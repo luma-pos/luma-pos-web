@@ -16,7 +16,9 @@
     "apply": "Apply",
     "add": "Add",
     "saved": "Saved",
-    "done": "Done"
+    "done": "Done",
+    "noResults": "No results",
+    "clear": "Clear"
   },
   "auth": {
     "login": "Sign in",

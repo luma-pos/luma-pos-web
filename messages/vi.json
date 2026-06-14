@@ -16,7 +16,9 @@
     "apply": "Áp dụng",
     "add": "Thêm",
     "saved": "Đã lưu",
-    "done": "Xong"
+    "done": "Xong",
+    "noResults": "Không tìm thấy",
+    "clear": "Xóa chọn"
   },
   "auth": {
     "login": "Đăng nhập",
