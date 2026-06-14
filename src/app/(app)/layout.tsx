@@ -36,7 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {/* brand — theo design: logo gradient + tên cửa hàng */}
         <div className="flex items-center gap-2.5 px-4 py-4 border-b border-border">
           <div className="w-9 h-9 rounded-xl shrink-0 grid place-items-center text-white font-extrabold bg-gradient-to-br from-primary-600 to-primary-400">
-            S
+            L
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="font-bold leading-tight">{t("common.appName")}</h1>
