@@ -45,7 +45,7 @@ export async function updateCustomerCore(input: UpdateCustomerOutput): Promise<A
       address: v.address || null,
       type: v.type,
       taxCode: v.taxCode?.slice(0, 30) || null,
-      debtLimit: toMoney(v.debtLimit),
+      debtLimit: toMoney(v.debtLimit) ?? 0,
       note: v.note || null,
     }).where(eq(customers.id, v.id));
     return { ok: true, data: undefined };
