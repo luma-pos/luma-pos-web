@@ -1,0 +1,51 @@
+"use client";
+
+import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { ArrowLeft, Printer, Settings2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { PaperSize } from "@/lib/print/template";
+
+const SIZES: { id: PaperSize; label: string }[] = [
+  { id: "a4", label: "A4" },
+  { id: "a5", label: "A5" },
+  { id: "k80", label: "K80" },
+];
+
+export function PrintToolbar({ backHref, baseHref, size }: { backHref: string; baseHref: string; size: PaperSize }) {
+  const t = useTranslations();
+  return (
+    <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 flex items-center gap-3 print:hidden">
+      <Link href={backHref} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+        <ArrowLeft className="w-4 h-4" />
+      </Link>
+      <span className="font-semibold text-sm">{t("print.title")}</span>
+      <div className="flex gap-1 ml-2">
+        {SIZES.map((s) => (
+          <Link
+            key={s.id}
+            href={`${baseHref}${baseHref.includes("?") ? "&" : "?"}size=${s.id}`}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-medium border",
+              size === s.id ? "bg-primary-600 text-white border-primary-600" : "border-slate-300 dark:border-slate-700"
+            )}
+          >
+            {s.label}
+          </Link>
+        ))}
+      </div>
+      <Link href="/settings/print" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-500">
+        <Settings2 className="w-3.5 h-3.5" />
+        {t("print.editTemplate")}
+      </Link>
+      <div className="flex-1" />
+      <button
+        onClick={() => window.print()}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium"
+      >
+        <Printer className="w-4 h-4" />
+        {t("print.printBtn")}
+      </button>
+    </div>
+  );
+}

@@ -1,0 +1,109 @@
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { db } from "@/db";
+import { categories, customers, orderItems, orders, products, profiles } from "@/db/schema";
+
+function daysAgo(n: number) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - n);
+  return d;
+}
+
+export async function getReports(rangeDays = 30) {
+  const since = daysAgo(rangeDays - 1);
+  // chỉ đơn bán thật: loại quote/merged/cancelled/draft
+  const notCancelled = inArray(orders.status, ["completed", "returned"]);
+
+  const [summaryRows, byDay, topProducts, byCategory, byCustomer, byEmployee] = await Promise.all([
+    db.select({
+      revenue: sql<string>`coalesce(sum(${orders.total}), 0)`,
+      collected: sql<string>`coalesce(sum(${orders.amountPaid}), 0)`,
+      orderCount: sql<number>`count(*)::int`,
+    }).from(orders).where(and(notCancelled, gte(orders.createdAt, since))),
+
+    db.select({
+      day: sql<string>`to_char(${orders.createdAt}, 'YYYY-MM-DD')`,
+      revenue: sql<string>`coalesce(sum(${orders.total}), 0)`,
+      orderCount: sql<number>`count(*)::int`,
+    })
+      .from(orders)
+      .where(and(notCancelled, gte(orders.createdAt, since)))
+      .groupBy(sql`to_char(${orders.createdAt}, 'YYYY-MM-DD')`)
+      .orderBy(sql`to_char(${orders.createdAt}, 'YYYY-MM-DD')`),
+
+    db.select({
+      productId: orderItems.productId,
+      productName: sql<string>`max(${orderItems.productName})`,
+      qtySold: sql<string>`sum(${orderItems.quantity} * ${orderItems.unitMultiplier})`,
+      baseUnit: sql<string>`max(${products.baseUnit})`,
+      revenue: sql<string>`sum(${orderItems.total})`,
+      profit: sql<string>`sum(${orderItems.total} - (${orderItems.quantity} * ${orderItems.unitMultiplier} * ${products.costPrice}))`,
+    })
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .innerJoin(products, eq(orderItems.productId, products.id))
+      .where(and(notCancelled, gte(orders.createdAt, since)))
+      .groupBy(orderItems.productId)
+      .orderBy(desc(sql`sum(${orderItems.total})`))
+      .limit(10),
+
+    db.select({
+      categoryName: sql<string>`coalesce(${categories.name}, 'Khác')`,
+      revenue: sql<string>`sum(${orderItems.total})`,
+    })
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .innerJoin(products, eq(orderItems.productId, products.id))
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .where(and(notCancelled, gte(orders.createdAt, since)))
+      .groupBy(categories.name)
+      .orderBy(desc(sql`sum(${orderItems.total})`)),
+
+    // top khách hàng theo doanh thu
+    db.select({
+      customerId: orders.customerId,
+      customerName: sql<string>`coalesce(max(${customers.name}), 'Khách lẻ')`,
+      customerType: sql<string | null>`max(${customers.type})`,
+      orderCount: sql<number>`count(*)::int`,
+      revenue: sql<string>`sum(${orders.total})`,
+      remaining: sql<string>`sum(${orders.total} - ${orders.amountPaid})`,
+    })
+      .from(orders)
+      .leftJoin(customers, eq(orders.customerId, customers.id))
+      .where(and(notCancelled, gte(orders.createdAt, since)))
+      .groupBy(orders.customerId)
+      .orderBy(desc(sql`sum(${orders.total})`))
+      .limit(10),
+
+    // theo nhân viên (createdBy)
+    db.select({
+      sellerId: orders.createdBy,
+      sellerName: sql<string>`coalesce(max(${profiles.fullName}), '—')`,
+      orderCount: sql<number>`count(*)::int`,
+      revenue: sql<string>`sum(${orders.total})`,
+      collected: sql<string>`sum(${orders.amountPaid})`,
+    })
+      .from(orders)
+      .leftJoin(profiles, eq(orders.createdBy, profiles.id))
+      .where(and(notCancelled, gte(orders.createdAt, since)))
+      .groupBy(orders.createdBy)
+      .orderBy(desc(sql`sum(${orders.total})`)),
+  ]);
+
+  const summary = summaryRows[0];
+  return {
+    rangeDays,
+    summary: {
+      revenue: Number(summary.revenue),
+      collected: Number(summary.collected),
+      orderCount: summary.orderCount,
+    },
+    byDay,
+    topProducts,
+    byCategory,
+    byCustomer,
+    byEmployee,
+  };
+}
+
+export type ReportsData = Awaited<ReturnType<typeof getReports>>;

@@ -1,0 +1,214 @@
+import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { Routes } from "@/lib/routes";
+import { cn, formatCurrency, formatNumber } from "@/lib/utils";
+import { getReports } from "@/lib/data/reports";
+
+interface PageProps {
+  searchParams: Promise<{ range?: string }>;
+}
+
+const RANGES = [7, 30, 90] as const;
+
+export default async function ReportsPage({ searchParams }: PageProps) {
+  const t = await getTranslations();
+  const params = await searchParams;
+  const range = RANGES.includes(Number(params.range) as 7) ? Number(params.range) : 30;
+  const data = await getReports(range);
+
+  const maxDay = Math.max(1, ...data.byDay.map((d) => Number(d.revenue)));
+  const totalCatRevenue = Math.max(1, data.byCategory.reduce((s, c) => s + Number(c.revenue), 0));
+  const uncollected = data.summary.revenue - data.summary.collected;
+
+  return (
+    <div className="p-6 space-y-5">
+      <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-5 min-h-[58px] px-6 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+        <h1 className="text-[17px] font-bold">{t("reports.title")}</h1>
+        <div className="flex gap-1.5">
+          {RANGES.map((r) => (
+            <Link
+              key={r}
+              href={`${Routes.Reports}?range=${r}`}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-sm font-medium border",
+                range === r ? "bg-primary-600 text-white border-primary-600" : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+              )}
+            >
+              {t("reports.lastNDays", { n: r })}
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+          <div className="text-sm text-slate-500">{t("reports.revenue")}</div>
+          <div className="text-2xl font-bold tabular-nums mt-1">{formatCurrency(data.summary.revenue)}</div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+          <div className="text-sm text-slate-500">{t("reports.collected")}</div>
+          <div className="text-2xl font-bold tabular-nums mt-1 text-emerald-600">{formatCurrency(data.summary.collected)}</div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+          <div className="text-sm text-slate-500">{t("reports.uncollected")}</div>
+          <div className={cn("text-2xl font-bold tabular-nums mt-1", uncollected > 0 ? "text-red-600" : "")}>{formatCurrency(uncollected)}</div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+          <div className="text-sm text-slate-500">{t("reports.orders")}</div>
+          <div className="text-2xl font-bold tabular-nums mt-1">{data.summary.orderCount}</div>
+          <div className="text-xs text-slate-400 mt-1">
+            {data.summary.orderCount > 0 && t("reports.avgOrder", { avg: formatCurrency(Math.round(data.summary.revenue / data.summary.orderCount)) })}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+        <h2 className="font-semibold text-sm mb-4">{t("dashboard.revenueByDay")}</h2>
+        {data.byDay.length === 0 ? (
+          <p className="text-sm text-slate-400 py-8 text-center">{t("dashboard.noData")}</p>
+        ) : (
+          <div className="flex items-end gap-1 h-44 overflow-x-auto">
+            {data.byDay.map((d) => {
+              const v = Number(d.revenue);
+              return (
+                <div key={d.day} className="flex-1 min-w-6 flex flex-col items-center justify-end h-full gap-1" title={`${d.day}: ${formatCurrency(v)}`}>
+                  <div className="w-full rounded-t bg-primary-600/85" style={{ height: `${Math.max(2, (v / maxDay) * 100)}%` }} />
+                  <span className="text-[9px] text-slate-400 whitespace-nowrap">{d.day.slice(8)}/{d.day.slice(5, 7)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm">{t("reports.topProducts")}</div>
+          {data.topProducts.length === 0 ? (
+            <p className="text-sm text-slate-400 py-8 text-center">{t("dashboard.noData")}</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/60 text-left text-xs uppercase text-slate-500">
+                  <th className="px-4 py-2.5 font-semibold">{t("orders.cols.product")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">{t("reports.qtySold")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">{t("reports.revenue")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">{t("reports.grossProfit")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {data.topProducts.map((p) => {
+                  const profit = Number(p.profit);
+                  return (
+                    <tr key={p.productId}>
+                      <td className="px-4 py-2.5 font-medium">{p.productName}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-slate-500">{formatNumber(Number(p.qtySold))} {p.baseUnit}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-medium">{formatCurrency(Number(p.revenue))}</td>
+                      <td className={cn("px-4 py-2.5 text-right tabular-nums", profit >= 0 ? "text-emerald-600" : "text-red-600")}>
+                        {formatCurrency(profit)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 self-start">
+          <h2 className="font-semibold text-sm mb-4">{t("reports.byCategory")}</h2>
+          {data.byCategory.length === 0 ? (
+            <p className="text-sm text-slate-400 py-8 text-center">{t("dashboard.noData")}</p>
+          ) : (
+            <div className="space-y-3">
+              {data.byCategory.map((c) => {
+                const v = Number(c.revenue);
+                const pct = Math.round((v / totalCatRevenue) * 100);
+                return (
+                  <div key={c.categoryName}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium">{c.categoryName}</span>
+                      <span className="tabular-nums text-slate-500">{formatCurrency(v)} · {pct}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div className="h-full rounded-full bg-primary-600/85" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* theo khách hàng + theo nhân viên — theo design */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm">{t("reports.topCustomers")}</div>
+          {data.byCustomer.length === 0 ? (
+            <p className="text-sm text-slate-400 py-8 text-center">{t("dashboard.noData")}</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/60 text-left text-xs uppercase text-slate-500">
+                  <th className="px-4 py-2.5 font-semibold">{t("orders.cols.customer")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">{t("reports.orders")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">{t("reports.revenue")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">{t("reports.uncollected")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {data.byCustomer.map((c) => {
+                  const remaining = Number(c.remaining);
+                  return (
+                    <tr key={c.customerId ?? "walkin"}>
+                      <td className="px-4 py-2.5 font-medium">
+                        {c.customerName}
+                        {c.customerType && c.customerType !== "retail" && (
+                          <span className="text-xs text-slate-400"> ({t(`customers.types.${c.customerType}` as never)})</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums">{c.orderCount}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-medium">{formatCurrency(Number(c.revenue))}</td>
+                      <td className={cn("px-4 py-2.5 text-right tabular-nums", remaining > 0 ? "text-red-600 font-semibold" : "text-slate-400")}>
+                        {remaining > 0 ? formatCurrency(remaining) : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden self-start">
+          <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm">{t("reports.byEmployee")}</div>
+          {data.byEmployee.length === 0 ? (
+            <p className="text-sm text-slate-400 py-8 text-center">{t("dashboard.noData")}</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/60 text-left text-xs uppercase text-slate-500">
+                  <th className="px-4 py-2.5 font-semibold">{t("reports.employee")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">{t("reports.orders")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">{t("reports.revenue")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">{t("reports.collected")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {data.byEmployee.map((e) => (
+                  <tr key={e.sellerId ?? "system"}>
+                    <td className="px-4 py-2.5 font-medium">{e.sellerName}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums">{e.orderCount}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-medium">{formatCurrency(Number(e.revenue))}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-emerald-600">{formatCurrency(Number(e.collected))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

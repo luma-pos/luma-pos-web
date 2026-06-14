@@ -1,0 +1,970 @@
+{
+  "common": {
+    "appName": "Sales Mgmt",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "refresh": "Refresh",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "language": "Language",
+    "apply": "Apply",
+    "add": "Add",
+    "saved": "Saved",
+    "done": "Done"
+  },
+  "auth": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "email": "Email",
+    "password": "Password",
+    "loginSubtitle": "Sign in to continue",
+    "loginButton": "Sign in",
+    "loggingIn": "Signing in...",
+    "brandTagline": "Building-materials sales management",
+    "loginTitle": "Sign in",
+    "accountHint": "Accounts are provisioned by your admin",
+    "heroTitle": "Sell faster,\ntrack stock tighter,\nkeep debts clear.",
+    "heroDesc": "POS for building-material stores — auto tile m² calculation, 4 price groups, realtime receivables.",
+    "heroStat1": "Price lists per customer group",
+    "heroStat2": "Tiles-by-area calculator",
+    "heroStat3": "Invoices in every paper size"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "pos": "Point of Sale",
+    "orders": "Orders",
+    "products": "Products",
+    "inventory": "Inventory",
+    "customers": "Customers",
+    "suppliers": "Suppliers",
+    "reports": "Reports",
+    "settings": "Settings",
+    "purchases": "Purchasing",
+    "quotes": "Quotes",
+    "cashbook": "Cash book",
+    "delivery": "Delivery",
+    "projects": "Projects",
+    "promotions": "Promotions",
+    "einvoices": "E-invoices",
+    "groups": {
+      "overview": "Overview",
+      "sales": "Sales",
+      "inventory": "Goods & stock",
+      "partners": "Partners",
+      "finance": "Finance",
+      "system": "System"
+    },
+    "pricing": "Price setup",
+    "stocktakes": "Stocktake",
+    "collapseSidebar": "Collapse menu",
+    "expandSidebar": "Open menu",
+    "more": "More"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Today's business",
+    "revenueToday": "Revenue today",
+    "ordersToday": "Orders today",
+    "products": "Products",
+    "customers": "Customers",
+    "gettingStarted": "Getting started",
+    "gettingStartedDesc": "Project setup done. Next steps:",
+    "step1": "Create Supabase project + paste keys into",
+    "step2": "Run",
+    "step2cmd": "to create tables",
+    "step3": "Run",
+    "step3cmd": "for seed data",
+    "step4": "Import data from KiotViet (Excel)",
+    "step5": "Create your first product",
+    "revenue7d": "Revenue (7 days)",
+    "receivable": "Receivables",
+    "lowStockCount": "Low stock items",
+    "ordersCount": "{count} orders",
+    "debtors": "{count} owing customers",
+    "revenueByDay": "Revenue by day",
+    "noData": "No data yet",
+    "lowStockTitle": "Stock alerts",
+    "stockOk": "Stock is healthy ✓",
+    "viewAll": "View all →",
+    "recentOrders": "Recent orders",
+    "topDebtors": "Top debtors",
+    "noDebt": "No outstanding debt 🎉",
+    "range": {
+      "today": "Today",
+      "7d": "7 days",
+      "30d": "30 days",
+      "month": "This month"
+    },
+    "revenueLabel": {
+      "today": "Revenue today",
+      "7d": "Revenue (7 days)",
+      "30d": "Revenue (30 days)",
+      "month": "Revenue this month"
+    },
+    "grossProfit": "Gross profit",
+    "marginPct": "{pct}% margin",
+    "ordersLabel": "Orders",
+    "avgPerOrder": "Avg {avg}/order",
+    "unitMillion": "Unit: million ₫",
+    "stockOfMin": "{stock} {unit} left · min {min}",
+    "badgeCritical": "Critical",
+    "badgeLow": "Low",
+    "createPurchase": "Create purchase order",
+    "allOrders": "All orders →",
+    "debtLink": "Debts →",
+    "pctOfLimit": "{pct}% of limit",
+    "noLimit": "No limit",
+    "totalReceivable": "Total receivable"
+  },
+  "pos": {
+    "searchPlaceholder": "Search by name / SKU / barcode... (F2)",
+    "order": "Order",
+    "calcTiles": "Calc m²",
+    "noItems": "No items yet",
+    "subtotal": "Subtotal",
+    "total": "Total",
+    "checkout": "Checkout (F9)",
+    "tileCalc": {
+      "title": "Tile calculator",
+      "width": "Width (m)",
+      "length": "Length (m)",
+      "m2PerUnit": "m²/tile",
+      "wastePct": "Waste %",
+      "result": "Area",
+      "needTiles": "Need",
+      "tilesUnit": "tiles",
+      "wasteIncluded": "(incl. waste)"
+    },
+    "stockLabel": "Stock",
+    "noProducts": "No products yet — add products before selling.",
+    "walkInCustomer": "Walk-in customer",
+    "projectPlaceholder": "Project (optional)…",
+    "customerDebt": "Current debt: {debt}",
+    "discount": "Discount",
+    "shipping": "Shipping",
+    "paidAmount": "Paid",
+    "willOweAmount": "Will owe: {amount}",
+    "payMethods": {
+      "cash": "Cash",
+      "bank_transfer": "Bank transfer",
+      "credit": "On credit",
+      "card": "Card",
+      "vnpay": "VNPay",
+      "momo": "MoMo"
+    },
+    "errors": {
+      "creditNeedsCustomer": "Credit sales require a saved customer.",
+      "emptyCart": "Cart is empty."
+    },
+    "saveQuote": "Save quote",
+    "noProject": "— Existing project —",
+    "allCategories": "All",
+    "held": {
+      "title": "Held orders ({count})",
+      "hold": "Hold",
+      "holdHint": "Park this cart to serve another customer — restore from the held row",
+      "walkIn": "Walk-in"
+    },
+    "dragToReorder": "Drag to reorder",
+    "invoice": {
+      "tab": "Order {n}",
+      "add": "Add invoice",
+      "close": "Close invoice",
+      "newOrder": "New order"
+    },
+    "priceEditor": {
+      "unitPrice": "Unit price",
+      "discount": "Discount",
+      "sellPrice": "Sell price",
+      "editHint": "Edit price / discount"
+    },
+    "noSearchResults": "No matching products",
+    "offline": {
+      "banner": "Offline — orders will sync when back online",
+      "syncing": "Syncing…",
+      "pending": "{n} orders pending sync",
+      "savedToast": "Order saved (offline)"
+    },
+    "priceBook": {
+      "title": "Select price book",
+      "auto": "By customer group",
+      "retail": "Retail",
+      "wholesale": "Wholesale",
+      "contractor": "Contractor",
+      "agent": "Agent"
+    },
+    "printSlip": "Print",
+    "tempSlipTitle": "PROVISIONAL SLIP",
+    "printA5": "Print A5",
+    "printK80": "Print K80 receipt"
+  },
+  "stub": {
+    "wip": "Work in progress..."
+  },
+  "products": {
+    "title": "Products",
+    "create": "Create Product",
+    "edit": "Edit Product",
+    "createNew": "New",
+    "saveAndCreate": "Save & New",
+    "directSale": "Direct sale",
+    "tabs": {
+      "info": "Info",
+      "description": "Description",
+      "variants": "Units & attributes"
+    },
+    "fields": {
+      "sku": "SKU",
+      "skuPlaceholder": "Auto",
+      "barcode": "Barcode",
+      "barcodePlaceholder": "Enter barcode",
+      "name": "Name",
+      "namePlaceholder": "Required",
+      "category": "Category",
+      "categoryPlaceholder": "Select category",
+      "brand": "Brand",
+      "brandPlaceholder": "Select brand",
+      "createNew": "Create new",
+      "image": "Image",
+      "addImage": "Add image",
+      "imageHint": "Max 2 MB per image",
+      "baseUnit": "Base unit",
+      "unitName": "Unit name",
+      "multiplier": "Ratio",
+      "multiplierHint": "1 unit = N {unit}",
+      "supplier": "Supplier",
+      "supplierPlaceholder": "Select supplier",
+      "suppliers": "Suppliers",
+      "primarySupplier": "Primary",
+      "addSupplier": "+ Add supplier",
+      "primaryImage": "Primary",
+      "imageUploadError": "Upload failed"
+    },
+    "sections": {
+      "pricing": "Pricing",
+      "pricingDesc": "Cost price and selling price tiers",
+      "stock": "Stock",
+      "stockDesc": "Manage stock quantities and thresholds",
+      "physical": "Position, weight, dimensions",
+      "physicalDesc": "Manage warehouse placement and shipping",
+      "warranty": "Warranty",
+      "warrantyDesc": "Product warranty configuration",
+      "units": "Units of measure",
+      "unitsDesc": "Add units like bottle, pack, case",
+      "attributes": "Product attributes",
+      "attributesDesc": "Add traits like color, size, surface, pressure..."
+    },
+    "pricing": {
+      "costPrice": "Cost price",
+      "retailPrice": "Retail price",
+      "wholesalePrice": "Wholesale price",
+      "contractorPrice": "Contractor price",
+      "agentPrice": "Agent price",
+      "setupPriceTiers": "Setup price tiers",
+      "priceBookHint": "Wholesale/contractor/agent prices are managed in Pricing (price books)"
+    },
+    "stock": {
+      "current": "On hand",
+      "min": "Min level",
+      "max": "Max level"
+    },
+    "physical": {
+      "location": "Location",
+      "locationPlaceholder": "Select location",
+      "weight": "Weight",
+      "dimensions": "Dimensions",
+      "width": "Width",
+      "length": "Length",
+      "thickness": "Thickness"
+    },
+    "attributes": {
+      "empty": "No attributes yet. Add traits like color, size, pressure...",
+      "add": "Add attribute",
+      "namePlaceholder": "Select attribute",
+      "valuePlaceholder": "Enter value and press Enter"
+    },
+    "units": {
+      "baseUnit": "Base unit",
+      "baseUnitPlaceholder": "piece, m, kg...",
+      "addUnit": "Add unit",
+      "unitName": "Unit name",
+      "unitNamePlaceholder": "box, case, m²...",
+      "multiplier": "Conversion",
+      "multiplierHint": "1 {unit} = {count} {base}",
+      "barcode": "Unit barcode",
+      "priceOverride": "Override price (optional)"
+    },
+    "description": {
+      "main": "Description",
+      "invoiceNote": "Note template (invoice, orders)"
+    },
+    "list": {
+      "searchPlaceholder": "Search name, SKU, barcode…",
+      "allCategories": "Category: All",
+      "total": "{total} products",
+      "empty": "No products yet",
+      "emptyHint": "Click \"New product\" to create your first product, or adjust the filters.",
+      "colProduct": "Product",
+      "colCategory": "Category",
+      "colUnits": "Units",
+      "colRetail": "Retail price",
+      "colContractor": "Contractor price",
+      "colStock": "Stock",
+      "colStatus": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "pageOf": "Page {page} / {pageCount}",
+      "prev": "← Prev",
+      "next": "Next →",
+      "statusActive": "On sale",
+      "statusInactive": "Stopped",
+      "statusAll": "All statuses"
+    },
+    "errors": {
+      "skuExists": "SKU already exists — choose another."
+    },
+    "editTitle": "Edit product",
+    "unitLabel": "products"
+  },
+  "validation": {
+    "required": "Required",
+    "email": "Invalid email",
+    "min": "Minimum {min} characters",
+    "max": "Maximum {max} characters",
+    "minNumber": "Min {min}",
+    "maxNumber": "Max {max}",
+    "url": "Invalid URL",
+    "phone": "Invalid phone number",
+    "passwordTooShort": "Password must be at least 6 characters"
+  },
+  "errors": {
+    "unauthorized": "Session expired — please sign in again.",
+    "invalidData": "Invalid data.",
+    "serverError": "Something went wrong, please retry."
+  },
+  "orders": {
+    "title": "Orders",
+    "total": "{total} orders",
+    "createViaPos": "New order (POS)",
+    "searchPlaceholder": "Search code, customer, project…",
+    "empty": "No orders yet",
+    "walkIn": "Walk-in",
+    "tabs": {
+      "all": "All",
+      "completed": "Completed",
+      "owing": "Owing",
+      "cancelled": "Cancelled",
+      "returned": "Returned"
+    },
+    "cols": {
+      "code": "Code",
+      "date": "Date",
+      "customer": "Customer",
+      "project": "Project",
+      "total": "Total",
+      "remaining": "Owing",
+      "payment": "Payment",
+      "status": "Status",
+      "product": "Product",
+      "unit": "Unit",
+      "qty": "Qty",
+      "unitPrice": "Unit price",
+      "lineTotal": "Line total",
+      "discount": "Discount"
+    },
+    "status": {
+      "draft": "Draft",
+      "quote": "Quote",
+      "confirmed": "Confirmed",
+      "delivering": "Delivering",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "returned": "Returned",
+      "merged": "Merged"
+    },
+    "paymentStatus": {
+      "unpaid": "Unpaid",
+      "deposit": "Deposit",
+      "partial": "Partial",
+      "paid": "Paid",
+      "refunded": "Refunded"
+    },
+    "detail": {
+      "items": "Items",
+      "payments": "Payments",
+      "noPayments": "No payments yet",
+      "remaining": "Remaining",
+      "addPayment": "Record payment / collect debt",
+      "amount": "Amount",
+      "receive": "Collect",
+      "notePlaceholder": "Note…",
+      "customer": "Customer",
+      "info": "Order info",
+      "warehouse": "Warehouse",
+      "seller": "Seller",
+      "cancel": "Cancel order",
+      "cancelConfirm": "Cancel this order? Stock will be restored and debt adjusted."
+    },
+    "errors": {
+      "nothingToPay": "Nothing left to collect.",
+      "alreadyCancelled": "Order already cancelled."
+    },
+    "batchHint": "Tick orders to print together (max 20)",
+    "printSelected": "Print selected",
+    "batchEmpty": "No orders selected — go back and tick some.",
+    "batchCount": "Printing {count} invoices — one per page",
+    "paymentFilter": {
+      "all": "All payments",
+      "paid": "Paid",
+      "partial": "Partial",
+      "unpaid": "Unpaid"
+    },
+    "filter": {
+      "from": "From",
+      "to": "To",
+      "clear": "Clear"
+    },
+    "unitLabel": "orders"
+  },
+  "customers": {
+    "title": "Customers",
+    "total": "{total} customers",
+    "totalDebt": "Total debt: {debt}",
+    "createNew": "New customer",
+    "searchPlaceholder": "Search name, phone, code…",
+    "empty": "No customers yet",
+    "tabs": {
+      "all": "All",
+      "retail": "Retail",
+      "wholesale": "Wholesale",
+      "contractor": "Contractors",
+      "agent": "Agents",
+      "owing": "Owing"
+    },
+    "types": {
+      "retail": "Retail",
+      "wholesale": "Wholesale",
+      "contractor": "Contractor",
+      "agent": "Agent"
+    },
+    "cols": {
+      "name": "Customer",
+      "phone": "Phone",
+      "type": "Price group",
+      "totalSpent": "Total spent",
+      "debt": "Debt",
+      "debtLimit": "Credit limit"
+    },
+    "fields": {
+      "name": "Customer name",
+      "namePlaceholder": "e.g. Mr. Tuan (contractor)",
+      "address": "Address",
+      "taxCode": "Tax code",
+      "debtLimit": "Credit limit",
+      "debtLimitHint": "0 = no credit allowed",
+      "note": "Note"
+    },
+    "debtOfLimit": "{pct}% of {limit} limit",
+    "orderCount": "{count} recent orders",
+    "owingOrders": "{count} orders owing",
+    "collectHint": "Open each order to record collections.",
+    "orderHistory": "Order history",
+    "editTitle": "Edit customer",
+    "unitLabel": "customers"
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "total": "{total} suppliers",
+    "createNew": "New supplier",
+    "searchPlaceholder": "Search name, phone…",
+    "empty": "No suppliers yet",
+    "cols": {
+      "name": "Supplier",
+      "debt": "Payable"
+    },
+    "filter": {
+      "allDebt": "All debt",
+      "owing": "Owing",
+      "clear": "Cleared"
+    },
+    "purchaseHistory": "Purchase history",
+    "noPurchases": "No purchases yet",
+    "unitLabel": "suppliers"
+  },
+  "purchases": {
+    "title": "Purchasing",
+    "total": "{total} receipts",
+    "createNew": "New purchase",
+    "empty": "No purchases yet",
+    "emptyHint": "Create a purchase to add stock and update cost prices.",
+    "cols": {
+      "code": "Code",
+      "supplier": "Supplier",
+      "warehouse": "Warehouse",
+      "owed": "Owed",
+      "qty": "Qty",
+      "unitCost": "Unit cost",
+      "itemCount": "Items",
+      "total": "Total"
+    },
+    "status": {
+      "received": "Received",
+      "draft": "Draft",
+      "cancelled": "Cancelled",
+      "returned": "Returned to supplier"
+    },
+    "addProduct": "Add product to receipt",
+    "pickProduct": "— Pick a product —",
+    "unitLabel": "purchases",
+    "noSuppliers": "No suppliers — create one in Suppliers",
+    "payFull": "Pay supplier in full",
+    "amountPaid": "Paid to supplier",
+    "receiveNow": "Save & receive now",
+    "receiveHint": "Receive now: stock is added, cost price updated, unpaid balance recorded as supplier debt.",
+    "errors": {
+      "emptyItems": "Add at least 1 product."
+    },
+    "searchPlaceholder": "Search code, supplier...",
+    "searchProduct": "Search products by name / code",
+    "invoiceNumber": "Input invoice number",
+    "invoiceNumberPlaceholder": "Enter invoice no...",
+    "subtotal": "Goods total",
+    "needPay": "Payable"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "totalValue": "Stock value",
+    "byCost": "At cost price",
+    "lowStock": "Low stock",
+    "belowMin": "Below minimum",
+    "recentMoves": "Recent movements",
+    "last20": "Last 20 entries",
+    "searchPlaceholder": "Search products…",
+    "lowOnly": "Low only",
+    "empty": "No matching products",
+    "cols": {
+      "stock": "Stock",
+      "min": "Min",
+      "value": "Value"
+    },
+    "statusLow": "Low",
+    "statusOk": "OK",
+    "movementsTitle": "Stock movements",
+    "noMovements": "No movements yet",
+    "moveTypes": {
+      "purchase": "Purchase",
+      "sale": "Sale",
+      "return_in": "Return in",
+      "return_out": "Return out",
+      "transfer": "Transfer",
+      "adjust": "Adjustment",
+      "init": "Initial"
+    },
+    "stockFilter": {
+      "all": "All stock",
+      "instock": "In stock",
+      "low": "Low",
+      "out": "Out of stock"
+    }
+  },
+  "reports": {
+    "title": "Reports",
+    "lastNDays": "{n} days",
+    "revenue": "Revenue",
+    "collected": "Collected",
+    "uncollected": "Uncollected",
+    "orders": "Orders",
+    "avgOrder": "Avg {avg}/order",
+    "topProducts": "Top products by revenue",
+    "qtySold": "Qty sold",
+    "grossProfit": "Gross profit",
+    "byCategory": "Revenue by category",
+    "topCustomers": "Top customers by revenue",
+    "byEmployee": "By employee",
+    "employee": "Employee"
+  },
+  "returns": {
+    "action": "Return items",
+    "titleFor": "Return — {code}",
+    "sectionTitle": "Returns",
+    "returnedQty": "{qty} {unit} returned",
+    "cols": {
+      "bought": "Bought",
+      "returned": "Returned",
+      "returnNow": "Return now",
+      "restock": "Restock",
+      "refund": "Refund"
+    },
+    "restockYes": "Restock for sale",
+    "restockNo": "Damaged — discard",
+    "reason": "Reason",
+    "pickReason": "— Pick a reason —",
+    "reasons": {
+      "defective": "Defective / warranty",
+      "wrong_item": "Wrong item delivered",
+      "changed_mind": "Changed mind",
+      "other": "Other"
+    },
+    "refundVia": "Refund via",
+    "refundMethods": {
+      "cash": "Cash",
+      "bank_transfer": "Bank transfer",
+      "debt_deduct": "Deduct from debt"
+    },
+    "currentDebtOf": "{name} owes {debt}",
+    "totalRefund": "Total refund",
+    "submit": "Create return",
+    "errors": {
+      "emptyItems": "Select at least 1 item to return.",
+      "qtyExceeds": "Return quantity exceeds purchased quantity.",
+      "orderCancelled": "Order is cancelled — cannot return.",
+      "debtNeedsCustomer": "Debt deduction requires a customer on the order.",
+      "debtTooSmall": "Current debt is less than the refund — use cash/bank instead."
+    }
+  },
+  "print": {
+    "title": "Print invoice",
+    "printBtn": "Print",
+    "invoiceTitle": "SALES INVOICE",
+    "number": "No.",
+    "date": "Date",
+    "deliverTo": "Deliver to",
+    "grandTotal": "GRAND TOTAL",
+    "paid": "Paid",
+    "remaining": "Remaining",
+    "inWords": "In words",
+    "thanks": "Thank you!",
+    "buyerSign": "Buyer",
+    "delivererSign": "Deliverer",
+    "sellerSign": "Issued by",
+    "signHint": "(sign, full name)",
+    "footerNote": "Please inspect goods upon delivery. Unopened items may be returned within 7 days.",
+    "editTemplate": "Edit template",
+    "titles": {
+      "order": "SALES INVOICE",
+      "quote": "QUOTATION",
+      "purchase": "GOODS RECEIPT",
+      "purchaseDraft": "PURCHASE ORDER",
+      "return": "RETURN SLIP"
+    },
+    "supplierSign": "Supplier",
+    "receiverSign": "Receiver"
+  },
+  "printSettings": {
+    "title": "Print templates",
+    "settingsDesc": "Store info, A4/A5/K80 paper, display options per document type",
+    "docTypes": {
+      "order": "Sales invoice",
+      "quote": "Quotation",
+      "purchase": "Purchase / PO",
+      "return": "Return slip",
+      "receipt": "Cash receipt"
+    },
+    "previewTitles": {
+      "order": "SALES INVOICE",
+      "quote": "QUOTATION",
+      "purchase": "GOODS RECEIPT",
+      "return": "RETURN SLIP",
+      "receipt": "RECEIPT"
+    },
+    "storeSection": "Store info (printed at the top)",
+    "storeName": "Store name",
+    "storeAddress": "Address",
+    "storePhone": "Phone",
+    "storeTaxCode": "Tax code",
+    "paperDefault": "Default paper size",
+    "applyAll": "Apply store info to all templates",
+    "appliedAll": "Applied to all 5 templates — remember to Save each.",
+    "optionsSection": "Show on document",
+    "toggles": {
+      "showSeller": "Seller name",
+      "showProject": "Project",
+      "showDebt": "Paid / remaining",
+      "showInWords": "Amount in words",
+      "showSignatures": "Signature area",
+      "showSku": "SKU next to product"
+    },
+    "footerNote": "Footer note (return policy, thanks…)",
+    "saveFor": "Save template: {type}",
+    "saved": "Template saved ✓",
+    "preview": "Preview (condensed)",
+    "previewHint": "Actual printing reflows per selected A4/A5/K80 size."
+  },
+  "settings": {
+    "moreSoon": "More settings (staff, permissions, e-invoice…) coming with the roadmap."
+  },
+  "quotes": {
+    "title": "Quotes",
+    "total": "{total} quotes",
+    "createViaPos": "New quote (POS)",
+    "empty": "No quotes yet",
+    "emptyHint": "Build a cart in POS then press 'Save quote'.",
+    "cols": {
+      "code": "Code",
+      "value": "Value"
+    },
+    "convert": "Convert to order",
+    "convertConfirm": "Convert this quote to a sale? Stock will be deducted and debt recorded.",
+    "cancelConfirm": "Cancel this quote?",
+    "errors": {
+      "notAQuote": "This is not an open quote."
+    }
+  },
+  "cashbook": {
+    "title": "Cash book",
+    "createTx": "Receipt / payment",
+    "fundCash": "Cash",
+    "fundBank": "Bank",
+    "totalBalance": "Total balance",
+    "autoHint": "Sales, collections, supplier payments and refunds are recorded automatically",
+    "typeTabs": {
+      "all": "All",
+      "in": "In",
+      "out": "Out"
+    },
+    "empty": "No transactions yet",
+    "cols": {
+      "code": "Code",
+      "category": "Category",
+      "note": "Description",
+      "fund": "Fund",
+      "amount": "Amount"
+    },
+    "categories": {
+      "sale": "Sales income",
+      "debt_collect": "Debt collection",
+      "supplier_payment": "Supplier payment",
+      "refund": "Customer refund",
+      "expense": "Expense",
+      "other": "Other"
+    },
+    "notePlaceholder": "Description (required)…",
+    "unitLabel": "transactions"
+  },
+  "orderEdit": {
+    "title": "Edit {code}",
+    "action": "Edit order",
+    "warning": "Editing restores stock for old lines and deducts for new ones; debt adjusts by the difference. Orders with returns can't be edited.",
+    "oldTotal": "Old total",
+    "newTotal": "New total",
+    "delta": "Difference",
+    "newRemaining": "Remaining due",
+    "save": "Save changes",
+    "errors": {
+      "notEditable": "This order can't be edited (cancelled/returned/merged).",
+      "hasReturns": "Order has returns — can't edit.",
+      "hasEInvoice": "An e-invoice was issued — can't edit/cancel. Void the e-invoice first."
+    }
+  },
+  "merge": {
+    "title": "Merge invoices",
+    "noneSelected": "Nothing selected — go back and tick orders.",
+    "totalMerged": "Total of {count} orders",
+    "confirm": "Merge {count} orders",
+    "hint": "Items and payments move to the merged order; originals become 'Merged' (stock & debt unchanged). Same customer only, no returns.",
+    "errNoCustomer": "Walk-in — can't merge",
+    "errStatus": "Invalid status",
+    "errors": {
+      "needTwo": "Pick at least 2 orders.",
+      "onlyCompleted": "Only completed orders.",
+      "sameCustomer": "Orders must share one customer.",
+      "hasReturns": "An order has returns — can't merge.",
+      "hasEInvoice": "An order already has an e-invoice — can't merge."
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "total": "{total} projects",
+    "createNew": "New project",
+    "empty": "No projects yet",
+    "emptyHint": "Create projects to attach to POS sales.",
+    "cols": {
+      "name": "Project",
+      "orders": "Orders",
+      "value": "Materials value"
+    },
+    "status": {
+      "active": "Active",
+      "done": "Done"
+    },
+    "noCustomer": "— No customer —",
+    "markDone": "Mark done",
+    "reopen": "Reopen"
+  },
+  "promos": {
+    "title": "Promotions",
+    "total": "{total} programs",
+    "createNew": "New promotion",
+    "empty": "No promotions yet",
+    "emptyHint": "Create quantity-tier discounts — POS applies them automatically.",
+    "cols": {
+      "name": "Program",
+      "tiers": "Discount tiers",
+      "period": "Period"
+    },
+    "active": "Running",
+    "inactive": "Paused",
+    "noEnd": "no end",
+    "pause": "Pause",
+    "resume": "Resume",
+    "addTier": "Add tier",
+    "discount": "off",
+    "endsAt": "Ends",
+    "posHint": "POS applies the best tier by quantity (in base units) and shows a promo badge on the line.",
+    "errors": {
+      "needTier": "At least 1 tier required."
+    }
+  },
+  "delivery": {
+    "title": "Delivery / dispatch",
+    "createTrip": "New trip",
+    "createTripBtn": "Create trip ({count} orders)",
+    "empty": "No trips yet",
+    "emptyHint": "Group sold orders into a trip for delivery.",
+    "vehicle": "Vehicle (plate)",
+    "driver": "Driver",
+    "noOrders": "No orders awaiting dispatch.",
+    "status": {
+      "planned": "Planned",
+      "ongoing": "Delivering",
+      "done": "Done"
+    },
+    "stopsDone": "stops delivered",
+    "departed": "Departed",
+    "start": "Depart",
+    "markDelivered": "Delivered",
+    "errors": {
+      "needOrders": "Pick at least 1 order."
+    }
+  },
+  "einvoice": {
+    "title": "E-invoice",
+    "issue": "Issue e-invoice",
+    "issued": "Issued",
+    "stubNote": "Using internal stub issuer — sequential numbers. Swap issueWithProvider() for real Viettel/VNPT/MISA integration.",
+    "empty": "No e-invoices yet",
+    "emptyHint": "Issue from the order detail page.",
+    "cols": {
+      "number": "Number",
+      "issuedAt": "Issued at",
+      "order": "Source order",
+      "buyer": "Buyer",
+      "beforeVat": "Before VAT"
+    },
+    "errors": {
+      "onlyCompleted": "Only completed orders.",
+      "alreadyIssued": "This order already has an e-invoice."
+    }
+  },
+  "portal": {
+    "linkTitle": "Online ordering link",
+    "desc": "Generate a private link so this customer can order at their price group — orders arrive pending confirmation.",
+    "generate": "Generate link",
+    "regenerate": "New link",
+    "copy": "Copy link",
+    "copied": "Copied ✓",
+    "hint": "Share via Zalo. Generating a new link invalidates the old one.",
+    "errors": {
+      "invalidToken": "Invalid link."
+    }
+  },
+  "pricing": {
+    "title": "Price setup",
+    "cols": {
+      "costPrice": "Cost",
+      "retailPrice": "Retail",
+      "wholesalePrice": "Wholesale",
+      "contractorPrice": "Contractor",
+      "agentPrice": "Agent",
+      "lastPurchase": "Last purchase"
+    },
+    "markupTool": "Set price = cost +",
+    "markupHint": "(applies to visible rows, remember to Save each)",
+    "belowCost": "Below cost price!",
+    "saved": "Saved",
+    "booksCount": "{n} price books",
+    "booksLabel": "Price books",
+    "addBook": "Add book",
+    "newBookPlaceholder": "Book name…",
+    "errors": {
+      "cannotDeleteDefault": "Cannot delete default price book"
+    },
+    "formula": {
+      "title": "Set price by formula",
+      "newPrice": "New price",
+      "baseCurrent": "Current price",
+      "baseCost": "Cost price",
+      "applyAll": "Apply this formula to all {n} products in"
+    }
+  },
+  "stocktakes": {
+    "title": "Stocktake",
+    "createNew": "New stocktake",
+    "empty": "No stocktakes yet",
+    "emptyHint": "Create one to count actual stock and balance inventory.",
+    "cols": {
+      "code": "Code",
+      "items": "Items",
+      "totalDiff": "Total diff",
+      "balancedAt": "Balanced at",
+      "systemQty": "System",
+      "actualQty": "Actual",
+      "diff": "Diff",
+      "diffValue": "Diff value"
+    },
+    "status": {
+      "draft": "Draft",
+      "balanced": "Balanced",
+      "cancelled": "Cancelled"
+    },
+    "searchPlaceholder": "Search product by name / SKU to add…",
+    "noLines": "Nothing counted yet — search above to add products.",
+    "warehouseLocked": "Items added — warehouse locked",
+    "summary": {
+      "checked": "Counted",
+      "matched": "Matched",
+      "diff": "Different"
+    },
+    "saveDraft": "Save draft",
+    "complete": "Complete (balance stock)",
+    "balance": "Balance stock",
+    "balanceConfirm": "Balance now? Stock will be SET to counted quantities; differences logged as adjustments.",
+    "cancelConfirm": "Cancel this draft stocktake?",
+    "balanceHint": "Drafts don't affect stock. Balancing sets stock = actual and logs 'adjust' movements.",
+    "errors": {
+      "emptyItems": "Add at least 1 product.",
+      "notDraft": "Only drafts can be modified."
+    }
+  },
+  "theme": {
+    "mode": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
+  },
+  "categories": {
+    "title": "Categories",
+    "count": "{n} categories",
+    "create": "Create category",
+    "empty": "No categories yet",
+    "name": "Name",
+    "parent": "Parent group",
+    "noParent": "— No parent —"
+  },
+  "pagination": {
+    "show": "Show",
+    "rows": "{n} rows",
+    "first": "First",
+    "prev": "Previous",
+    "next": "Next",
+    "last": "Last",
+    "range": "{start} - {end} of {total}"
+  }
+}

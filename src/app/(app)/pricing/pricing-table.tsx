@@ -1,0 +1,265 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Check, Loader2, Pencil, Plus, X, Calculator } from "lucide-react";
+import { cn, formatCurrency } from "@/lib/utils";
+import { MoneyInput } from "@/components/ui/money-input";
+import { createPriceBook, renamePriceBook, deletePriceBook, setProductPrice, applyPriceFormulaAll, type PriceFormulaBase } from "@/lib/actions/price-books";
+
+interface Book { id: string; name: string; isDefault: boolean; sortOrder: number; }
+interface Row {
+  id: string;
+  sku: string;
+  name: string;
+  baseUnit: string;
+  costPrice: number;
+  lastPurchase: number;
+  prices: Record<string, number | null>;
+}
+
+export function PricingTable({ books: initialBooks, rows: initialRows, total }: { books: Book[]; rows: Row[]; total: number }) {
+  const t = useTranslations();
+  const router = useRouter();
+  const [books, setBooks] = useState(initialBooks);
+  const [rows, setRows] = useState(initialRows);
+  const [error, setError] = useState("");
+  const [savingCell, setSavingCell] = useState<Set<string>>(new Set());
+  const [savedCell, setSavedCell] = useState<Set<string>>(new Set());
+
+  // popover "Đặt giá theo công thức"
+  const [formula, setFormula] = useState<{ rowId: string; bookId: string } | null>(null);
+  const [fBase, setFBase] = useState<PriceFormulaBase>("current");
+  const [fOp, setFOp] = useState<"+" | "-">("+");
+  const [fAmount, setFAmount] = useState(0);
+  const [fUnit, setFUnit] = useState<"vnd" | "pct">("pct");
+  const [fAll, setFAll] = useState(false);
+  const [applying, setApplying] = useState(false);
+
+  function openFormula(rowId: string, bookId: string) {
+    setFBase("current"); setFOp("+"); setFAmount(0); setFUnit("pct"); setFAll(false);
+    setFormula({ rowId, bookId });
+  }
+  function computeNew(row: Row, bookId: string): number {
+    const base = fBase === "cost" ? row.costPrice
+      : fBase === "lastPurchase" ? row.lastPurchase
+      : (row.prices[bookId] ?? row.prices[defaultBookId] ?? 0);
+    const delta = fUnit === "pct" ? (base * fAmount) / 100 : fAmount;
+    return Math.max(0, Math.round(base + (fOp === "-" ? -delta : delta)));
+  }
+  async function applyFormula(row: Row, bookId: string) {
+    if (fAll) {
+      setApplying(true); setError("");
+      const res = await applyPriceFormulaAll({ priceBookId: bookId, base: fBase, op: fOp, amount: fAmount, unit: fUnit });
+      setApplying(false);
+      if (res.ok) { setFormula(null); router.refresh(); }
+      else setError(t(res.error as never));
+    } else {
+      await saveCell(row, bookId, computeNew(row, bookId));
+      setFormula(null);
+    }
+  }
+
+  // quản lý bảng giá
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+
+  const defaultBookId = books.find((b) => b.isDefault)?.id ?? books[0]?.id ?? "";
+  const cellKey = (rowId: string, bookId: string) => `${rowId}:${bookId}`;
+
+  async function addBook() {
+    const name = newName.trim();
+    if (!name) { setCreating(false); return; }
+    setError("");
+    const res = await createPriceBook(name);
+    if (res.ok) {
+      setBooks((b) => [...b, { id: res.data.id, name: res.data.name, isDefault: false, sortOrder: b.length }]);
+      setRows((rs) => rs.map((r) => ({ ...r, prices: { ...r.prices, [res.data.id]: null } })));
+      setNewName("");
+      setCreating(false);
+    } else setError(t(res.error as never));
+  }
+
+  async function rename(id: string, name: string) {
+    setEditing(null);
+    const n = name.trim();
+    if (!n) return;
+    setBooks((b) => b.map((x) => (x.id === id ? { ...x, name: n } : x)));
+    const res = await renamePriceBook(id, n);
+    if (!res.ok) setError(t(res.error as never));
+  }
+
+  async function removeBook(id: string) {
+    setError("");
+    const res = await deletePriceBook(id);
+    if (res.ok) {
+      setBooks((b) => b.filter((x) => x.id !== id));
+      setRows((rs) => rs.map((r) => { const p = { ...r.prices }; delete p[id]; return { ...r, prices: p }; }));
+    } else setError(t(res.error as never));
+  }
+
+  async function saveCell(row: Row, bookId: string, value: number | null) {
+    const k = cellKey(row.id, bookId);
+    setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, prices: { ...r.prices, [bookId]: value } } : r)));
+    setSavingCell((s) => new Set(s).add(k));
+    setSavedCell((s) => { const n = new Set(s); n.delete(k); return n; });
+    setError("");
+    const res = await setProductPrice({ priceBookId: bookId, productId: row.id, price: value });
+    setSavingCell((s) => { const n = new Set(s); n.delete(k); return n; });
+    if (res.ok) {
+      setSavedCell((s) => new Set(s).add(k));
+      setTimeout(() => setSavedCell((s) => { const n = new Set(s); n.delete(k); return n; }), 1500);
+    } else setError(t(res.error as never));
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+      {/* thanh quản lý bảng giá */}
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-medium text-slate-500 mr-1">{t("pricing.booksLabel")}</span>
+        {books.map((b) => (
+          <span key={b.id} className="group inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 pl-2.5 pr-1.5 py-1 text-sm">
+            {editing?.id === b.id ? (
+              <input
+                autoFocus
+                value={editing.name}
+                onChange={(e) => setEditing({ id: b.id, name: e.target.value })}
+                onBlur={() => rename(b.id, editing.name)}
+                onKeyDown={(e) => { if (e.key === "Enter") rename(b.id, editing.name); if (e.key === "Escape") setEditing(null); }}
+                className="w-28 px-1 py-0.5 text-sm rounded border border-primary-400 bg-white dark:bg-slate-900"
+              />
+            ) : (
+              <>
+                <span className={cn(b.isDefault && "font-semibold")}>{b.name}</span>
+                <button onClick={() => setEditing({ id: b.id, name: b.name })} className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-primary-600" title={t("common.edit")}>
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                {!b.isDefault && (
+                  <button onClick={() => removeBook(b.id)} className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-500" title={t("common.delete")}>
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </>
+            )}
+          </span>
+        ))}
+        {creating ? (
+          <input
+            autoFocus
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onBlur={addBook}
+            onKeyDown={(e) => { if (e.key === "Enter") addBook(); if (e.key === "Escape") { setCreating(false); setNewName(""); } }}
+            placeholder={t("pricing.newBookPlaceholder")}
+            className="w-36 px-2 py-1 text-sm rounded-lg border border-primary-400 bg-white dark:bg-slate-900"
+          />
+        ) : (
+          <button onClick={() => setCreating(true)} className="inline-flex items-center gap-1 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 px-2.5 py-1 text-sm text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/40">
+            <Plus className="w-3.5 h-3.5" /> {t("pricing.addBook")}
+          </button>
+        )}
+        {error && <span className="text-xs text-red-600 ml-auto">{error}</span>}
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 dark:bg-slate-800/60 text-left text-xs uppercase text-slate-500">
+              <th className="px-4 py-3 font-semibold">{t("orders.cols.product")}</th>
+              <th className="px-4 py-3 font-semibold text-right">{t("pricing.cols.costPrice")}</th>
+              <th className="px-4 py-3 font-semibold text-right">{t("pricing.cols.lastPurchase")}</th>
+              {books.map((b) => (
+                <th key={b.id} className="px-4 py-3 font-semibold text-right whitespace-nowrap">{b.name}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {rows.map((r) => (
+              <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                <td className="px-4 py-2.5">
+                  <div className="font-medium">{r.name}</div>
+                  <div className="text-xs text-slate-400">{r.sku} · {r.baseUnit}</div>
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-slate-500">{formatCurrency(r.costPrice)}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-slate-500">{formatCurrency(r.lastPurchase)}</td>
+                {books.map((b) => {
+                  const k = cellKey(r.id, b.id);
+                  const val = r.prices[b.id];
+                  const fallback = b.id !== defaultBookId && val == null;
+                  const belowCost = val != null && val > 0 && val < r.costPrice;
+                  return (
+                    <td key={b.id} className="px-4 py-2.5 text-right">
+                      <div className="relative inline-flex items-center gap-1 group/cell">
+                        <button
+                          type="button"
+                          onClick={() => openFormula(r.id, b.id)}
+                          title={t("pricing.formula.title")}
+                          className="opacity-0 group-hover/cell:opacity-100 p-1 text-slate-400 hover:text-primary-600"
+                        >
+                          <Calculator className="w-3.5 h-3.5" />
+                        </button>
+                        <MoneyInput
+                          value={val ?? ""}
+                          placeholder={fallback ? formatCurrency(r.prices[defaultBookId] ?? 0) : "—"}
+                          onChange={(v) => {
+                            setRows((rs) => rs.map((x) => (x.id === r.id ? { ...x, prices: { ...x.prices, [b.id]: v } } : x)));
+                          }}
+                          onBlur={() => {
+                            const next = val == null ? (b.id === defaultBookId ? 0 : null) : Math.max(0, val);
+                            saveCell(r, b.id, next);
+                          }}
+                          className={cn(
+                            "w-28 px-2 py-1.5 text-right text-sm rounded-md border bg-white dark:bg-slate-900 tabular-nums",
+                            belowCost ? "border-red-400 text-red-600" : "border-slate-200 dark:border-slate-700",
+                            fallback && "text-slate-400"
+                          )}
+                          title={belowCost ? t("pricing.belowCost") : undefined}
+                        />
+                        {savingCell.has(k) && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400 absolute -right-5" />}
+                        {savedCell.has(k) && <Check className="w-3.5 h-3.5 text-emerald-500 absolute -right-5" />}
+
+                        {formula?.rowId === r.id && formula.bookId === b.id && (
+                          <div className="absolute right-0 top-full mt-1 z-30 w-[420px] text-left bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 space-y-4">
+                            <div className="font-semibold">{t("pricing.formula.title")}</div>
+                            <div className="text-sm">{t("pricing.formula.newPrice")} <span className="text-primary-600 font-bold">[{formatCurrency(computeNew(r, b.id))}]</span></div>
+                            <div className="flex items-center gap-1.5 text-sm flex-wrap">
+                              <span className="text-slate-500">{t("pricing.formula.newPrice")} =</span>
+                              <select value={fBase} onChange={(e) => setFBase(e.target.value as PriceFormulaBase)} className="px-2 py-1.5 text-sm rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
+                                <option value="current">{t("pricing.formula.baseCurrent")}</option>
+                                <option value="cost">{t("pricing.formula.baseCost")}</option>
+                                <option value="lastPurchase">{t("pricing.cols.lastPurchase")}</option>
+                              </select>
+                              <button type="button" onClick={() => setFOp("+")} className={cn("w-7 h-7 grid place-items-center rounded-full border text-sm", fOp === "+" ? "bg-primary-600 text-white border-primary-600" : "border-slate-300 dark:border-slate-700")}>+</button>
+                              <button type="button" onClick={() => setFOp("-")} className={cn("w-7 h-7 grid place-items-center rounded-full border text-sm", fOp === "-" ? "bg-primary-600 text-white border-primary-600" : "border-slate-300 dark:border-slate-700")}>−</button>
+                              <input type="number" min={0} value={fAmount || ""} onChange={(e) => setFAmount(Math.max(0, Number(e.target.value)))} className="no-spinner w-16 px-2 py-1.5 text-right text-sm rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900" />
+                              <div className="inline-flex rounded-md border border-slate-300 dark:border-slate-700 overflow-hidden text-xs">
+                                <button type="button" onClick={() => setFUnit("vnd")} className={cn("px-2 py-1.5", fUnit === "vnd" ? "bg-primary-600 text-white" : "")}>VND</button>
+                                <button type="button" onClick={() => setFUnit("pct")} className={cn("px-2 py-1.5", fUnit === "pct" ? "bg-primary-600 text-white" : "")}>%</button>
+                              </div>
+                            </div>
+                            <label className="flex items-start gap-2 text-sm">
+                              <input type="checkbox" checked={fAll} onChange={(e) => setFAll(e.target.checked)} className="mt-0.5" />
+                              <span>{t("pricing.formula.applyAll", { n: total })} <b>{b.name}</b></span>
+                            </label>
+                            <div className="flex justify-end gap-2 pt-1">
+                              <button type="button" onClick={() => setFormula(null)} className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700">{t("common.cancel")}</button>
+                              <button type="button" onClick={() => applyFormula(r, b.id)} disabled={applying} className="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg bg-primary-600 text-white font-medium disabled:opacity-50">
+                                {applying && <Loader2 className="w-4 h-4 animate-spin" />} {t("common.done")}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

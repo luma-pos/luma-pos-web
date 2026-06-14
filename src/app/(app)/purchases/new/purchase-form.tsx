@@ -1,0 +1,238 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { ArrowLeft, Loader2, Search, Trash2 } from "lucide-react";
+import { Routes } from "@/lib/routes";
+import { cn, formatCurrency } from "@/lib/utils";
+import { Combobox } from "@/components/combobox";
+import { MoneyInput } from "@/components/ui/money-input";
+import { createPurchase } from "@/lib/actions/purchases";
+import { searchPurchaseProducts } from "@/lib/actions/purchase-search";
+import type { PurchaseFormOptions, PurchaseProductRow } from "@/lib/data/inventory";
+
+type PUnit = { unitName: string; multiplier: number };
+type Line = {
+  productId: string; name: string; sku: string;
+  baseUnit: string; baseCost: number; units: PUnit[];
+  unitName: string; multiplier: number; // đơn vị đang chọn
+  quantity: number; unitCost: number;   // theo đơn vị đang chọn
+  discInput: number; discMode: "vnd" | "pct"; // giảm giá dòng
+};
+
+export function PurchaseForm({ options }: { options: PurchaseFormOptions }) {
+  const t = useTranslations();
+  const router = useRouter();
+
+  const [supplierId, setSupplierId] = useState(options.suppliers[0]?.id ?? "");
+  const [warehouseId, setWarehouseId] = useState(options.warehouses[0]?.id ?? "");
+  const [lines, setLines] = useState<Line[]>([]);
+  const [search, setSearch] = useState("");
+  const [discount, setDiscount] = useState(0);
+  const [vatRate, setVatRate] = useState(0);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [amountPaid, setAmountPaid] = useState(0);
+  const [payFull, setPayFull] = useState(false);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  // tìm SP query thẳng DB (bỏ dấu, quét toàn bộ) — giống POS/Sản phẩm
+  const [results, setResults] = useState<PurchaseProductRow[]>([]);
+  useEffect(() => {
+    const q = search.trim();
+    let cancelled = false;
+    const h = setTimeout(() => {
+      if (cancelled) return;
+      if (!q) { setResults([]); return; }
+      searchPurchaseProducts(q).then((rows) => {
+        if (!cancelled) setResults(rows.filter((p) => !lines.some((l) => l.productId === p.id)));
+      }).catch(() => { if (!cancelled) setResults([]); });
+    }, q ? 250 : 0);
+    return () => { cancelled = true; clearTimeout(h); };
+  }, [search, lines]);
+
+  const lineDiscountVnd = (l: Line) =>
+    l.discMode === "pct" ? Math.round((l.quantity * l.unitCost * l.discInput) / 100) : l.discInput;
+  const lineTotal = (l: Line) => Math.max(0, l.quantity * l.unitCost - lineDiscountVnd(l));
+  const subtotal = lines.reduce((s, l) => s + lineTotal(l), 0);
+  const afterDiscount = Math.max(0, subtotal - discount);
+  const tax = Math.round((afterDiscount * vatRate) / 100);
+  const total = afterDiscount + tax;
+  const paid = payFull ? total : Math.min(amountPaid, total);
+  const owed = total - paid;
+
+  function addProduct(p: PurchaseProductRow) {
+    const baseCost = Number(p.costPrice) || 0;
+    const units: PUnit[] = (p.units ?? []).map((u) => ({ unitName: u.unitName, multiplier: Number(u.multiplier) || 1 }));
+    setLines((ls) => [...ls, {
+      productId: p.id, name: p.name, sku: p.sku, baseUnit: p.baseUnit, baseCost, units,
+      unitName: p.baseUnit, multiplier: 1, quantity: 1, unitCost: baseCost, discInput: 0, discMode: "vnd",
+    }]);
+    setSearch("");
+  }
+  function patch(id: string, p: Partial<Line>) {
+    setLines((ls) => ls.map((l) => (l.productId === id ? { ...l, ...p } : l)));
+  }
+  /** Đổi đơn vị tính: cập nhật hệ số + giá nhập theo đơn vị mới (= giá vốn gốc × hệ số). */
+  function changeUnit(id: string, unitName: string) {
+    setLines((ls) => ls.map((l) => {
+      if (l.productId !== id) return l;
+      const mult = unitName === l.baseUnit ? 1 : (l.units.find((u) => u.unitName === unitName)?.multiplier ?? 1);
+      return { ...l, unitName, multiplier: mult, unitCost: Math.round(l.baseCost * mult) };
+    }));
+  }
+
+  async function submit() {
+    if (!supplierId || !warehouseId || lines.length === 0 || busy) return;
+    setBusy(true); setError("");
+    const res = await createPurchase({
+      supplierId, warehouseId,
+      discount, vatRate,
+      invoiceNumber: invoiceNumber || undefined,
+      note: note || undefined,
+      amountPaid: paid,
+      // quy về đơn vị gốc cho action (SL gốc = SL×hệ số; giá vốn/đơn vị gốc = giá nhập/hệ số)
+      items: lines.map((l) => ({
+        productId: l.productId,
+        quantity: l.quantity * l.multiplier,
+        unitCost: l.multiplier > 0 ? l.unitCost / l.multiplier : l.unitCost,
+        discount: lineDiscountVnd(l),
+      })),
+    });
+    setBusy(false);
+    if (res.ok) router.push(Routes.Purchases);
+    else setError(t(res.error as never));
+  }
+
+  const numCls = "no-spinner w-full px-2 py-1.5 text-right text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 tabular-nums";
+  const fieldCls = "w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900";
+
+  return (
+    <div className="h-screen flex flex-col">
+      <header className="shrink-0 h-12 px-4 flex items-center gap-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <button onClick={() => router.push(Routes.Purchases)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"><ArrowLeft className="w-4 h-4" /></button>
+        <h1 className="font-bold">{t("purchases.createNew")}</h1>
+      </header>
+
+      <div className="flex-1 min-h-0 flex">
+        {/* trái: tìm + bảng hàng */}
+        <div className="flex-1 min-w-0 flex flex-col p-4">
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("purchases.searchProduct")} className={cn(fieldCls, "pl-9")} />
+            {results.length > 0 && (
+              <div className="absolute z-20 left-0 right-0 mt-1 max-h-80 overflow-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg">
+                {results.map((p) => (
+                  <button key={p.id} onClick={() => addProduct(p)} className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 flex justify-between gap-2">
+                    <span className="min-w-0"><span className="font-medium text-sm">{p.name}</span><span className="text-xs text-slate-400 ml-1">{p.sku}</span></span>
+                    <span className="text-xs text-slate-500 shrink-0">{formatCurrency(Number(p.costPrice))}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+            {lines.length === 0 ? (
+              <div className="h-full grid place-items-center text-sm text-slate-400">{t("purchases.pickProduct")}</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800/80">
+                  <tr className="text-left text-xs uppercase text-slate-500">
+                    <th className="px-3 py-2.5 font-semibold">{t("orders.cols.product")}</th>
+                    <th className="px-2 py-2.5 font-semibold w-28">{t("products.fields.baseUnit")}</th>
+                    <th className="px-2 py-2.5 font-semibold text-right w-20">{t("purchases.cols.qty")}</th>
+                    <th className="px-2 py-2.5 font-semibold text-right w-28">{t("purchases.cols.unitCost")}</th>
+                    <th className="px-2 py-2.5 font-semibold text-right w-36">{t("orders.cols.discount")}</th>
+                    <th className="px-3 py-2.5 font-semibold text-right w-32">{t("orders.cols.lineTotal")}</th>
+                    <th className="w-9"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {lines.map((l) => (
+                    <tr key={l.productId}>
+                      <td className="px-3 py-2"><div className="font-medium">{l.name}</div><div className="text-xs text-slate-400">{l.sku}</div></td>
+                      <td className="px-2 py-2">
+                        <select value={l.unitName} onChange={(e) => changeUnit(l.productId, e.target.value)}
+                          className="w-full px-2 py-1.5 text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                          <option value={l.baseUnit}>{l.baseUnit}</option>
+                          {l.units.map((u) => <option key={u.unitName} value={u.unitName}>{u.unitName} (×{u.multiplier})</option>)}
+                        </select>
+                      </td>
+                      <td className="px-2 py-2"><input type="number" min={0} value={l.quantity} onChange={(e) => patch(l.productId, { quantity: Math.max(0, Number(e.target.value)) })} className={numCls} /></td>
+                      <td className="px-2 py-2"><MoneyInput value={l.unitCost} onChange={(v) => patch(l.productId, { unitCost: v ?? 0 })} className={numCls} /></td>
+                      <td className="px-2 py-2">
+                        <div className="flex items-center gap-1">
+                          <input type="number" min={0} value={l.discInput || ""} placeholder="0" onChange={(e) => patch(l.productId, { discInput: Math.max(0, Number(e.target.value)) })} className={numCls} />
+                          <div className="flex rounded-md overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
+                            {(["vnd", "pct"] as const).map((m) => (
+                              <button key={m} type="button" onClick={() => patch(l.productId, { discMode: m })}
+                                className={cn("px-1.5 py-1 text-[11px] font-semibold", l.discMode === m ? "bg-primary-600 text-white" : "bg-white dark:bg-slate-900 text-slate-500")}>
+                                {m === "vnd" ? "đ" : "%"}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums font-medium">{formatCurrency(lineTotal(l))}</td>
+                      <td className="px-2 py-2 text-right"><button onClick={() => setLines((ls) => ls.filter((x) => x.productId !== l.productId))} className="text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* phải: NCC + tổng tiền */}
+        <div className="w-[380px] shrink-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col p-4 gap-3 overflow-auto">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t("purchases.cols.supplier")} *</label>
+            <Combobox value={supplierId} onChange={setSupplierId} allowClear={false}
+              placeholder={t("purchases.noSuppliers")}
+              options={options.suppliers.map((s) => ({ value: s.id, label: s.name }))} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t("purchases.cols.warehouse")}</label>
+            <Combobox value={warehouseId} onChange={setWarehouseId} allowClear={false}
+              options={options.warehouses.map((w) => ({ value: w.id, label: w.name }))} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t("purchases.invoiceNumber")}</label>
+            <input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder={t("purchases.invoiceNumberPlaceholder")} className={fieldCls} />
+          </div>
+
+          <div className="mt-1 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5 text-sm">
+            <div className="flex justify-between items-center"><span className="text-slate-500">{t("purchases.subtotal")} ({lines.length})</span><span className="tabular-nums">{formatCurrency(subtotal)}</span></div>
+            <div className="flex justify-between items-center gap-2"><span className="text-slate-500">{t("pos.discount")}</span><MoneyInput value={discount || ""} placeholder="0" onChange={(v) => setDiscount(v ?? 0)} className={cn(numCls, "w-32")} /></div>
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-slate-500">VAT %</span>
+              <div className="flex items-center gap-2">
+                <input type="number" min={0} max={100} value={vatRate || ""} placeholder="0" onChange={(e) => setVatRate(Math.min(100, Math.max(0, Number(e.target.value))))} className={cn(numCls, "w-16")} />
+                <span className="tabular-nums text-slate-500 w-24 text-right">{formatCurrency(tax)}</span>
+              </div>
+            </div>
+            <div className="flex justify-between items-center text-base font-semibold pt-1"><span>{t("purchases.needPay")}</span><span className="text-primary-600 tabular-nums">{formatCurrency(total)}</span></div>
+
+            <label className="flex items-center gap-2 text-sm pt-1"><input type="checkbox" checked={payFull} onChange={(e) => setPayFull(e.target.checked)} className="rounded text-primary-600" />{t("purchases.payFull")}</label>
+            {!payFull && (
+              <div className="flex justify-between items-center gap-2"><span className="text-slate-500">{t("purchases.amountPaid")}</span><MoneyInput value={amountPaid || ""} placeholder="0" onChange={(v) => setAmountPaid(v ?? 0)} className={cn(numCls, "w-36")} /></div>
+            )}
+            <div className="flex justify-between items-center"><span className="text-slate-500">{t("purchases.cols.owed")}</span><span className={cn("tabular-nums font-semibold", owed > 0 ? "text-amber-600" : "text-slate-400")}>{formatCurrency(owed)}</span></div>
+          </div>
+
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("orders.detail.notePlaceholder")} rows={2} className={cn(fieldCls, "resize-none")} />
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
+          <button onClick={submit} disabled={busy || lines.length === 0 || !supplierId} className="mt-auto py-3 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-semibold inline-flex items-center justify-center gap-2">
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />}{t("purchases.receiveNow")} · {formatCurrency(total)}
+          </button>
+          <p className="text-[11px] text-slate-400">{t("purchases.receiveHint")}</p>
+        </div>
+      </div>
+    </div>
+  );
+}

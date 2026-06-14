@@ -1,0 +1,970 @@
+{
+  "common": {
+    "appName": "Sales Mgmt",
+    "loading": "Đang tải...",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "create": "Tạo mới",
+    "search": "Tìm kiếm",
+    "refresh": "Làm mới",
+    "close": "Đóng",
+    "confirm": "Xác nhận",
+    "back": "Quay lại",
+    "language": "Ngôn ngữ",
+    "apply": "Áp dụng",
+    "add": "Thêm",
+    "saved": "Đã lưu",
+    "done": "Xong"
+  },
+  "auth": {
+    "login": "Đăng nhập",
+    "logout": "Đăng xuất",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "loginSubtitle": "Đăng nhập để tiếp tục",
+    "loginButton": "Đăng nhập",
+    "loggingIn": "Đang đăng nhập...",
+    "brandTagline": "Quản lý bán hàng VLXD",
+    "loginTitle": "Đăng nhập",
+    "accountHint": "Tài khoản do quản trị viên cấp",
+    "heroTitle": "Bán hàng nhanh,\nquản kho chặt,\nnợ rõ ràng.",
+    "heroDesc": "POS cho cửa hàng VLXD — tính m² gạch tự động, 4 bảng giá theo nhóm khách, công nợ realtime.",
+    "heroStat1": "Bảng giá theo nhóm khách",
+    "heroStat2": "Tính gạch theo diện tích",
+    "heroStat3": "In hóa đơn mọi khổ"
+  },
+  "nav": {
+    "dashboard": "Tổng quan",
+    "pos": "Bán hàng (POS)",
+    "orders": "Đơn hàng",
+    "products": "Sản phẩm",
+    "inventory": "Tồn kho",
+    "customers": "Khách hàng",
+    "suppliers": "Nhà cung cấp",
+    "reports": "Báo cáo",
+    "settings": "Cài đặt",
+    "purchases": "Nhập hàng",
+    "quotes": "Báo giá",
+    "cashbook": "Sổ quỹ",
+    "delivery": "Giao hàng",
+    "projects": "Công trình",
+    "promotions": "Khuyến mãi",
+    "einvoices": "HĐ điện tử",
+    "groups": {
+      "overview": "Tổng quan",
+      "sales": "Bán hàng",
+      "inventory": "Hàng hóa & kho",
+      "partners": "Đối tác",
+      "finance": "Tài chính",
+      "system": "Hệ thống"
+    },
+    "pricing": "Thiết lập giá",
+    "stocktakes": "Kiểm kho",
+    "collapseSidebar": "Thu gọn menu",
+    "expandSidebar": "Mở menu",
+    "more": "Thêm"
+  },
+  "dashboard": {
+    "title": "Tổng quan",
+    "subtitle": "Tình hình kinh doanh hôm nay",
+    "revenueToday": "Doanh thu hôm nay",
+    "ordersToday": "Đơn hàng hôm nay",
+    "products": "Sản phẩm",
+    "customers": "Khách hàng",
+    "gettingStarted": "Bắt đầu",
+    "gettingStartedDesc": "Setup project xong. Bước tiếp theo:",
+    "step1": "Tạo project Supabase + paste keys vào",
+    "step2": "Chạy",
+    "step2cmd": "để tạo bảng",
+    "step3": "Chạy",
+    "step3cmd": "để có data mẫu",
+    "step4": "Import data từ KiotViet (Excel)",
+    "step5": "Tạo sản phẩm đầu tiên",
+    "revenue7d": "Doanh thu 7 ngày",
+    "receivable": "Công nợ phải thu",
+    "lowStockCount": "SP sắp hết",
+    "ordersCount": "{count} đơn",
+    "debtors": "{count} khách đang nợ",
+    "revenueByDay": "Doanh thu theo ngày",
+    "noData": "Chưa có dữ liệu",
+    "lowStockTitle": "Cảnh báo tồn kho",
+    "stockOk": "Tồn kho ổn ✓",
+    "viewAll": "Xem tất cả →",
+    "recentOrders": "Đơn hàng gần đây",
+    "topDebtors": "Nợ nhiều nhất",
+    "noDebt": "Không có công nợ 🎉",
+    "range": {
+      "today": "Hôm nay",
+      "7d": "7 ngày",
+      "30d": "30 ngày",
+      "month": "Tháng này"
+    },
+    "revenueLabel": {
+      "today": "Doanh thu hôm nay",
+      "7d": "Doanh thu 7 ngày",
+      "30d": "Doanh thu 30 ngày",
+      "month": "Doanh thu tháng này"
+    },
+    "grossProfit": "Lợi nhuận gộp",
+    "marginPct": "biên {pct}%",
+    "ordersLabel": "Đơn hàng",
+    "avgPerOrder": "TB {avg}/đơn",
+    "unitMillion": "Đơn vị: triệu ₫",
+    "stockOfMin": "Còn {stock} {unit} · min {min}",
+    "badgeCritical": "Sắp hết",
+    "badgeLow": "Thấp",
+    "createPurchase": "Tạo phiếu nhập hàng",
+    "allOrders": "Tất cả đơn →",
+    "debtLink": "Công nợ →",
+    "pctOfLimit": "{pct}% hạn mức",
+    "noLimit": "Không hạn mức",
+    "totalReceivable": "Tổng phải thu"
+  },
+  "pos": {
+    "searchPlaceholder": "Tìm sản phẩm theo tên / SKU / barcode... (F2)",
+    "order": "Đơn hàng",
+    "calcTiles": "Tính m²",
+    "noItems": "Chưa có sản phẩm nào",
+    "subtotal": "Tạm tính",
+    "total": "Tổng cộng",
+    "checkout": "Thanh toán (F9)",
+    "tileCalc": {
+      "title": "Tính số viên gạch",
+      "width": "Rộng (m)",
+      "length": "Dài (m)",
+      "m2PerUnit": "m²/viên",
+      "wastePct": "% hao hụt",
+      "result": "Diện tích",
+      "needTiles": "Cần",
+      "tilesUnit": "viên",
+      "wasteIncluded": "(đã + hao hụt)"
+    },
+    "stockLabel": "Tồn",
+    "noProducts": "Chưa có sản phẩm — thêm sản phẩm trước khi bán.",
+    "walkInCustomer": "Khách lẻ (không lưu)",
+    "projectPlaceholder": "Công trình (tùy chọn)…",
+    "customerDebt": "Đang nợ: {debt}",
+    "discount": "Giảm giá",
+    "shipping": "Vận chuyển",
+    "paidAmount": "Khách trả",
+    "willOweAmount": "Ghi nợ: {amount}",
+    "payMethods": {
+      "cash": "Tiền mặt",
+      "bank_transfer": "Chuyển khoản",
+      "credit": "Ghi nợ",
+      "card": "Quẹt thẻ",
+      "vnpay": "VNPay",
+      "momo": "MoMo"
+    },
+    "errors": {
+      "creditNeedsCustomer": "Ghi nợ cần chọn khách hàng có hồ sơ.",
+      "emptyCart": "Giỏ hàng trống."
+    },
+    "saveQuote": "Lưu báo giá",
+    "noProject": "— Công trình có sẵn —",
+    "allCategories": "Tất cả",
+    "held": {
+      "title": "Đơn tạm ({count})",
+      "hold": "Lưu tạm",
+      "holdHint": "Cất giỏ này để bán khách khác — mở lại từ hàng Đơn tạm",
+      "walkIn": "Khách lẻ"
+    },
+    "dragToReorder": "Kéo để sắp xếp",
+    "invoice": {
+      "tab": "Đơn {n}",
+      "add": "Thêm hóa đơn",
+      "close": "Đóng hóa đơn",
+      "newOrder": "Đơn mới"
+    },
+    "priceEditor": {
+      "unitPrice": "Đơn giá",
+      "discount": "Giảm giá",
+      "sellPrice": "Giá bán",
+      "editHint": "Sửa giá / giảm giá"
+    },
+    "noSearchResults": "Không tìm thấy sản phẩm phù hợp",
+    "offline": {
+      "banner": "Đang offline — đơn sẽ tự đồng bộ khi có mạng",
+      "syncing": "Đang đồng bộ…",
+      "pending": "Chờ đồng bộ {n} đơn",
+      "savedToast": "Đã lưu đơn (offline)"
+    },
+    "priceBook": {
+      "title": "Chọn bảng giá",
+      "auto": "Theo nhóm khách",
+      "retail": "Giá lẻ",
+      "wholesale": "Giá sỉ",
+      "contractor": "Giá thầu",
+      "agent": "Giá đại lý"
+    },
+    "printSlip": "In",
+    "tempSlipTitle": "PHIẾU TẠM TÍNH",
+    "printA5": "In phiếu A5",
+    "printK80": "In bill K80"
+  },
+  "stub": {
+    "wip": "Đang phát triển..."
+  },
+  "products": {
+    "title": "Sản phẩm",
+    "create": "Tạo hàng hóa",
+    "edit": "Sửa hàng hóa",
+    "createNew": "Thêm mới",
+    "saveAndCreate": "Lưu & Tạo thêm",
+    "directSale": "Bán trực tiếp",
+    "tabs": {
+      "info": "Thông tin",
+      "description": "Mô tả",
+      "variants": "Đơn vị & thuộc tính"
+    },
+    "fields": {
+      "sku": "Mã hàng",
+      "skuPlaceholder": "Tự động",
+      "barcode": "Mã vạch",
+      "barcodePlaceholder": "Nhập mã vạch",
+      "name": "Tên hàng",
+      "namePlaceholder": "Bắt buộc",
+      "category": "Nhóm hàng",
+      "categoryPlaceholder": "Chọn nhóm hàng",
+      "brand": "Thương hiệu",
+      "brandPlaceholder": "Chọn thương hiệu",
+      "createNew": "Tạo mới",
+      "image": "Hình ảnh",
+      "addImage": "Thêm ảnh",
+      "imageHint": "Mỗi ảnh không quá 2 MB",
+      "baseUnit": "Đơn vị tính",
+      "unitName": "Tên đơn vị",
+      "multiplier": "Quy đổi",
+      "multiplierHint": "1 đơn vị = N {unit}",
+      "supplier": "Nhà cung cấp",
+      "supplierPlaceholder": "Chọn nhà cung cấp",
+      "suppliers": "Nhà cung cấp",
+      "primarySupplier": "Chính",
+      "addSupplier": "+ Thêm nhà cung cấp",
+      "primaryImage": "Ảnh chính",
+      "imageUploadError": "Tải ảnh thất bại"
+    },
+    "sections": {
+      "pricing": "Giá vốn, giá bán",
+      "pricingDesc": "Giá vốn nhập kho và các bảng giá bán",
+      "stock": "Tồn kho",
+      "stockDesc": "Quản lý số lượng tồn kho và định mức tồn",
+      "physical": "Vị trí, trọng lượng, kích thước",
+      "physicalDesc": "Quản lý việc sắp xếp kho, vị trí bán hàng hoặc quy cách giao hàng",
+      "warranty": "Bảo hành",
+      "warrantyDesc": "Cấu hình thời gian bảo hành sản phẩm",
+      "units": "Đơn vị tính",
+      "unitsDesc": "Thêm đơn vị bán hoặc nhập như chai, lốc, thùng",
+      "attributes": "Thuộc tính sản phẩm",
+      "attributesDesc": "Thêm đặc điểm như màu sắc, kích thước, bề mặt, áp lực..."
+    },
+    "pricing": {
+      "costPrice": "Giá vốn",
+      "retailPrice": "Giá bán lẻ",
+      "wholesalePrice": "Giá sỉ",
+      "contractorPrice": "Giá thợ",
+      "agentPrice": "Giá đại lý",
+      "setupPriceTiers": "Thiết lập bảng giá",
+      "priceBookHint": "Giá sỉ/thầu/đại lý quản lý ở mục Thiết lập giá (bảng giá)"
+    },
+    "stock": {
+      "current": "Tồn kho",
+      "min": "Định mức tồn thấp nhất",
+      "max": "Định mức tồn cao nhất"
+    },
+    "physical": {
+      "location": "Vị trí",
+      "locationPlaceholder": "Chọn vị trí",
+      "weight": "Trọng lượng",
+      "dimensions": "Kích thước",
+      "width": "Rộng",
+      "length": "Dài",
+      "thickness": "Dày"
+    },
+    "attributes": {
+      "empty": "Chưa có thuộc tính nào. Thêm để mô tả màu sắc, kích thước, áp lực...",
+      "add": "Thêm thuộc tính",
+      "namePlaceholder": "Chọn thuộc tính",
+      "valuePlaceholder": "Nhập giá trị và Enter"
+    },
+    "units": {
+      "baseUnit": "Đơn vị cơ bản",
+      "baseUnitPlaceholder": "viên, cái, m, kg...",
+      "addUnit": "Thêm đơn vị",
+      "unitName": "Tên đơn vị",
+      "unitNamePlaceholder": "hộp, thùng, m²...",
+      "multiplier": "Quy đổi",
+      "multiplierHint": "1 {unit} = {count} {base}",
+      "barcode": "Mã vạch riêng",
+      "priceOverride": "Giá riêng (tùy chọn)"
+    },
+    "description": {
+      "main": "Mô tả",
+      "invoiceNote": "Mẫu ghi chú (hóa đơn, đặt hàng)"
+    },
+    "list": {
+      "searchPlaceholder": "Tìm tên, SKU, barcode…",
+      "allCategories": "Danh mục: Tất cả",
+      "total": "{total} sản phẩm",
+      "empty": "Chưa có sản phẩm nào",
+      "emptyHint": "Bấm \"Thêm sản phẩm\" để tạo sản phẩm đầu tiên, hoặc đổi bộ lọc tìm kiếm.",
+      "colProduct": "Sản phẩm",
+      "colCategory": "Danh mục",
+      "colUnits": "Đơn vị",
+      "colRetail": "Giá lẻ",
+      "colContractor": "Giá thầu",
+      "colStock": "Tồn kho",
+      "colStatus": "Trạng thái",
+      "active": "Đang bán",
+      "inactive": "Ngừng bán",
+      "pageOf": "Trang {page} / {pageCount}",
+      "prev": "← Trước",
+      "next": "Sau →",
+      "statusActive": "Đang bán",
+      "statusInactive": "Ngừng bán",
+      "statusAll": "Tất cả trạng thái"
+    },
+    "errors": {
+      "skuExists": "SKU đã tồn tại — chọn mã khác."
+    },
+    "editTitle": "Sửa sản phẩm",
+    "unitLabel": "hàng hóa"
+  },
+  "validation": {
+    "required": "Bắt buộc",
+    "email": "Email không hợp lệ",
+    "min": "Tối thiểu {min} ký tự",
+    "max": "Tối đa {max} ký tự",
+    "minNumber": "Tối thiểu {min}",
+    "maxNumber": "Tối đa {max}",
+    "url": "URL không hợp lệ",
+    "phone": "Số điện thoại không hợp lệ",
+    "passwordTooShort": "Mật khẩu tối thiểu 6 ký tự"
+  },
+  "errors": {
+    "unauthorized": "Phiên đăng nhập hết hạn — đăng nhập lại.",
+    "invalidData": "Dữ liệu không hợp lệ.",
+    "serverError": "Có lỗi xảy ra, thử lại sau."
+  },
+  "orders": {
+    "title": "Đơn hàng",
+    "total": "{total} đơn",
+    "createViaPos": "Tạo đơn (POS)",
+    "searchPlaceholder": "Tìm mã đơn, khách hàng, công trình…",
+    "empty": "Chưa có đơn hàng nào",
+    "walkIn": "Khách lẻ",
+    "tabs": {
+      "all": "Tất cả",
+      "completed": "Hoàn tất",
+      "owing": "Còn nợ",
+      "cancelled": "Đã hủy",
+      "returned": "Đã trả hàng"
+    },
+    "cols": {
+      "code": "Mã đơn",
+      "date": "Ngày",
+      "customer": "Khách hàng",
+      "project": "Công trình",
+      "total": "Tổng tiền",
+      "remaining": "Còn nợ",
+      "payment": "Thanh toán",
+      "status": "Trạng thái",
+      "product": "Sản phẩm",
+      "unit": "Đơn vị",
+      "qty": "SL",
+      "unitPrice": "Đơn giá",
+      "lineTotal": "Thành tiền",
+      "discount": "Giảm giá"
+    },
+    "status": {
+      "draft": "Nháp",
+      "quote": "Báo giá",
+      "confirmed": "Đã xác nhận",
+      "delivering": "Đang giao",
+      "completed": "Hoàn tất",
+      "cancelled": "Đã hủy",
+      "returned": "Đã trả hàng",
+      "merged": "Đã gộp"
+    },
+    "paymentStatus": {
+      "unpaid": "Chưa TT",
+      "deposit": "Đặt cọc",
+      "partial": "TT một phần",
+      "paid": "Đã TT",
+      "refunded": "Đã hoàn"
+    },
+    "detail": {
+      "items": "Sản phẩm",
+      "payments": "Thanh toán",
+      "noPayments": "Chưa có thanh toán nào",
+      "remaining": "Còn lại phải thu",
+      "addPayment": "Ghi nhận thanh toán / thu nợ",
+      "amount": "Số tiền",
+      "receive": "Thu",
+      "notePlaceholder": "Ghi chú…",
+      "customer": "Khách hàng",
+      "info": "Thông tin đơn",
+      "warehouse": "Kho xuất",
+      "seller": "Người bán",
+      "cancel": "Hủy đơn",
+      "cancelConfirm": "Hủy đơn này? Kho sẽ được hoàn lại và công nợ được điều chỉnh."
+    },
+    "errors": {
+      "nothingToPay": "Đơn này không còn gì để thu.",
+      "alreadyCancelled": "Đơn đã hủy trước đó."
+    },
+    "batchHint": "Tick chọn nhiều đơn để in cùng lúc (tối đa 20)",
+    "printSelected": "In đã chọn",
+    "batchEmpty": "Chưa chọn đơn nào để in — quay lại tick chọn.",
+    "batchCount": "Đang in {count} hóa đơn — mỗi hóa đơn 1 trang",
+    "paymentFilter": {
+      "all": "Tất cả thanh toán",
+      "paid": "Đã thanh toán",
+      "partial": "Một phần",
+      "unpaid": "Chưa thanh toán"
+    },
+    "filter": {
+      "from": "Từ ngày",
+      "to": "Đến ngày",
+      "clear": "Xóa lọc"
+    },
+    "unitLabel": "đơn hàng"
+  },
+  "customers": {
+    "title": "Khách hàng",
+    "total": "{total} khách",
+    "totalDebt": "Tổng nợ: {debt}",
+    "createNew": "Thêm khách hàng",
+    "searchPlaceholder": "Tìm tên, SĐT, mã KH…",
+    "empty": "Chưa có khách hàng nào",
+    "tabs": {
+      "all": "Tất cả",
+      "retail": "Khách lẻ",
+      "wholesale": "Khách sỉ",
+      "contractor": "Nhà thầu",
+      "agent": "Đại lý",
+      "owing": "Đang nợ"
+    },
+    "types": {
+      "retail": "Lẻ",
+      "wholesale": "Sỉ",
+      "contractor": "Thầu",
+      "agent": "Đại lý"
+    },
+    "cols": {
+      "name": "Khách hàng",
+      "phone": "SĐT",
+      "type": "Nhóm giá",
+      "totalSpent": "Tổng mua",
+      "debt": "Công nợ",
+      "debtLimit": "Hạn mức"
+    },
+    "fields": {
+      "name": "Tên khách hàng",
+      "namePlaceholder": "VD: Anh Tuấn (thầu)",
+      "address": "Địa chỉ",
+      "taxCode": "Mã số thuế",
+      "debtLimit": "Hạn mức công nợ",
+      "debtLimitHint": "0 = không cho ghi nợ",
+      "note": "Ghi chú"
+    },
+    "debtOfLimit": "{pct}% hạn mức {limit}",
+    "orderCount": "{count} đơn gần nhất",
+    "owingOrders": "{count} đơn còn nợ",
+    "collectHint": "Mở từng đơn để ghi nhận thu nợ.",
+    "orderHistory": "Lịch sử đơn hàng",
+    "editTitle": "Sửa khách hàng",
+    "unitLabel": "khách hàng"
+  },
+  "suppliers": {
+    "title": "Nhà cung cấp",
+    "total": "{total} NCC",
+    "createNew": "Thêm NCC",
+    "searchPlaceholder": "Tìm tên, SĐT…",
+    "empty": "Chưa có nhà cung cấp nào",
+    "cols": {
+      "name": "Nhà cung cấp",
+      "debt": "Nợ phải trả"
+    },
+    "filter": {
+      "allDebt": "Tất cả công nợ",
+      "owing": "Còn nợ",
+      "clear": "Hết nợ"
+    },
+    "purchaseHistory": "Lịch sử nhập hàng",
+    "noPurchases": "Chưa có phiếu nhập",
+    "unitLabel": "nhà cung cấp"
+  },
+  "purchases": {
+    "title": "Nhập hàng",
+    "total": "{total} phiếu",
+    "createNew": "Tạo phiếu nhập",
+    "empty": "Chưa có phiếu nhập nào",
+    "emptyHint": "Tạo phiếu nhập để cộng tồn kho và cập nhật giá vốn.",
+    "cols": {
+      "code": "Mã phiếu",
+      "supplier": "Nhà cung cấp",
+      "warehouse": "Kho nhận",
+      "owed": "Nợ NCC",
+      "qty": "SL nhập",
+      "unitCost": "Giá nhập",
+      "itemCount": "Số mặt hàng",
+      "total": "Tổng tiền"
+    },
+    "status": {
+      "received": "Đã nhận",
+      "draft": "Nháp",
+      "cancelled": "Đã hủy",
+      "returned": "Trả hàng nhập"
+    },
+    "addProduct": "Thêm sản phẩm vào phiếu",
+    "pickProduct": "— Chọn sản phẩm —",
+    "unitLabel": "phiếu nhập",
+    "noSuppliers": "Chưa có NCC — tạo ở mục Nhà cung cấp",
+    "payFull": "Thanh toán đủ cho NCC",
+    "amountPaid": "Đã trả NCC",
+    "receiveNow": "Lưu & nhận hàng ngay",
+    "receiveHint": "Nhận hàng ngay: cộng tồn kho, cập nhật giá vốn theo giá nhập, phần chưa trả ghi vào nợ NCC.",
+    "errors": {
+      "emptyItems": "Phiếu nhập cần ít nhất 1 sản phẩm."
+    },
+    "searchPlaceholder": "Tìm mã phiếu, nhà cung cấp...",
+    "searchProduct": "Tìm hàng theo tên / mã (F3)",
+    "invoiceNumber": "Số hóa đơn đầu vào",
+    "invoiceNumberPlaceholder": "Nhập số hóa đơn...",
+    "subtotal": "Tổng tiền hàng",
+    "needPay": "Cần trả NCC"
+  },
+  "inventory": {
+    "title": "Tồn kho",
+    "totalValue": "Giá trị tồn kho",
+    "byCost": "Theo giá vốn",
+    "lowStock": "Sắp hết hàng",
+    "belowMin": "Dưới tồn tối thiểu",
+    "recentMoves": "Biến động gần đây",
+    "last20": "20 giao dịch gần nhất",
+    "searchPlaceholder": "Tìm sản phẩm…",
+    "lowOnly": "Chỉ sắp hết",
+    "empty": "Không có sản phẩm phù hợp",
+    "cols": {
+      "stock": "Tồn",
+      "min": "Min",
+      "value": "Giá trị"
+    },
+    "statusLow": "Sắp hết",
+    "statusOk": "Đủ hàng",
+    "movementsTitle": "Lịch sử xuất nhập",
+    "noMovements": "Chưa có biến động kho",
+    "moveTypes": {
+      "purchase": "Nhập hàng",
+      "sale": "Bán hàng",
+      "return_in": "Hoàn kho",
+      "return_out": "Trả NCC",
+      "transfer": "Chuyển kho",
+      "adjust": "Kiểm kê",
+      "init": "Tồn đầu"
+    },
+    "stockFilter": {
+      "all": "Tất cả tồn",
+      "instock": "Còn hàng",
+      "low": "Sắp hết",
+      "out": "Hết hàng"
+    }
+  },
+  "reports": {
+    "title": "Báo cáo",
+    "lastNDays": "{n} ngày",
+    "revenue": "Doanh thu",
+    "collected": "Đã thu",
+    "uncollected": "Chưa thu",
+    "orders": "Số đơn",
+    "avgOrder": "TB {avg}/đơn",
+    "topProducts": "Top sản phẩm theo doanh thu",
+    "qtySold": "SL bán",
+    "grossProfit": "Lãi gộp",
+    "byCategory": "Doanh thu theo danh mục",
+    "topCustomers": "Top khách hàng theo doanh thu",
+    "byEmployee": "Theo nhân viên",
+    "employee": "Nhân viên"
+  },
+  "returns": {
+    "action": "Trả hàng",
+    "titleFor": "Trả hàng — {code}",
+    "sectionTitle": "Phiếu trả hàng",
+    "returnedQty": "đã trả {qty} {unit}",
+    "cols": {
+      "bought": "Đã mua",
+      "returned": "Đã trả",
+      "returnNow": "Trả lần này",
+      "restock": "Nhập lại kho",
+      "refund": "Hoàn lại"
+    },
+    "restockYes": "Nhập lại kho bán",
+    "restockNo": "Hàng hỏng — bỏ",
+    "reason": "Lý do trả",
+    "pickReason": "— Chọn lý do —",
+    "reasons": {
+      "defective": "Hàng lỗi / bảo hành",
+      "wrong_item": "Giao sai hàng",
+      "changed_mind": "Khách đổi ý",
+      "other": "Khác"
+    },
+    "refundVia": "Hoàn bằng",
+    "refundMethods": {
+      "cash": "Tiền mặt",
+      "bank_transfer": "Chuyển khoản",
+      "debt_deduct": "Trừ công nợ"
+    },
+    "currentDebtOf": "{name} đang nợ {debt}",
+    "totalRefund": "Tổng hoàn trả",
+    "submit": "Lập phiếu trả hàng",
+    "errors": {
+      "emptyItems": "Chọn ít nhất 1 sản phẩm để trả.",
+      "qtyExceeds": "Số lượng trả vượt quá số đã mua.",
+      "orderCancelled": "Đơn đã hủy — không thể trả hàng.",
+      "debtNeedsCustomer": "Trừ công nợ cần đơn có khách hàng.",
+      "debtTooSmall": "Công nợ hiện tại nhỏ hơn số tiền hoàn — chọn hoàn tiền mặt/CK."
+    }
+  },
+  "print": {
+    "title": "In hóa đơn",
+    "printBtn": "In",
+    "invoiceTitle": "HÓA ĐƠN BÁN HÀNG",
+    "number": "Số",
+    "date": "Ngày",
+    "deliverTo": "Giao đến",
+    "grandTotal": "TỔNG CỘNG",
+    "paid": "Đã thanh toán",
+    "remaining": "Còn lại",
+    "inWords": "Bằng chữ",
+    "thanks": "Cảm ơn quý khách!",
+    "buyerSign": "Khách hàng",
+    "delivererSign": "Người giao",
+    "sellerSign": "Người lập",
+    "signHint": "(ký, họ tên)",
+    "footerNote": "Vui lòng kiểm tra hàng khi nhận. Hàng nguyên kiện chưa khui được đổi/trả trong 7 ngày.",
+    "editTemplate": "Sửa mẫu in",
+    "titles": {
+      "order": "HÓA ĐƠN BÁN HÀNG",
+      "quote": "BÁO GIÁ",
+      "purchase": "PHIẾU NHẬP KHO",
+      "purchaseDraft": "ĐƠN ĐẶT HÀNG NCC",
+      "return": "PHIẾU TRẢ HÀNG"
+    },
+    "supplierSign": "Nhà cung cấp",
+    "receiverSign": "Người nhận"
+  },
+  "printSettings": {
+    "title": "Mẫu in",
+    "settingsDesc": "Thông tin cửa hàng, khổ giấy A4/A5/K80, tùy chọn hiển thị cho từng loại chứng từ",
+    "docTypes": {
+      "order": "Hóa đơn bán hàng",
+      "quote": "Báo giá",
+      "purchase": "Phiếu nhập / Đặt NCC",
+      "return": "Phiếu trả hàng",
+      "receipt": "Phiếu thu / chi"
+    },
+    "previewTitles": {
+      "order": "HÓA ĐƠN BÁN HÀNG",
+      "quote": "BÁO GIÁ",
+      "purchase": "PHIẾU NHẬP KHO",
+      "return": "PHIẾU TRẢ HÀNG",
+      "receipt": "PHIẾU THU"
+    },
+    "storeSection": "Thông tin cửa hàng (in trên đầu chứng từ)",
+    "storeName": "Tên cửa hàng",
+    "storeAddress": "Địa chỉ",
+    "storePhone": "Điện thoại",
+    "storeTaxCode": "Mã số thuế",
+    "paperDefault": "Khổ giấy mặc định",
+    "applyAll": "Áp dụng thông tin cửa hàng cho tất cả mẫu",
+    "appliedAll": "Đã áp dụng cho cả 5 mẫu — nhớ Lưu từng mẫu.",
+    "optionsSection": "Hiển thị trên chứng từ",
+    "toggles": {
+      "showSeller": "Tên người lập/bán",
+      "showProject": "Công trình",
+      "showDebt": "Đã trả / còn nợ",
+      "showInWords": "Số tiền bằng chữ",
+      "showSignatures": "Khu vực chữ ký",
+      "showSku": "Mã SKU cạnh tên SP"
+    },
+    "footerNote": "Ghi chú chân trang (chính sách đổi trả, cảm ơn…)",
+    "saveFor": "Lưu mẫu: {type}",
+    "saved": "Đã lưu mẫu in ✓",
+    "preview": "Xem trước (rút gọn)",
+    "previewHint": "Khi in thật, mẫu tự dàn trang theo khổ A4/A5/K80 đã chọn."
+  },
+  "settings": {
+    "moreSoon": "Các mục cài đặt khác (nhân viên, phân quyền, HĐĐT…) sẽ bổ sung theo lộ trình."
+  },
+  "quotes": {
+    "title": "Báo giá",
+    "total": "{total} báo giá",
+    "createViaPos": "Tạo báo giá (POS)",
+    "empty": "Chưa có báo giá nào",
+    "emptyHint": "Tạo giỏ hàng ở POS rồi bấm 'Lưu báo giá'.",
+    "cols": {
+      "code": "Mã BG",
+      "value": "Giá trị"
+    },
+    "convert": "Chốt thành đơn",
+    "convertConfirm": "Chốt báo giá này thành đơn bán? Kho sẽ trừ và ghi công nợ.",
+    "cancelConfirm": "Hủy báo giá này?",
+    "errors": {
+      "notAQuote": "Đây không phải báo giá đang mở."
+    }
+  },
+  "cashbook": {
+    "title": "Sổ quỹ thu chi",
+    "createTx": "Phiếu thu / chi",
+    "fundCash": "Tiền mặt",
+    "fundBank": "Ngân hàng",
+    "totalBalance": "Tổng số dư",
+    "autoHint": "Bán hàng, thu nợ, trả NCC, hoàn trả tự ghi vào sổ",
+    "typeTabs": {
+      "all": "Tất cả",
+      "in": "Thu",
+      "out": "Chi"
+    },
+    "empty": "Chưa có giao dịch nào",
+    "cols": {
+      "code": "Mã phiếu",
+      "category": "Loại",
+      "note": "Diễn giải",
+      "fund": "Quỹ",
+      "amount": "Số tiền"
+    },
+    "categories": {
+      "sale": "Thu bán hàng",
+      "debt_collect": "Thu nợ",
+      "supplier_payment": "Trả NCC",
+      "refund": "Hoàn trả khách",
+      "expense": "Chi vận hành",
+      "other": "Khác"
+    },
+    "notePlaceholder": "Diễn giải (bắt buộc)…",
+    "unitLabel": "giao dịch"
+  },
+  "orderEdit": {
+    "title": "Sửa đơn {code}",
+    "action": "Sửa đơn",
+    "warning": "Sửa đơn sẽ hoàn kho các dòng cũ và trừ kho theo dòng mới; công nợ tính lại theo chênh lệch. Đơn đã có trả hàng thì không sửa được.",
+    "oldTotal": "Tổng cũ",
+    "newTotal": "Tổng mới",
+    "delta": "Chênh lệch",
+    "newRemaining": "Còn phải thu",
+    "save": "Lưu thay đổi",
+    "errors": {
+      "notEditable": "Đơn này không sửa được (đã hủy/đã trả/đã gộp).",
+      "hasReturns": "Đơn đã có phiếu trả hàng — không sửa được.",
+      "hasEInvoice": "Đơn đã phát hành HĐĐT — không sửa/hủy được. Cần hủy HĐĐT trước."
+    }
+  },
+  "merge": {
+    "title": "Gộp hóa đơn",
+    "noneSelected": "Chưa chọn đơn nào — quay lại danh sách tick chọn.",
+    "totalMerged": "Tổng {count} đơn gộp",
+    "confirm": "Gộp {count} đơn",
+    "hint": "Items và thanh toán chuyển sang đơn gộp; đơn gốc chuyển trạng thái 'Đã gộp' (kho & công nợ không đổi). Chỉ gộp đơn cùng khách, chưa trả hàng.",
+    "errNoCustomer": "Khách lẻ — không gộp được",
+    "errStatus": "Trạng thái không hợp lệ",
+    "errors": {
+      "needTwo": "Chọn ít nhất 2 đơn.",
+      "onlyCompleted": "Chỉ gộp đơn hoàn tất.",
+      "sameCustomer": "Các đơn phải cùng một khách hàng.",
+      "hasReturns": "Có đơn đã trả hàng — không gộp được.",
+      "hasEInvoice": "Có đơn đã phát hành HĐĐT — không gộp được."
+    }
+  },
+  "projects": {
+    "title": "Công trình",
+    "total": "{total} công trình",
+    "createNew": "Thêm công trình",
+    "empty": "Chưa có công trình nào",
+    "emptyHint": "Tạo công trình để gắn vào đơn khi bán ở POS.",
+    "cols": {
+      "name": "Công trình",
+      "orders": "Số đơn",
+      "value": "Giá trị vật tư"
+    },
+    "status": {
+      "active": "Đang chạy",
+      "done": "Hoàn tất"
+    },
+    "noCustomer": "— Không gắn khách —",
+    "markDone": "Hoàn tất",
+    "reopen": "Mở lại"
+  },
+  "promos": {
+    "title": "Khuyến mãi",
+    "total": "{total} chương trình",
+    "createNew": "Tạo khuyến mãi",
+    "empty": "Chưa có khuyến mãi nào",
+    "emptyHint": "Tạo chiết khấu bậc thang theo số lượng — POS tự áp giá.",
+    "cols": {
+      "name": "Chương trình",
+      "tiers": "Bậc giảm giá",
+      "period": "Thời gian"
+    },
+    "active": "Đang chạy",
+    "inactive": "Tạm dừng",
+    "noEnd": "không giới hạn",
+    "pause": "Tạm dừng",
+    "resume": "Chạy lại",
+    "addTier": "Thêm bậc",
+    "discount": "giảm",
+    "endsAt": "Kết thúc",
+    "posHint": "POS tự áp bậc giảm tốt nhất theo số lượng (tính theo đơn vị gốc) và hiện badge KM trên dòng hàng.",
+    "errors": {
+      "needTier": "Cần ít nhất 1 bậc giảm giá."
+    }
+  },
+  "delivery": {
+    "title": "Giao hàng / điều xe",
+    "createTrip": "Tạo chuyến xe",
+    "createTripBtn": "Tạo chuyến ({count} đơn)",
+    "empty": "Chưa có chuyến xe nào",
+    "emptyHint": "Gom các đơn đã bán vào một chuyến để giao.",
+    "vehicle": "Xe (biển số)",
+    "driver": "Tài xế",
+    "noOrders": "Không còn đơn chờ xếp chuyến.",
+    "status": {
+      "planned": "Chờ xuất bến",
+      "ongoing": "Đang giao",
+      "done": "Hoàn tất"
+    },
+    "stopsDone": "điểm đã giao",
+    "departed": "Xuất bến",
+    "start": "Xuất bến",
+    "markDelivered": "Đã giao",
+    "errors": {
+      "needOrders": "Chọn ít nhất 1 đơn."
+    }
+  },
+  "einvoice": {
+    "title": "Hóa đơn điện tử",
+    "issue": "Phát hành HĐĐT",
+    "issued": "Đã phát hành",
+    "stubNote": "Đang dùng bộ phát hành nội bộ (stub) — số HĐ cấp tuần tự. Khi tích hợp Viettel S-Invoice/VNPT/MISA chỉ thay 1 hàm issueWithProvider().",
+    "empty": "Chưa phát hành HĐĐT nào",
+    "emptyHint": "Phát hành từ trang chi tiết đơn hàng.",
+    "cols": {
+      "number": "Số HĐ",
+      "issuedAt": "Ngày phát hành",
+      "order": "Đơn nguồn",
+      "buyer": "Người mua",
+      "beforeVat": "Trước VAT"
+    },
+    "errors": {
+      "onlyCompleted": "Chỉ phát hành cho đơn hoàn tất.",
+      "alreadyIssued": "Đơn này đã có HĐĐT."
+    }
+  },
+  "portal": {
+    "linkTitle": "Link đặt hàng online",
+    "desc": "Tạo link riêng để khách tự đặt hàng theo bảng giá của họ — đơn về dạng chờ xác nhận.",
+    "generate": "Tạo link",
+    "regenerate": "Đổi link mới",
+    "copy": "Copy link",
+    "copied": "Đã copy ✓",
+    "hint": "Gửi link qua Zalo cho khách. Đổi link mới sẽ vô hiệu link cũ.",
+    "errors": {
+      "invalidToken": "Link không hợp lệ."
+    }
+  },
+  "pricing": {
+    "title": "Thiết lập giá",
+    "cols": {
+      "costPrice": "Giá vốn",
+      "retailPrice": "Giá lẻ",
+      "wholesalePrice": "Giá sỉ",
+      "contractorPrice": "Giá thầu",
+      "agentPrice": "Giá đại lý",
+      "lastPurchase": "Giá nhập cuối"
+    },
+    "markupTool": "Áp giá = giá vốn +",
+    "markupHint": "(áp cho các dòng đang hiển thị, nhớ Lưu từng dòng)",
+    "belowCost": "Giá thấp hơn giá vốn!",
+    "saved": "Đã lưu",
+    "booksCount": "{n} bảng giá",
+    "booksLabel": "Bảng giá",
+    "addBook": "Thêm bảng giá",
+    "newBookPlaceholder": "Tên bảng giá…",
+    "errors": {
+      "cannotDeleteDefault": "Không thể xóa bảng giá mặc định"
+    },
+    "formula": {
+      "title": "Đặt giá theo công thức",
+      "newPrice": "Giá mới",
+      "baseCurrent": "Giá hiện tại",
+      "baseCost": "Giá vốn",
+      "applyAll": "Áp dụng công thức này cho tất cả {n} hàng hóa trong"
+    }
+  },
+  "stocktakes": {
+    "title": "Kiểm kho",
+    "createNew": "Kiểm kho",
+    "empty": "Chưa có phiếu kiểm kho nào",
+    "emptyHint": "Tạo phiếu kiểm để đếm thực tế và cân bằng kho.",
+    "cols": {
+      "code": "Mã kiểm kho",
+      "items": "SP kiểm",
+      "totalDiff": "Tổng lệch",
+      "balancedAt": "Ngày cân bằng",
+      "systemQty": "Tồn hệ thống",
+      "actualQty": "Thực tế",
+      "diff": "SL lệch",
+      "diffValue": "Giá trị lệch"
+    },
+    "status": {
+      "draft": "Phiếu tạm",
+      "balanced": "Đã cân bằng",
+      "cancelled": "Đã hủy"
+    },
+    "searchPlaceholder": "Tìm SP theo tên / SKU để thêm vào phiếu kiểm…",
+    "noLines": "Chưa kiểm sản phẩm nào — tìm và thêm SP ở ô trên.",
+    "warehouseLocked": "Đã có SP trong phiếu — không đổi kho được",
+    "summary": {
+      "checked": "Đã kiểm",
+      "matched": "Khớp",
+      "diff": "Lệch"
+    },
+    "saveDraft": "Lưu tạm",
+    "complete": "Hoàn thành (cân bằng kho)",
+    "balance": "Cân bằng kho",
+    "balanceConfirm": "Cân bằng kho? Tồn kho sẽ được SET về đúng số thực tế đã đếm, phần lệch ghi vào lịch sử kho.",
+    "cancelConfirm": "Hủy phiếu kiểm tạm này?",
+    "balanceHint": "Phiếu tạm chưa ảnh hưởng kho. Khi cân bằng: tồn = số thực tế, lệch ghi movement 'Kiểm kê'.",
+    "errors": {
+      "emptyItems": "Phiếu kiểm cần ít nhất 1 sản phẩm.",
+      "notDraft": "Chỉ thao tác được trên phiếu tạm."
+    }
+  },
+  "theme": {
+    "mode": {
+      "light": "Sáng",
+      "dark": "Tối",
+      "system": "Theo hệ thống"
+    }
+  },
+  "categories": {
+    "title": "Nhóm hàng",
+    "count": "{n} nhóm",
+    "create": "Tạo nhóm hàng",
+    "empty": "Chưa có nhóm hàng",
+    "name": "Tên nhóm",
+    "parent": "Nhóm cha",
+    "noParent": "— Không có nhóm cha —"
+  },
+  "pagination": {
+    "show": "Hiển thị",
+    "rows": "{n} dòng",
+    "first": "Trang đầu",
+    "prev": "Trước",
+    "next": "Sau",
+    "last": "Trang cuối",
+    "range": "{start} - {end} trong {total}"
+  }
+}

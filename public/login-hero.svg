@@ -1,0 +1,68 @@
+<svg width="900" height="1200" viewBox="0 0 900 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="900" y2="1200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="900" height="1200" fill="url(#bg)"/>
+
+  <!-- vòng tròn trang trí -->
+  <circle cx="760" cy="180" r="220" fill="#FFFFFF" opacity="0.06"/>
+  <circle cx="120" cy="1020" r="260" fill="#1D4ED8" opacity="0.25"/>
+  <circle cx="700" cy="980" r="90" fill="#FFFFFF" opacity="0.05"/>
+
+  <!-- cửa hàng VLXD -->
+  <g transform="translate(250 330)">
+    <!-- mái -->
+    <path d="M-40 120 L200 40 L440 120 L440 160 L-40 160 Z" fill="#FFFFFF" opacity="0.9"/>
+    <path d="M-40 160 L440 160 L440 175 L-40 175 Z" fill="#FFFFFF" opacity="0.55"/>
+    <!-- thân -->
+    <rect x="0" y="175" width="400" height="320" rx="14" fill="url(#card)" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="3"/>
+    <!-- cửa -->
+    <rect x="160" y="345" width="90" height="150" rx="8" fill="#FFFFFF" opacity="0.85"/>
+    <circle cx="238" cy="425" r="5" fill="#2563EB"/>
+    <!-- cửa sổ / kệ -->
+    <rect x="40" y="220" width="110" height="90" rx="8" fill="#FFFFFF" opacity="0.25"/>
+    <rect x="260" y="220" width="110" height="90" rx="8" fill="#FFFFFF" opacity="0.25"/>
+    <rect x="40" y="345" width="90" height="60" rx="8" fill="#FFFFFF" opacity="0.18"/>
+    <rect x="280" y="345" width="90" height="60" rx="8" fill="#FFFFFF" opacity="0.18"/>
+    <!-- bảng hiệu -->
+    <rect x="120" y="120" width="160" height="40" rx="10" fill="#FFFFFF"/>
+    <rect x="150" y="135" width="100" height="10" rx="5" fill="#2563EB"/>
+  </g>
+
+  <!-- hóa đơn -->
+  <g transform="translate(540 620) rotate(8)">
+    <rect x="0" y="0" width="200" height="280" rx="14" fill="#FFFFFF"/>
+    <rect x="24" y="30" width="120" height="14" rx="7" fill="#2563EB"/>
+    <rect x="24" y="64" width="152" height="9" rx="4.5" fill="#CBD5E1"/>
+    <rect x="24" y="86" width="152" height="9" rx="4.5" fill="#CBD5E1"/>
+    <rect x="24" y="120" width="100" height="9" rx="4.5" fill="#E2E8F0"/>
+    <rect x="24" y="142" width="130" height="9" rx="4.5" fill="#E2E8F0"/>
+    <rect x="24" y="164" width="90" height="9" rx="4.5" fill="#E2E8F0"/>
+    <rect x="24" y="210" width="152" height="2" fill="#CBD5E1"/>
+    <rect x="24" y="228" width="70" height="16" rx="8" fill="#1E293B"/>
+    <rect x="120" y="228" width="56" height="16" rx="8" fill="#2563EB"/>
+  </g>
+
+  <!-- giỏ hàng -->
+  <g transform="translate(150 760)" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M0 0 H40 L80 200 H250 L290 50 H100"/>
+    <circle cx="110" cy="250" r="22" fill="#FFFFFF" stroke="none"/>
+    <circle cx="230" cy="250" r="22" fill="#FFFFFF" stroke="none"/>
+  </g>
+
+  <!-- thẻ giá -->
+  <g transform="translate(610 360) rotate(-10)">
+    <path d="M0 30 L40 0 L180 0 A14 14 0 0 1 194 14 V120 A14 14 0 0 1 180 134 H40 Z" fill="#FFFFFF"/>
+    <circle cx="44" cy="34" r="10" fill="#2563EB"/>
+    <rect x="74" y="44" width="96" height="14" rx="7" fill="#2563EB"/>
+    <rect x="74" y="76" width="70" height="10" rx="5" fill="#CBD5E1"/>
+  </g>
+</svg>

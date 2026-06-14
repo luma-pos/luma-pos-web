@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark mode: chỉ flip dải trung tính qua CSS var; brand color giữ nguyên (đẹp trên cả 2 nền). */
+@layer base {
+  :root {
+    --bg: 246 247 249;
+    --surface: 255 255 255;
+    --surface2: 241 243 246;
+    --border: 229 232 238;
+    --text: 22 32 46;
+    --muted: 100 116 139;
+    --faint: 148 163 184;
+  }
+  .dark:root {
+    --bg: 13 19 34;
+    --surface: 21 28 46;
+    --surface2: 29 39 64;
+    --border: 39 50 83;
+    --text: 232 237 246;
+    --muted: 148 163 184;
+    --faint: 91 107 133;
+  }
+}
