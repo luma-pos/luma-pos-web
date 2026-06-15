@@ -11,6 +11,10 @@ export const Routes = {
   Home: "/",
   Dashboard: "/dashboard",
   POS: "/pos",
+  // Nhóm trang có tab (gộp)
+  Sales: "/sales",
+  Partners: "/partners",
+  Finance: "/finance",
   Orders: "/orders",
   Quotes: "/quotes",
   Cashbook: "/cashbook",
