@@ -502,6 +502,23 @@ export const printTemplates = pgTable("print_templates", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// ============= Shifts (Quản lý ca — Part 17) =============
+
+export const shifts = pgTable("shifts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: varchar("code", { length: 30 }).notNull().unique(),
+  userId: uuid("user_id").references(() => profiles.id),
+  openingFloat: decimal("opening_float", { precision: 14, scale: 2 }).notNull().default("0"),
+  openedAt: timestamp("opened_at", { withTimezone: true }).defaultNow().notNull(),
+  closedAt: timestamp("closed_at", { withTimezone: true }),
+  expectedCash: decimal("expected_cash", { precision: 14, scale: 2 }),
+  countedCash: decimal("counted_cash", { precision: 14, scale: 2 }),
+  variance: decimal("variance", { precision: 14, scale: 2 }),
+  status: text("status").notNull().default("open"),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [index("shifts_status_idx").on(t.status), index("shifts_user_idx").on(t.userId)]);
+
 // ============= Store settings (singleton) =============
 
 export const storeSettings = pgTable("store_settings", {

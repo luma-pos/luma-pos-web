@@ -66,6 +66,7 @@
     "pricing": "Thiết lập giá",
     "stocktakes": "Kiểm kho",
     "internalUse": "Xuất nội bộ",
+    "shifts": "Ca làm việc",
     "collapseSidebar": "Thu gọn menu",
     "expandSidebar": "Mở menu",
     "more": "Thêm"
@@ -352,6 +353,26 @@
     "invalidData": "Dữ liệu không hợp lệ.",
     "serverError": "Có lỗi xảy ra, thử lại sau.",
     "forbidden": "Bạn không có quyền thực hiện thao tác này."
+  },
+  "shifts": {
+    "openTitle": "Mở ca",
+    "openSub": "Bắt đầu ca với số tiền đầu ca.",
+    "openFloat": "Tiền đầu ca",
+    "openBtn": "Mở ca",
+    "current": "Ca hiện tại",
+    "openedAt": "Mở lúc",
+    "expected": "Tiền dự kiến",
+    "counted": "Tiền đếm thực",
+    "variance": "Chênh lệch",
+    "over": "thừa",
+    "short": "thiếu",
+    "exact": "khớp",
+    "closeBtn": "Đóng ca",
+    "historyTitle": "Lịch sử ca",
+    "empty": "Chưa có ca nào.",
+    "cols": { "code": "Ca", "cashier": "Thu ngân", "opened": "Mở", "closed": "Đóng" },
+    "status": { "open": "Đang mở", "closed": "Đã đóng" },
+    "errors": { "alreadyOpen": "Bạn đang có ca mở.", "noOpen": "Không có ca mở để đóng." }
   },
   "internalUse": {
     "formTitle": "Phiếu xuất dùng nội bộ",

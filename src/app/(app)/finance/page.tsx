@@ -3,12 +3,14 @@ import { Routes } from "@/lib/routes";
 import { GroupTabs } from "@/components/group-tabs";
 import { CashbookTab } from "./tabs/cashbook";
 import { EInvoicesTab } from "./tabs/einvoices";
+import { ShiftsTab } from "./tabs/shifts";
 
 export const dynamic = "force-dynamic";
 
 const TABS = [
   { tab: "cashbook", labelKey: "nav.cashbook" },
   { tab: "einvoices", labelKey: "nav.einvoices" },
+  { tab: "shifts", labelKey: "nav.shifts" },
 ];
 
 export default async function FinancePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -25,7 +27,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         <div className="px-6 pb-1.5"><GroupTabs base={Routes.Finance} items={TABS} /></div>
       </div>
 
-      {tab === "einvoices" ? <EInvoicesTab /> : <CashbookTab searchParams={params} />}
+      {tab === "einvoices" ? <EInvoicesTab /> : tab === "shifts" ? <ShiftsTab /> : <CashbookTab searchParams={params} />}
     </div>
   );
 }

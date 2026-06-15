@@ -66,6 +66,7 @@
     "pricing": "Price setup",
     "stocktakes": "Stocktake",
     "internalUse": "Internal Use",
+    "shifts": "Shifts",
     "collapseSidebar": "Collapse menu",
     "expandSidebar": "Open menu",
     "more": "More"
@@ -352,6 +353,26 @@
     "invalidData": "Invalid data.",
     "serverError": "Something went wrong, please retry.",
     "forbidden": "You don't have permission for this action."
+  },
+  "shifts": {
+    "openTitle": "Open shift",
+    "openSub": "Start your register with an opening float.",
+    "openFloat": "Opening float",
+    "openBtn": "Open shift",
+    "current": "Current shift",
+    "openedAt": "Opened",
+    "expected": "Expected cash",
+    "counted": "Counted cash",
+    "variance": "Variance",
+    "over": "over",
+    "short": "short",
+    "exact": "exact",
+    "closeBtn": "Close shift",
+    "historyTitle": "Shift history",
+    "empty": "No shifts yet.",
+    "cols": { "code": "Shift", "cashier": "Cashier", "opened": "Opened", "closed": "Closed" },
+    "status": { "open": "Open", "closed": "Closed" },
+    "errors": { "alreadyOpen": "You already have an open shift.", "noOpen": "No open shift to close." }
   },
   "internalUse": {
     "formTitle": "Internal-Use Issue",
