@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Plus, Truck, Search } from "lucide-react";
@@ -6,6 +7,7 @@ import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { getPurchases } from "@/lib/data/inventory";
 import { Pagination } from "@/components/pagination";
 import { parsePageSize } from "@/lib/pagination";
+import { TableSkeleton } from "@/components/table-skeleton";
 
 type SP = Record<string, string | undefined>;
 const PSTATUS = ["", "received", "returned", "cancelled"] as const;
@@ -13,16 +15,12 @@ const PSTATUS = ["", "received", "returned", "cancelled"] as const;
 export async function PurchasesTab({ searchParams }: { searchParams: SP }) {
   const t = await getTranslations();
   const params = searchParams;
-  const page = Number(params.page) || 1;
-  const pageSize = parsePageSize(params.size);
   const status = PSTATUS.includes(params.status as typeof PSTATUS[number]) ? (params.status ?? "") : "";
-  const { rows, total, pageCount } = await getPurchases({ q: params.q, status: status || undefined, page, pageSize });
 
   return (
     <>
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-        <span className="text-sm text-slate-500">{t("purchases.total", { total })}</span>
-        <Link href={Routes.PurchaseNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 hover:brightness-110 text-white text-sm font-medium transition active:scale-[0.98]"><Plus className="w-4 h-4" />{t("purchases.createNew")}</Link>
+        <Link href={Routes.PurchaseNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 hover:brightness-110 text-white text-sm font-medium transition active:scale-[0.98] ml-auto"><Plus className="w-4 h-4" />{t("purchases.createNew")}</Link>
       </div>
 
       <form className="flex flex-wrap items-center gap-3 mb-4" action={Routes.Inventory}>
@@ -39,6 +37,27 @@ export async function PurchasesTab({ searchParams }: { searchParams: SP }) {
         </select>
         <button type="submit" className="px-4 py-2 text-sm font-medium rounded-full bg-primary-600 hover:brightness-110 text-white">{t("common.search")}</button>
       </form>
+
+      <Suspense fallback={<TableSkeleton cols={8} rows={10} />}>
+        <PurchasesContent searchParams={searchParams} />
+      </Suspense>
+    </>
+  );
+}
+
+async function PurchasesContent({ searchParams }: { searchParams: SP }) {
+  const t = await getTranslations();
+  const params = searchParams;
+  const page = Number(params.page) || 1;
+  const pageSize = parsePageSize(params.size);
+  const status = PSTATUS.includes(params.status as typeof PSTATUS[number]) ? (params.status ?? "") : "";
+  const { rows, total, pageCount } = await getPurchases({ q: params.q, status: status || undefined, page, pageSize });
+
+  return (
+    <>
+      <div className="mb-2">
+        <span className="text-sm text-slate-500">{t("purchases.total", { total })}</span>
+      </div>
 
       {rows.length === 0 ? (
         <div className="bg-surface border border-dashed border-border rounded-card p-12 text-center text-slate-400">

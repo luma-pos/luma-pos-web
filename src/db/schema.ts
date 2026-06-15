@@ -502,6 +502,20 @@ export const printTemplates = pgTable("print_templates", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// ============= Store settings (singleton) =============
+
+export const storeSettings = pgTable("store_settings", {
+  id: text("id").primaryKey().default("default"),
+  name: text("name").notNull().default(""),
+  address: text("address").notNull().default(""),
+  phone: text("phone").notNull().default(""),
+  taxCode: text("tax_code").notNull().default(""),
+  industry: text("industry").notNull().default("grocery"),
+  currency: text("currency").notNull().default("VND"),
+  locale: text("locale").notNull().default("vi-VN"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // ============= Internal-Use Issue (Xuất dùng nội bộ — Part 8.1) =============
 // Phiếu xuất hàng dùng nội bộ (không bán): trừ kho theo giá vốn → COGS, không doanh thu.
 

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Search, ShoppingCart, FileX2 } from "lucide-react";
@@ -7,6 +8,7 @@ import { getOrders, type OrderStatusFilter, type OrderPaymentFilter } from "@/li
 import { Pagination } from "@/components/pagination";
 import { parsePageSize } from "@/lib/pagination";
 import { OrderStatusBadge, PaymentStatusBadge } from "../../orders/status-badges";
+import { TableSkeleton } from "@/components/table-skeleton";
 
 type SP = Record<string, string | undefined>;
 
@@ -20,10 +22,6 @@ export async function OrdersTab({ searchParams }: { searchParams: SP }) {
   const payment = (PAYMENTS.includes(params.payment as OrderPaymentFilter) ? params.payment : "all") as OrderPaymentFilter;
   const from = params.from ?? "";
   const to = params.to ?? "";
-  const page = Number(params.page) || 1;
-  const pageSize = parsePageSize(params.size);
-
-  const { rows, total, pageCount } = await getOrders({ q: params.q, status, payment, from, to, page, pageSize });
 
   const href = (overrides: Record<string, string | undefined>) => {
     const sp = new URLSearchParams();
@@ -35,8 +33,7 @@ export async function OrdersTab({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-        <span className="text-sm text-slate-500">{t("orders.total", { total })}</span>
-        <Link href={Routes.POS} target="_blank" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 hover:brightness-110 text-white text-sm font-medium transition active:scale-[0.98]">
+        <Link href={Routes.POS} target="_blank" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 hover:brightness-110 text-white text-sm font-medium transition active:scale-[0.98] ml-auto">
           <ShoppingCart className="w-4 h-4" />
           {t("orders.createViaPos")}
         </Link>
@@ -76,6 +73,31 @@ export async function OrdersTab({ searchParams }: { searchParams: SP }) {
           </Link>
         )}
       </form>
+
+      <Suspense fallback={<TableSkeleton cols={9} rows={10} />}>
+        <OrdersContent searchParams={searchParams} />
+      </Suspense>
+    </>
+  );
+}
+
+async function OrdersContent({ searchParams }: { searchParams: SP }) {
+  const t = await getTranslations();
+  const params = searchParams;
+  const status = (STATUS.includes(params.status as OrderStatusFilter) ? params.status : "all") as OrderStatusFilter;
+  const payment = (PAYMENTS.includes(params.payment as OrderPaymentFilter) ? params.payment : "all") as OrderPaymentFilter;
+  const from = params.from ?? "";
+  const to = params.to ?? "";
+  const page = Number(params.page) || 1;
+  const pageSize = parsePageSize(params.size);
+
+  const { rows, total, pageCount } = await getOrders({ q: params.q, status, payment, from, to, page, pageSize });
+
+  return (
+    <>
+      <div className="mb-2">
+        <span className="text-sm text-slate-500">{t("orders.total", { total })}</span>
+      </div>
 
       {rows.length === 0 ? (
         <div className="bg-surface border border-dashed border-border rounded-card p-12 text-center text-slate-400">

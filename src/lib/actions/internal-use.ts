@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  internalUseIssues, internalUseItems, stockLevels, stockMovements, warehouses, profiles,
+  internalUseIssues, internalUseItems, stockLevels, stockMovements, warehouses,
 } from "@/db/schema";
 import { createInternalUseSchema, type CreateInternalUseInput } from "@/lib/schemas/internal-use";
-import { type ActionResult, requireUser, getProfileId, generateCode, toMoney, toQty } from "./common";
+import { type ActionResult, requireUser, getProfileId, getRole, generateCode, toMoney, toQty } from "./common";
 import { Routes } from "@/lib/routes";
 
 /** Ngưỡng phải duyệt (giá vốn). >500k & không phải owner/manager → chờ duyệt. */
@@ -15,11 +15,6 @@ const APPROVAL_THRESHOLD = 500_000;
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type StockItem = { productId: string; unitMultiplier: string; quantity: string; unitCost: string };
-
-async function getRole(userId: string): Promise<string> {
-  const [p] = await db.select({ role: profiles.role }).from(profiles).where(eq(profiles.id, userId)).limit(1);
-  return p?.role ?? "cashier";
-}
 
 async function defaultWarehouseId(): Promise<string | null> {
   const [w] = await db.select({ id: warehouses.id }).from(warehouses).orderBy(desc(warehouses.isDefault)).limit(1);
