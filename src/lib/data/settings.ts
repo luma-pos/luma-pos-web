@@ -4,11 +4,11 @@ import { profiles, storeSettings } from "@/db/schema";
 
 export type StoreSettings = {
   name: string; address: string; phone: string; taxCode: string;
-  industry: string; currency: string; locale: string;
+  industry: string; currency: string; locale: string; onboarded: boolean;
 };
 
 const DEFAULTS: StoreSettings = {
-  name: "", address: "", phone: "", taxCode: "", industry: "grocery", currency: "VND", locale: "vi-VN",
+  name: "", address: "", phone: "", taxCode: "", industry: "grocery", currency: "VND", locale: "vi-VN", onboarded: false,
 };
 
 /** Cấu hình cửa hàng (1 dòng id='default'). Trả mặc định nếu chưa có. */
@@ -17,7 +17,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
   if (!row) return DEFAULTS;
   return {
     name: row.name, address: row.address, phone: row.phone, taxCode: row.taxCode,
-    industry: row.industry, currency: row.currency, locale: row.locale,
+    industry: row.industry, currency: row.currency, locale: row.locale, onboarded: row.onboarded,
   };
 }
 
