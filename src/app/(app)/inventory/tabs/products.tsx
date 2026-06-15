@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Plus, Search, PackageOpen } from "lucide-react";
@@ -6,6 +7,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { getProducts, getProductFormOptions } from "@/lib/data/products";
 import { Pagination } from "@/components/pagination";
 import { parsePageSize } from "@/lib/pagination";
+import { TableSkeleton } from "@/components/table-skeleton";
 
 type SP = Record<string, string | undefined>;
 const STATUSES = ["active", "inactive", "all"] as const;
@@ -14,19 +16,12 @@ type Status = (typeof STATUSES)[number];
 export async function ProductsTab({ searchParams }: { searchParams: SP }) {
   const t = await getTranslations();
   const params = searchParams;
-  const page = Number(params.page) || 1;
-  const pageSize = parsePageSize(params.size);
   const status: Status = STATUSES.includes(params.status as Status) ? (params.status as Status) : "active";
-
-  const [{ rows, total, pageCount }, { categories }] = await Promise.all([
-    getProducts({ q: params.q, categoryId: params.category, status, page, pageSize }),
-    getProductFormOptions(),
-  ]);
+  const { categories } = await getProductFormOptions();
 
   return (
     <>
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-        <span className="text-sm text-slate-500">{t("products.list.total", { total })}</span>
         <div className="flex items-center gap-2">
           <Link href={Routes.Categories} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border text-sm font-medium hover:bg-surface-2">{t("categories.title")}</Link>
           <Link href={Routes.ProductNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 hover:brightness-110 text-white text-sm font-medium transition active:scale-[0.98]"><Plus className="w-4 h-4" />{t("products.createNew")}</Link>
@@ -50,6 +45,28 @@ export async function ProductsTab({ searchParams }: { searchParams: SP }) {
         </select>
         <button type="submit" className="px-4 py-2 text-sm font-medium rounded-full border border-border bg-surface hover:bg-surface-2">{t("common.search")}</button>
       </form>
+
+      <Suspense fallback={<TableSkeleton cols={7} rows={10} />}>
+        <ProductsContent searchParams={searchParams} />
+      </Suspense>
+    </>
+  );
+}
+
+async function ProductsContent({ searchParams }: { searchParams: SP }) {
+  const t = await getTranslations();
+  const params = searchParams;
+  const page = Number(params.page) || 1;
+  const pageSize = parsePageSize(params.size);
+  const status: Status = STATUSES.includes(params.status as Status) ? (params.status as Status) : "active";
+
+  const { rows, total, pageCount } = await getProducts({ q: params.q, categoryId: params.category, status, page, pageSize });
+
+  return (
+    <>
+      <div className="mb-2">
+        <span className="text-sm text-slate-500">{t("products.list.total", { total })}</span>
+      </div>
 
       {rows.length === 0 ? (
         <div className="bg-surface border border-dashed border-border rounded-card p-12 text-center text-slate-400">

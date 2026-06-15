@@ -25,6 +25,12 @@ export async function getProfileId(userId: string): Promise<string | null> {
   return p?.id ?? null;
 }
 
+/** Vai trò của user (profiles.role) — mặc định 'cashier' nếu chưa có profile. */
+export async function getRole(userId: string): Promise<string> {
+  const [p] = await db.select({ role: profiles.role }).from(profiles).where(eq(profiles.id, userId)).limit(1);
+  return p?.role ?? "cashier";
+}
+
 /** Drizzle bọc lỗi PG vào DrizzleQueryError — lỗi gốc ở e.cause. */
 export function pgErrorCode(e: unknown): string | undefined {
   return (e as { cause?: { code?: string } })?.cause?.code

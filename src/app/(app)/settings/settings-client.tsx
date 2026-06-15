@@ -1,29 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useLocale } from "next-intl";
-import { Plus, Pencil, Check, Printer } from "lucide-react";
+import { Check, Printer, Loader2 } from "lucide-react";
 import { SearchableSelect } from "@/components/combobox";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
+import { updateStoreSettings, updateStaffRole, setStaffActive } from "@/lib/actions/settings";
+import type { StoreSettings, StaffRow } from "@/lib/data/settings";
+import { STAFF_ROLES, type StaffRole } from "@/lib/schemas/settings";
 
 /* ── sample data (design preview — chưa nối backend) ── */
-const STAFF = [
-  { id: 1, name: "Nguyễn Thị Hoa", role: "owner", color: "#0C7B6B", phone: "0912 345 678", active: true, lastLogin: "14/06 06:00" },
-  { id: 2, name: "Trần Văn Minh", role: "manager", color: "#1D4ED8", phone: "0923 456 789", active: true, lastLogin: "14/06 07:30" },
-  { id: 3, name: "Phạm Thùy Linh", role: "cashier", color: "#B45309", phone: "0934 567 890", active: true, lastLogin: "14/06 09:00" },
-  { id: 4, name: "Lê Thị Nga", role: "cashier", color: "#6B6F76", phone: "0945 678 901", active: false, lastLogin: "12/06 18:00" },
-  { id: 5, name: "Lê Công Khoa", role: "accountant", color: "#9CA0A8", phone: "0956 789 012", active: true, lastLogin: "13/06 10:00" },
-];
 const ROLE_LABELS: Record<string, [string, string]> = {
   owner: ["Owner", "Chủ cửa hàng"], manager: ["Manager", "Quản lý"],
   cashier: ["Cashier", "Thu ngân"], stock: ["Stock-keeper", "Thủ kho"], accountant: ["Accountant", "Kế toán"],
-};
-const ROLE_BADGE: Record<string, string> = {
-  owner: "bg-primary-50 text-primary-700 dark:bg-primary-950/40 dark:text-primary-300",
-  manager: "bg-in-soft text-in", cashier: "bg-ok-soft text-ok",
-  stock: "bg-warn-soft text-warn", accountant: "bg-surface-2 text-slate-500",
 };
 const PERMS: { en: string; vi: string; roles: Record<string, boolean> }[] = [
   { en: "Process sales", vi: "Thực hiện bán hàng", roles: { owner: true, manager: true, cashier: true, stock: false, accountant: false } },
@@ -116,7 +107,7 @@ const ROW = "flex items-center justify-between gap-3 px-3.5 py-2.5 bg-canvas rou
 const btnS = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-semibold hover:bg-surface-2 transition";
 const btnF = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-semibold hover:brightness-110 transition";
 
-export function SettingsClient() {
+export function SettingsClient({ store, staff, canManage }: { store: StoreSettings; staff: StaffRow[]; canManage: boolean }) {
   const locale = useLocale();
   const L = locale === "vi";
   const [active, setActive] = useState<SectionId>("store");
@@ -173,8 +164,8 @@ export function SettingsClient() {
         <div className="text-xs italic text-slate-400 mt-0.5">{L ? sec.subVi : sec.subEn}</div>
         <div className="w-9 h-0.75 bg-primary-600 rounded mt-3 mb-5" />
 
-        {active === "store" && <StoreSection L={L} locale={locale} />}
-        {active === "staff" && <StaffSection L={L} />}
+        {active === "store" && <StoreSection L={L} locale={locale} store={store} canManage={canManage} />}
+        {active === "staff" && <StaffSection L={L} staff={staff} canManage={canManage} />}
         {active === "hardware" && <HardwareSection L={L} />}
         {active === "payments" && <PaymentsSection L={L} />}
         {active === "print" && <PrintSection L={L} />}
@@ -186,40 +177,95 @@ export function SettingsClient() {
   );
 }
 
-function StoreSection({ L, locale }: { L: boolean; locale: string }) {
-  const [industry, setIndustry] = useState("grocery");
-  const [currency, setCurrency] = useState("VND");
-  const industryOpts = [
-    ["grocery", "Grocery / Mini-mart", "Tạp hóa / Siêu thị mini"], ["cafe", "Café", "Quán cà phê"],
-    ["restaurant", "Restaurant", "Nhà hàng"], ["fashion", "Fashion & Apparel", "Thời trang"],
-    ["electronics", "Electronics", "Điện tử / Điện máy"], ["cosmetics", "Cosmetics & Beauty", "Mỹ phẩm"],
-    ["books", "Books & Stationery", "Sách & VPP"], ["services", "Service Business", "Dịch vụ"],
-    ["petshop", "Pet Shop", "Thú cưng"], ["mobile", "Mobile & Gadgets", "Điện thoại & Phụ kiện"],
-    ["construction", "Construction Materials", "Vật liệu xây dựng"],
-  ].map(([value, en, vi]) => ({ value, label: locale === "vi" ? vi : en }));
+const INDUSTRY_OPTS = [
+  ["grocery", "Grocery / Mini-mart", "Tạp hóa / Siêu thị mini"], ["cafe", "Café", "Quán cà phê"],
+  ["restaurant", "Restaurant", "Nhà hàng"], ["fashion", "Fashion & Apparel", "Thời trang"],
+  ["electronics", "Electronics", "Điện tử / Điện máy"], ["cosmetics", "Cosmetics & Beauty", "Mỹ phẩm"],
+  ["books", "Books & Stationery", "Sách & VPP"], ["services", "Service Business", "Dịch vụ"],
+  ["petshop", "Pet Shop", "Thú cưng"], ["mobile", "Mobile & Gadgets", "Điện thoại & Phụ kiện"],
+  ["construction", "Construction Materials", "Vật liệu xây dựng"],
+] as const;
+const ROLE_TEXT: Record<string, [string, string]> = {
+  owner: ["Owner", "Chủ cửa hàng"], manager: ["Manager", "Quản lý"],
+  cashier: ["Cashier", "Thu ngân"], warehouse: ["Stock-keeper", "Thủ kho"],
+};
+const ROLE_PILL: Record<string, string> = {
+  owner: "bg-primary-50 text-primary-700 dark:bg-primary-950/40 dark:text-primary-300",
+  manager: "bg-in-soft text-in", cashier: "bg-ok-soft text-ok", warehouse: "bg-warn-soft text-warn",
+};
+const AVATAR_COLORS = ["#0C7B6B", "#1D4ED8", "#B45309", "#6B6F76", "#9CA0A8"];
+
+function StoreSection({ L, locale, store, canManage }: { L: boolean; locale: string; store: StoreSettings; canManage: boolean }) {
+  const [form, setForm] = useState(store);
+  const [dirty, setDirty] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [pending, start] = useTransition();
+  const set = <K extends keyof StoreSettings>(k: K, v: StoreSettings[K]) => { setForm((p) => ({ ...p, [k]: v })); setDirty(true); setSaved(false); };
+  const industryOpts = INDUSTRY_OPTS.map(([value, en, vi]) => ({ value, label: locale === "vi" ? vi : en }));
   const currencyOpts = [{ value: "VND", label: "VND — Việt Nam Đồng (₫)" }, { value: "USD", label: "USD — US Dollar ($)" }];
+  function save() { start(async () => { const res = await updateStoreSettings(form); if (res.ok) { setDirty(false); setSaved(true); } }); }
   return (
     <Card title={L ? "Thông tin cửa hàng" : "Store Profile"} vi={L ? "Store Profile" : "Thông tin cửa hàng"}>
       <div className="p-4.5 flex flex-col gap-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1"><span className={FL}>{L ? "Tên cửa hàng" : "Store Name"}</span><input className={FI} defaultValue="Cửa hàng Nguyễn Hoa" /></div>
-          <div className="flex flex-col gap-1"><span className={FL}>{L ? "Số điện thoại" : "Phone"}</span><input className={FI} defaultValue="0912 345 678" /></div>
+          <div className="flex flex-col gap-1"><span className={FL}>{L ? "Tên cửa hàng" : "Store Name"}</span><input className={FI} value={form.name} disabled={!canManage} onChange={(e) => set("name", e.target.value)} /></div>
+          <div className="flex flex-col gap-1"><span className={FL}>{L ? "Số điện thoại" : "Phone"}</span><input className={FI} value={form.phone} disabled={!canManage} onChange={(e) => set("phone", e.target.value)} /></div>
         </div>
-        <div className="flex flex-col gap-1"><span className={FL}>{L ? "Địa chỉ" : "Address"}</span><input className={FI} defaultValue="Số 12 Nguyễn Trãi, Cầu Giấy, Hà Nội" /></div>
+        <div className="flex flex-col gap-1"><span className={FL}>{L ? "Địa chỉ" : "Address"}</span><input className={FI} value={form.address} disabled={!canManage} onChange={(e) => set("address", e.target.value)} /></div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1"><span className={FL}>{L ? "Mã số thuế" : "Tax ID"}</span><input className={FI} value={form.taxCode} disabled={!canManage} onChange={(e) => set("taxCode", e.target.value)} /></div>
           <div className="flex flex-col gap-1"><span className={FL}>{L ? "Ngành" : "Industry"}</span>
-            <SearchableSelect options={industryOpts} value={industry} onChange={setIndustry} allowClear={false} />
-          </div>
-          <div className="flex flex-col gap-1"><span className={FL}>{L ? "Tiền tệ" : "Currency"}</span>
-            <SearchableSelect options={currencyOpts} value={currency} onChange={setCurrency} allowClear={false} />
+            <SearchableSelect options={industryOpts} value={form.industry} onChange={(v) => set("industry", v)} allowClear={false} disabled={!canManage} />
           </div>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1"><span className={FL}>{L ? "Tiền tệ" : "Currency"}</span>
+            <SearchableSelect options={currencyOpts} value={form.currency} onChange={(v) => set("currency", v)} allowClear={false} disabled={!canManage} />
+          </div>
+        </div>
+        {canManage && (dirty || saved) && (
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-[11px] text-slate-500 flex-1">{dirty ? (L ? "Có thay đổi chưa lưu" : "Unsaved changes") : (L ? "Đã lưu" : "Saved")}</span>
+            <button disabled={!dirty || pending} onClick={save} className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary-600 text-white text-xs font-semibold disabled:opacity-50">
+              {pending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}{L ? "Lưu" : "Save"}
+            </button>
+          </div>
+        )}
+        {!canManage && <p className="text-[11px] text-slate-400 italic">{L ? "Chỉ Chủ/Quản lý mới sửa được." : "Only Owner/Manager can edit."}</p>}
       </div>
     </Card>
   );
 }
 
-function StaffSection({ L }: { L: boolean }) {
+function StaffRowItem({ s, i, L, canManage }: { s: StaffRow; i: number; L: boolean; canManage: boolean }) {
+  const [role, setRole] = useState(s.role);
+  const [active, setActive] = useState(s.isActive);
+  const [, start] = useTransition();
+  const initial = ((s.fullName.trim().split(" ").pop() ?? "?")[0] ?? "?").toUpperCase();
+  return (
+    <tr className="border-b border-border-soft last:border-0 hover:bg-surface-2">
+      <td className="px-3 py-2.5"><div className="flex items-center gap-2">
+        <span className="w-7 h-7 rounded-full grid place-items-center text-[11px] font-extrabold text-white shrink-0" style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>{initial}</span>
+        <span className="font-bold text-xs">{s.fullName}</span>
+      </div></td>
+      <td className="px-3 py-2.5">
+        {canManage ? (
+          <select value={role} onChange={(e) => { const r = e.target.value as StaffRole; setRole(r); start(() => { updateStaffRole(s.id, r); }); }} className="px-2 py-1 text-xs rounded-md border border-border bg-canvas">
+            {STAFF_ROLES.map((r) => <option key={r} value={r}>{L ? ROLE_TEXT[r][1] : ROLE_TEXT[r][0]}</option>)}
+          </select>
+        ) : <span className={cn("inline-block px-2 py-0.5 rounded-full text-[9px] font-bold", ROLE_PILL[role] ?? "bg-surface-2 text-slate-500")}>{L ? (ROLE_TEXT[role]?.[1] ?? role) : (ROLE_TEXT[role]?.[0] ?? role)}</span>}
+      </td>
+      <td className="px-3 py-2.5 font-mono text-[11px] text-slate-500">{s.phone ?? "—"}</td>
+      <td className="px-3 py-2.5">
+        {canManage
+          ? <Toggle checked={active} onChange={(v) => { setActive(v); start(() => { setStaffActive(s.id, v); }); }} aria-label="active" />
+          : <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold", active ? "bg-ok-soft text-ok" : "bg-surface-2 text-slate-400")}>{active ? (L ? "Hoạt động" : "Active") : (L ? "Vô hiệu" : "Inactive")}</span>}
+      </td>
+    </tr>
+  );
+}
+
+function StaffSection({ L, staff, canManage }: { L: boolean; staff: StaffRow[]; canManage: boolean }) {
   const [tab, setTab] = useState<"list" | "perms">("list");
   const roles = ["owner", "manager", "cashier", "stock", "accountant"];
   return (
@@ -230,34 +276,23 @@ function StaffSection({ L }: { L: boolean }) {
         ))}
       </div>
       {tab === "list" && (
-        <Card title={L ? "Danh sách nhân viên" : "Staff Members"} vi={L ? "Staff Members — RBAC" : "Nhân viên — phân quyền"} action={<button className={btnF}><Plus className="w-3 h-3" />{L ? "Thêm NV" : "Add Staff"}</button>}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="bg-canvas text-left text-[9px] uppercase tracking-wide text-slate-400 border-b border-border">
-                <th className="px-3 py-2 font-bold">{L ? "Nhân viên" : "Staff"}</th>
-                <th className="px-3 py-2 font-bold">{L ? "Vai trò" : "Role"}</th>
-                <th className="px-3 py-2 font-bold">{L ? "Điện thoại" : "Phone"}</th>
-                <th className="px-3 py-2 font-bold">PIN</th>
-                <th className="px-3 py-2 font-bold">{L ? "Trạng thái" : "Status"}</th>
-                <th className="px-3 py-2 font-bold">{L ? "Đăng nhập" : "Last login"}</th>
-                <th />
-              </tr></thead>
-              <tbody>{STAFF.map((s) => (
-                <tr key={s.id} className="border-b border-border-soft last:border-0 hover:bg-surface-2">
-                  <td className="px-3 py-2.5"><div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-full grid place-items-center text-[11px] font-extrabold text-white shrink-0" style={{ background: s.color }}>{s.name.split(" ").pop()![0]}</span>
-                    <span className="font-bold text-xs">{s.name}</span>
-                  </div></td>
-                  <td className="px-3 py-2.5"><span className={cn("inline-block px-2 py-0.5 rounded-full text-[9px] font-bold", ROLE_BADGE[s.role])}>{L ? ROLE_LABELS[s.role][1] : ROLE_LABELS[s.role][0]}</span></td>
-                  <td className="px-3 py-2.5 font-mono text-[11px] text-slate-500">{s.phone}</td>
-                  <td className="px-3 py-2.5 font-mono text-slate-400 tracking-widest">••••</td>
-                  <td className="px-3 py-2.5">{s.active ? <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-ok-soft text-ok">{L ? "Hoạt động" : "Active"}</span> : <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-surface-2 text-slate-400">{L ? "Vô hiệu" : "Inactive"}</span>}</td>
-                  <td className="px-3 py-2.5 font-mono text-[11px] text-slate-400">{s.lastLogin}</td>
-                  <td className="px-3 py-2.5"><button className={btnS}><Pencil className="w-3 h-3" /></button></td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
+        <Card title={L ? "Danh sách nhân viên" : "Staff Members"} vi={L ? "Staff Members — RBAC" : "Nhân viên — phân quyền"}>
+          {staff.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-slate-400">{L ? "Chưa có nhân viên." : "No staff yet."}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="bg-canvas text-left text-[9px] uppercase tracking-wide text-slate-400 border-b border-border">
+                  <th className="px-3 py-2 font-bold">{L ? "Nhân viên" : "Staff"}</th>
+                  <th className="px-3 py-2 font-bold">{L ? "Vai trò" : "Role"}</th>
+                  <th className="px-3 py-2 font-bold">{L ? "Điện thoại" : "Phone"}</th>
+                  <th className="px-3 py-2 font-bold">{L ? "Trạng thái" : "Status"}</th>
+                </tr></thead>
+                <tbody>{staff.map((s, i) => <StaffRowItem key={s.id} s={s} i={i} L={L} canManage={canManage} />)}</tbody>
+              </table>
+            </div>
+          )}
+          {canManage && <div className="px-4 py-2.5 border-t border-border text-[10px] text-slate-400 italic">{L ? "Thêm nhân viên qua mời tài khoản (sắp có)." : "Add staff via account invite (coming soon)."}</div>}
         </Card>
       )}
       {tab === "perms" && (

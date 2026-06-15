@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { AlertTriangle, Search, Truck, Warehouse } from "lucide-react";
@@ -7,6 +8,7 @@ import { getInventory, getRecentMovements, type StockFilter } from "@/lib/data/i
 import { Pagination } from "@/components/pagination";
 import { parsePageSize } from "@/lib/pagination";
 import { getProductFormOptions } from "@/lib/data/products";
+import { TableSkeleton } from "@/components/table-skeleton";
 
 type SP = Record<string, string | undefined>;
 const STOCKS: StockFilter[] = ["all", "instock", "low", "out"];
@@ -28,18 +30,9 @@ const SEV_BAR: Record<Sev, string> = { out: "bg-er", crit: "bg-er", warn: "bg-wa
 export async function StockTab({ searchParams }: { searchParams: SP }) {
   const t = await getTranslations();
   const params = searchParams;
-  const page = Number(params.page) || 1;
-  const pageSize = parsePageSize(params.size);
   const stock: StockFilter = params.low === "1" ? "low" : (STOCKS.includes(params.stock as StockFilter) ? (params.stock as StockFilter) : "all");
   const category = params.category ?? "";
-
-  const [{ rows, total, totalValue, lowCount, pageCount }, movements, { categories }] = await Promise.all([
-    getInventory({ q: params.q, stock, categoryId: category || undefined, page, pageSize }),
-    getRecentMovements(20),
-    getProductFormOptions(),
-  ]);
-
-  const kpiCard = "bg-surface border border-border rounded-card shadow-e1 p-4";
+  const { categories } = await getProductFormOptions();
 
   return (
     <>
@@ -49,6 +42,46 @@ export async function StockTab({ searchParams }: { searchParams: SP }) {
         </Link>
       </div>
 
+      <form className="flex flex-wrap items-center gap-3 mb-3" action={Routes.Inventory}>
+        <input type="hidden" name="tab" value="stock" />
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input type="text" name="q" defaultValue={params.q ?? ""} placeholder={t("inventory.searchPlaceholder")} className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-primary-500" />
+        </div>
+        <select name="stock" defaultValue={stock} className="px-3 py-2 text-sm rounded-lg border border-border bg-surface">
+          {STOCKS.map((s) => <option key={s} value={s}>{t(`inventory.stockFilter.${s}`)}</option>)}
+        </select>
+        <select name="category" defaultValue={category} className="px-3 py-2 text-sm rounded-lg border border-border bg-surface">
+          <option value="">{t("products.list.allCategories")}</option>
+          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <button type="submit" className="px-4 py-2 text-sm font-medium rounded-full bg-primary-600 hover:brightness-110 text-white transition active:scale-[0.98]">{t("common.search")}</button>
+      </form>
+
+      <Suspense fallback={<TableSkeleton cols={6} rows={10} />}>
+        <StockContent searchParams={searchParams} />
+      </Suspense>
+    </>
+  );
+}
+
+async function StockContent({ searchParams }: { searchParams: SP }) {
+  const t = await getTranslations();
+  const params = searchParams;
+  const page = Number(params.page) || 1;
+  const pageSize = parsePageSize(params.size);
+  const stock: StockFilter = params.low === "1" ? "low" : (STOCKS.includes(params.stock as StockFilter) ? (params.stock as StockFilter) : "all");
+  const category = params.category ?? "";
+
+  const [{ rows, total, totalValue, lowCount, pageCount }, movements] = await Promise.all([
+    getInventory({ q: params.q, stock, categoryId: category || undefined, page, pageSize }),
+    getRecentMovements(20),
+  ]);
+
+  const kpiCard = "bg-surface border border-border rounded-card shadow-e1 p-4";
+
+  return (
+    <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <div className={kpiCard}>
           <div className="text-xs font-medium text-slate-500">{t("inventory.totalValue")}</div>
@@ -74,22 +107,6 @@ export async function StockTab({ searchParams }: { searchParams: SP }) {
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4">
         <div>
-          <form className="flex flex-wrap items-center gap-3 mb-3" action={Routes.Inventory}>
-            <input type="hidden" name="tab" value="stock" />
-            <div className="relative w-full max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input type="text" name="q" defaultValue={params.q ?? ""} placeholder={t("inventory.searchPlaceholder")} className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-primary-500" />
-            </div>
-            <select name="stock" defaultValue={stock} className="px-3 py-2 text-sm rounded-lg border border-border bg-surface">
-              {STOCKS.map((s) => <option key={s} value={s}>{t(`inventory.stockFilter.${s}`)}</option>)}
-            </select>
-            <select name="category" defaultValue={category} className="px-3 py-2 text-sm rounded-lg border border-border bg-surface">
-              <option value="">{t("products.list.allCategories")}</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <button type="submit" className="px-4 py-2 text-sm font-medium rounded-full bg-primary-600 hover:brightness-110 text-white transition active:scale-[0.98]">{t("common.search")}</button>
-          </form>
-
           {rows.length > 0 && (
             <div className="lg:hidden space-y-2 mb-3">
               {rows.map((r) => {
