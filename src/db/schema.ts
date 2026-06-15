@@ -530,6 +530,7 @@ export const storeSettings = pgTable("store_settings", {
   industry: text("industry").notNull().default("grocery"),
   currency: text("currency").notNull().default("VND"),
   locale: text("locale").notNull().default("vi-VN"),
+  onboarded: boolean("onboarded").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

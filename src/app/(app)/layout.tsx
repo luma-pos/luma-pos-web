@@ -10,6 +10,7 @@ import { MobileNavBackdrop } from "@/components/mobile-nav";
 import { MobileTabBar } from "@/components/mobile-tabbar";
 import { Routes } from "@/lib/routes";
 import { getTheme, getMode } from "@/lib/theme/cookie";
+import { getStoreSettings } from "@/lib/data/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(Routes.Login);
+
+  const store = await getStoreSettings();
+  if (!store.onboarded) redirect("/onboarding");
 
   const t = await getTranslations();
   const theme = await getTheme();
