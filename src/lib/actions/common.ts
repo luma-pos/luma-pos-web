@@ -16,6 +16,12 @@ export async function requireUser() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new UnauthorizedError();
+  const [p] = await db
+    .select({ isActive: profiles.isActive })
+    .from(profiles)
+    .where(eq(profiles.id, user.id))
+    .limit(1);
+  if (p && !p.isActive) throw new UnauthorizedError();
   return user;
 }
 
@@ -27,7 +33,8 @@ export async function getProfileId(userId: string): Promise<string | null> {
 
 /** Vai trò của user (profiles.role) — mặc định 'cashier' nếu chưa có profile. */
 export async function getRole(userId: string): Promise<string> {
-  const [p] = await db.select({ role: profiles.role }).from(profiles).where(eq(profiles.id, userId)).limit(1);
+  const [p] = await db.select({ role: profiles.role, isActive: profiles.isActive }).from(profiles).where(eq(profiles.id, userId)).limit(1);
+  if (p && !p.isActive) throw new UnauthorizedError();
   return p?.role ?? "cashier";
 }
 
@@ -48,6 +55,9 @@ export const requireManager = () => requireRole(["owner", "manager"]);
 
 /** Chủ/Quản lý/Thủ kho — hàng hóa & kho (sản phẩm, nhập hàng, kiểm kho). */
 export const requireStockAccess = () => requireRole(["owner", "manager", "warehouse"]);
+
+/** Chủ/Quản lý/Thu ngân — bán hàng và thu tiền. */
+export const requireSalesAccess = () => requireRole(["owner", "manager", "cashier"]);
 
 /** Drizzle bọc lỗi PG vào DrizzleQueryError — lỗi gốc ở e.cause. */
 export function pgErrorCode(e: unknown): string | undefined {

@@ -10,7 +10,7 @@ import {
   type CreateOrderOutput, type AddPaymentInput,
 } from "@/lib/schemas/order";
 import {
-  type ActionResult, requireUser, requireManager, getProfileId, toMoney, toQty,
+  type ActionResult, requireSalesAccess, requireManager, getProfileId, toMoney, toQty,
 } from "./common";
 import { Routes } from "@/lib/routes";
 import { createOrderForUser } from "@/lib/orders/create";
@@ -20,37 +20,25 @@ import { convertQuoteToOrderForUser } from "@/lib/orders/convert";
 export async function createOrder(
   input: CreateOrderOutput
 ): Promise<ActionResult<{ id: string; code: string }>> {
-  let userId: string;
-  try {
-    userId = (await requireUser()).id;
-  } catch {
-    return { ok: false, error: "errors.unauthorized" };
-  }
+  const gate = await requireSalesAccess();
+  if (!gate.ok) return gate;
   // Lõi tách riêng. Xem src/lib/orders/create.ts.
-  return createOrderForUser(userId, input);
+  return createOrderForUser(gate.userId, input);
 }
 
 export async function addPayment(input: AddPaymentInput): Promise<ActionResult> {
-  let userId: string;
-  try {
-    userId = (await requireUser()).id;
-  } catch {
-    return { ok: false, error: "errors.unauthorized" };
-  }
+  const gate = await requireSalesAccess();
+  if (!gate.ok) return gate;
   // Lõi tách riêng. Xem src/lib/orders/payment.ts.
-  return addPaymentForUser(userId, input);
+  return addPaymentForUser(gate.userId, input);
 }
 
 /** Chốt báo giá thành đơn: trừ kho + ghi nợ. Thu tiền sau qua addPayment. */
 export async function convertQuoteToOrder(quoteId: string): Promise<ActionResult<{ code: string }>> {
-  let userId: string;
-  try {
-    userId = (await requireUser()).id;
-  } catch {
-    return { ok: false, error: "errors.unauthorized" };
-  }
+  const gate = await requireSalesAccess();
+  if (!gate.ok) return gate;
   // Lõi tách riêng. Xem src/lib/orders/convert.ts.
-  const result = await convertQuoteToOrderForUser(userId, quoteId);
+  const result = await convertQuoteToOrderForUser(gate.userId, quoteId);
   if (result.ok) {
     revalidatePath(Routes.Orders);
     revalidatePath(Routes.Quotes);
@@ -61,11 +49,8 @@ export async function convertQuoteToOrder(quoteId: string): Promise<ActionResult
 
 /** Hủy báo giá (không ảnh hưởng kho/nợ). */
 export async function cancelQuote(quoteId: string): Promise<ActionResult> {
-  try {
-    await requireUser();
-  } catch {
-    return { ok: false, error: "errors.unauthorized" };
-  }
+  const gate = await requireSalesAccess();
+  if (!gate.ok) return gate;
   try {
     await db.transaction(async (tx) => {
       const [order] = await tx.select().from(orders).where(eq(orders.id, quoteId)).limit(1);

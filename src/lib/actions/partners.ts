@@ -4,13 +4,13 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { customers, suppliers } from "@/db/schema";
+import { suppliers } from "@/db/schema";
 import {
   createSupplierSchema,
-  updateCustomerSchema, type UpdateCustomerInput,
+  type UpdateCustomerInput,
   type CreateCustomerOutput, type CreateSupplierOutput,
 } from "@/lib/schemas/order";
-import { type ActionResult, generateCode, requireUser, requireManager, requireStockAccess, toMoney } from "./common";
+import { type ActionResult, generateCode, requireUser, requireManager, requireStockAccess } from "./common";
 import { createCustomerCore, updateCustomerCore } from "@/lib/customers/write";
 import { Routes } from "@/lib/routes";
 

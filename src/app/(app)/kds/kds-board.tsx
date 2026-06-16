@@ -13,8 +13,8 @@ type Ticket = { id: string; tableName: string; round: number; createdAtMs: numbe
 
 const NEXT: Record<KdsItemStatus, KdsItemStatus | null> = { pending: "preparing", preparing: "ready", ready: "served", served: null };
 
-function elapsed(ms: number) {
-  const min = Math.floor((Date.now() - ms) / 60000);
+function elapsed(ms: number, now: number) {
+  const min = Math.floor((now - ms) / 60000);
   if (min < 60) return `${min}'`;
   return `${Math.floor(min / 60)}h${min % 60}`;
 }
@@ -23,11 +23,11 @@ export function KdsBoard({ tickets }: { tickets: Ticket[] }) {
   const t = useTranslations();
   const router = useRouter();
   const [, start] = useTransition();
-  const [, force] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
   // tự làm mới: cập nhật đồng hồ mỗi 20s + kéo dữ liệu mới
   useEffect(() => {
-    const tick = setInterval(() => force((x) => x + 1), 20000);
+    const tick = setInterval(() => setNow(Date.now()), 20000);
     const refresh = setInterval(() => router.refresh(), 20000);
     return () => { clearInterval(tick); clearInterval(refresh); };
   }, [router]);
@@ -42,13 +42,13 @@ export function KdsBoard({ tickets }: { tickets: Ticket[] }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-start">
       {tickets.map((tk) => {
-        const min = (Date.now() - tk.createdAtMs) / 60000;
+        const min = (now - tk.createdAtMs) / 60000;
         const head = min > 10 ? "border-er bg-er/5" : min > 5 ? "border-warn bg-warn/5" : "border-border";
         return (
           <div key={tk.id} className={cn("bg-surface border rounded-card shadow-e1 overflow-hidden", head)}>
             <div className="px-3 py-2 border-b border-border flex items-center justify-between">
               <div className="font-bold text-sm">{tk.tableName} <span className="text-slate-400 font-normal">#{tk.round}</span></div>
-              <span className={cn("text-xs font-mono flex items-center gap-1", min > 10 ? "text-er" : min > 5 ? "text-warn" : "text-slate-400")}><Clock className="w-3 h-3" />{elapsed(tk.createdAtMs)}</span>
+              <span className={cn("text-xs font-mono flex items-center gap-1", min > 10 ? "text-er" : min > 5 ? "text-warn" : "text-slate-400")}><Clock className="w-3 h-3" />{elapsed(tk.createdAtMs, now)}</span>
             </div>
             <div className="divide-y divide-border-soft">
               {tk.items.map((it) => {

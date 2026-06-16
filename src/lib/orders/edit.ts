@@ -5,6 +5,7 @@ import {
 } from "@/db/schema";
 import { updateOrderSchema, type UpdateOrderInput } from "@/lib/schemas/order";
 import { type ActionResult, getProfileId, generateCode, toMoney, toQty } from "@/lib/actions/common";
+import { normalizeOrderItems } from "@/lib/orders/normalize";
 
 /**
  * Lõi sửa đơn — KHÔNG phải server action (nhận userId đã xác thực).
@@ -18,6 +19,7 @@ export async function updateOrderForUser(userId: string, input: UpdateOrderInput
 
   try {
     const profileId = await getProfileId(userId);
+    const trustedItems = await normalizeOrderItems(v.items);
 
     await db.transaction(async (tx) => {
       const [order] = await tx.select().from(orders).where(eq(orders.id, v.orderId)).limit(1);
@@ -44,11 +46,11 @@ export async function updateOrderForUser(userId: string, input: UpdateOrderInput
       await tx.delete(orderItems).where(eq(orderItems.orderId, v.orderId));
 
       // 2. Dòng mới
-      const subtotal = v.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+      const subtotal = trustedItems.reduce((s, i) => s + i.total, 0);
       const total = Math.max(0, subtotal - v.discount + v.shippingFee);
 
       await tx.insert(orderItems).values(
-        v.items.map((i) => ({
+        trustedItems.map((i) => ({
           orderId: v.orderId,
           productId: i.productId,
           productName: i.productName,
@@ -61,7 +63,7 @@ export async function updateOrderForUser(userId: string, input: UpdateOrderInput
       );
 
       if (!isQuote && order.warehouseId) {
-        for (const i of v.items) {
+        for (const i of trustedItems) {
           const baseQty = i.quantity * i.unitMultiplier;
           await tx
             .insert(stockLevels)
@@ -72,7 +74,7 @@ export async function updateOrderForUser(userId: string, input: UpdateOrderInput
             });
         }
         await tx.insert(stockMovements).values({
-          productId: v.items[0].productId,
+          productId: trustedItems[0].productId,
           warehouseId: order.warehouseId,
           type: "adjust",
           quantity: toQty(0),
@@ -113,6 +115,9 @@ export async function updateOrderForUser(userId: string, input: UpdateOrderInput
     return { ok: true, data: undefined };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
+    if (["PRODUCT_NOT_FOUND", "UNIT_NOT_FOUND", "INVALID_ITEMS"].includes(msg)) {
+      return { ok: false, error: "errors.invalidData" };
+    }
     const known: Record<string, string> = {
       NOT_EDITABLE: "orderEdit.errors.notEditable",
       HAS_RETURNS: "orderEdit.errors.hasReturns",

@@ -139,7 +139,7 @@ export async function checkoutTable(id: string, method: Method, lineIds?: unknow
         unitName: i.unitName,
         unitMultiplier: i.unitMultiplier,
         quantity: i.quantity,
-        unitPrice: i.unitPrice,
+        manualUnitPrice: i.unitPrice,
       })),
       discount: 0,
       shippingFee: 0,

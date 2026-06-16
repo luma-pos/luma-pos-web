@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/actions/common";
 import { Routes } from "@/lib/routes";
 
 /**
@@ -7,9 +7,11 @@ import { Routes } from "@/lib/routes";
  * (giống KiotViet). Vẫn yêu cầu đăng nhập.
  */
 export default async function PosLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(Routes.Login);
+  try {
+    await requireUser();
+  } catch {
+    redirect(Routes.Login);
+  }
 
   return <div className="h-screen overflow-hidden bg-canvas">{children}</div>;
 }

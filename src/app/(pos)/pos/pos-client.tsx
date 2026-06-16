@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Search, Plus, Minus, Trash2, Loader2, ShoppingCart, X, GripVertical, Pencil, WifiOff, RefreshCw, Tag, ChevronDown, Check, Printer, MoreVertical } from "lucide-react";
+import { Search, Plus, Minus, Trash2, Loader2, ShoppingCart, X, GripVertical, WifiOff, RefreshCw, Tag, ChevronDown, Check, Printer, MoreVertical } from "lucide-react";
 import { formatCurrency, formatNumber, cn } from "@/lib/utils";
 import { normalizeSearch } from "@/lib/normalize";
 import { createPortal } from "react-dom";
@@ -126,6 +126,10 @@ function makeTempSlipCode(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
   return `TT${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
+
+function currentTimestamp(): number {
+  return Date.now();
 }
 
 export function PosClient({ data, printTemplate }: { data: PosData; printTemplate: PrintTemplate }) {
@@ -451,13 +455,15 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
       projectName: projectName || undefined,
       discount: discountVnd,
       shippingFee,
+      priceBookId: priceBook || null,
       items: cart.map((l) => ({
         productId: l.product.id,
         productName: l.product.name,
         unitName: l.unitName,
         unitMultiplier: l.unitMultiplier,
         quantity: l.quantity,
-        unitPrice: effPrice(l).price,
+        manualUnitPrice: l.manualPrice ? l.unitPrice : undefined,
+        lineDiscount: l.lineDiscount ?? 0,
       })),
       payment: { method: payMethod, amount: mode === "quote" ? 0 : paid },
     };
@@ -487,7 +493,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
   /** Lưu đơn vào hàng đợi offline + báo người dùng. */
   async function queueOffline(payload: Parameters<typeof createOrder>[0]) {
     // localId = clientId của đơn → sync lại dùng đúng clientId, server khử trùng.
-    await enqueueOrder({ localId: payload.clientId ?? makeClientId(), payload, savedAt: Date.now() });
+    await enqueueOrder({ localId: payload.clientId ?? makeClientId(), payload, savedAt: currentTimestamp() });
     setSubmitting(false);
     setPending((c) => c + 1);
     closeInvoice(activeId);

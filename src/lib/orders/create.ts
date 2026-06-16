@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions/common";
 import { recordCashTx, fundForMethod } from "@/lib/cash";
 import { Routes } from "@/lib/routes";
+import { normalizeOrderItems } from "@/lib/orders/normalize";
 
 /**
  * Lõi tạo đơn — KHÔNG phải server action (nhận userId đã xác thực).
@@ -34,7 +35,17 @@ export async function createOrderForUser(
 
   // Server tự tính tiền — không tin client
   const isQuote = v.mode === "quote";
-  const subtotal = v.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+  let trustedItems;
+  try {
+    trustedItems = await normalizeOrderItems(v.items, v.priceBookId);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (["PRODUCT_NOT_FOUND", "UNIT_NOT_FOUND", "INVALID_ITEMS"].includes(msg)) {
+      return { ok: false, error: "errors.invalidData" };
+    }
+    throw e;
+  }
+  const subtotal = trustedItems.reduce((s, i) => s + i.total, 0);
   const total = Math.max(0, subtotal - v.discount + v.shippingFee);
   const paid = isQuote || v.payment.method === "credit" ? 0 : Math.min(v.payment.amount, total);
   const remaining = total - paid;
@@ -64,7 +75,7 @@ export async function createOrderForUser(
       }).returning({ id: orders.id, code: orders.code });
 
       await tx.insert(orderItems).values(
-        v.items.map((i) => ({
+        trustedItems.map((i) => ({
           orderId: order.id,
           productId: i.productId,
           productName: i.productName,
@@ -94,7 +105,7 @@ export async function createOrderForUser(
       if (isQuote) return order;
 
       // Trừ kho theo base unit + ghi movement
-      for (const i of v.items) {
+      for (const i of trustedItems) {
         const baseQty = i.quantity * i.unitMultiplier;
         await tx
           .insert(stockLevels)

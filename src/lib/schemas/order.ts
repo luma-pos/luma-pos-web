@@ -3,11 +3,13 @@ import { z } from "zod";
 /** Schema dùng chung client/server cho tạo đơn POS. */
 export const orderItemSchema = z.object({
   productId: z.uuid(),
-  productName: z.string().min(1),
+  productName: z.string().min(1).optional(),
   unitName: z.string().min(1),
-  unitMultiplier: z.number().positive(),
+  unitMultiplier: z.number().positive().optional(),
   quantity: z.number().positive(),
-  unitPrice: z.number().min(0),
+  unitPrice: z.number().min(0).optional(),
+  manualUnitPrice: z.number().min(0).optional(),
+  lineDiscount: z.number().min(0).optional(),
 });
 
 export const createOrderSchema = z.object({
@@ -16,6 +18,7 @@ export const createOrderSchema = z.object({
   clientId: z.string().max(40).optional(),
   customerId: z.uuid().nullable().optional(),
   warehouseId: z.uuid(),
+  priceBookId: z.uuid().nullable().optional(),
   projectId: z.uuid().nullable().optional(),
   projectName: z.string().optional(),
   deliveryAddress: z.string().optional(),
