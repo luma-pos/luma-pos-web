@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, Upload, FileText, Loader2, Check, AlertTriangle, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { cn } from "@/lib/utils";
 import { importProducts, type ImportRow, type ImportSummary } from "@/lib/actions/import";
 
@@ -22,12 +23,36 @@ const ALIASES: Record<FieldKey, string[]> = {
   name: ["tenhang", "tensanpham", "ten", "productname", "name", "tenhanghoa"],
   sku: ["mahang", "ma", "sku", "masanpham", "mahanghoa", "code"],
   barcode: ["barcode", "mavach"],
-  category: ["nhomhang", "nhom", "category", "loai", "danhmuc", "loaihang"],
+  category: ["nhomhang", "nhom", "category", "danhmuc"],
   unit: ["donvi", "dvt", "unit", "donvitinh"],
   retailPrice: ["giaban", "giale", "retail", "price", "dongia", "giabanle"],
   costPrice: ["giavon", "gianhap", "cost", "giagoc"],
   stock: ["tonkho", "ton", "stock", "qty", "quantity", "soluong", "toncuoi"],
 };
+
+// nhận diện dòng tiêu đề + cột "Mã ĐVT Cơ bản" của KiotViet (dòng đơn vị quy đổi)
+const HEADER_HINTS = ["tenhang", "mahang", "giaban", "tonkho", "mavach", "nhomhang", "giavon"];
+const BASE_UNIT_KEYS = ["madvtcoban"]; // KiotViet: dòng có giá trị này = đơn vị quy đổi của SP khác
+
+function findHeaderRow(rows: string[][]): number {
+  for (let i = 0; i < Math.min(rows.length, 8); i++) {
+    const ks = rows[i].map((c) => key(c ?? ""));
+    if (ks.filter((k) => HEADER_HINTS.some((h) => k === h || k.startsWith(h))).length >= 2) return i;
+  }
+  return 0;
+}
+
+/** Ghép cột tự động: ưu tiên khớp chính xác, sau đó khớp tiền tố (vd "nhomhang3cap"). */
+function autoMap(headers: string[]): Record<FieldKey, number> {
+  const ks = headers.map((h) => key(h));
+  const m = {} as Record<FieldKey, number>;
+  for (const f of FIELDS) m[f.key] = ks.findIndex((k) => ALIASES[f.key].includes(k));
+  for (const f of FIELDS) {
+    if (m[f.key] >= 0) continue;
+    m[f.key] = ks.findIndex((k, i) => !Object.values(m).includes(i) && ALIASES[f.key].some((a) => k.startsWith(a)));
+  }
+  return m;
+}
 
 /** CSV parser tối giản: hỗ trợ ngoặc kép, dấu phẩy & xuống dòng trong ô. */
 function parseCsv(text: string): string[][] {
@@ -60,24 +85,35 @@ export function ImportClient() {
   const [err, setErr] = useState("");
   const [pending, start] = useTransition();
 
+  function loadRows(all: string[][]) {
+    if (all.length < 2) { setErr(t("import.errors.empty")); return; }
+    const hr = findHeaderRow(all);
+    const hd = (all[hr] ?? []).map((h) => (h ?? "").trim());
+    let data = all.slice(hr + 1);
+    // KiotViet: bỏ dòng đơn vị quy đổi (có "Mã ĐVT Cơ bản") để không tạo SP rác
+    const baseUnitIdx = hd.findIndex((h) => BASE_UNIT_KEYS.includes(key(h)));
+    if (baseUnitIdx >= 0) data = data.filter((r) => !(r[baseUnitIdx] ?? "").trim());
+    setHeaders(hd); setRows(data); setMap(autoMap(hd));
+  }
+
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; if (!f) return;
     setErr(""); setSummary(null); setFileName(f.name);
     const reader = new FileReader();
+    const isCsv = /\.csv$/i.test(f.name);
     reader.onload = () => {
-      const all = parseCsv(String(reader.result ?? ""));
-      if (all.length < 2) { setErr(t("import.errors.empty")); return; }
-      const hd = all[0].map((h) => h.trim());
-      setHeaders(hd); setRows(all.slice(1));
-      // auto map
-      const m = {} as Record<FieldKey, number>;
-      for (const f of FIELDS) {
-        const idx = hd.findIndex((h) => ALIASES[f.key].includes(key(h)));
-        m[f.key] = idx;
-      }
-      setMap(m);
+      try {
+        if (isCsv) {
+          loadRows(parseCsv(String(reader.result ?? "")));
+        } else {
+          const wb = XLSX.read(reader.result as ArrayBuffer, { type: "array" });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const aoa = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, raw: false, defval: "" });
+          loadRows(aoa.map((r) => (r ?? []).map((c) => String(c ?? ""))));
+        }
+      } catch { setErr(t("import.errors.parse")); }
     };
-    reader.readAsText(f);
+    if (isCsv) reader.readAsText(f); else reader.readAsArrayBuffer(f);
   }
 
   function buildRows(): ImportRow[] {
@@ -110,7 +146,7 @@ export function ImportClient() {
   const mappedSample = rows.slice(0, 5);
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="p-6 min-h-screen">
       <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-5 min-h-13 px-6 py-2.5 bg-surface border-b border-border flex items-center gap-3">
         <Link href="/settings" className="p-1.5 rounded-lg hover:bg-surface-2 text-slate-500"><ArrowLeft className="w-4 h-4" /></Link>
         <h1 className="text-[17px] font-bold">{t("import.title")}</h1>
@@ -123,7 +159,7 @@ export function ImportClient() {
 
       {/* Step 1 — upload */}
       <div className="bg-surface border border-border rounded-card p-5 mb-4">
-        <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
+        <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls,text/csv" onChange={onFile} className="hidden" />
         <button onClick={() => fileRef.current?.click()} className="w-full border-2 border-dashed border-border rounded-xl py-8 grid place-items-center gap-2 hover:border-primary-400 transition">
           <Upload className="w-7 h-7 text-slate-400" />
           <span className="text-sm font-semibold">{fileName || t("import.choose")}</span>
