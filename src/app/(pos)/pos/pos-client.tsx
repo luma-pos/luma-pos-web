@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Search, Plus, Minus, Trash2, Loader2, ShoppingCart, X, GripVertical, Pencil, WifiOff, RefreshCw, Tag, ChevronDown, Check, Printer } from "lucide-react";
+import { Search, Plus, Minus, Trash2, Loader2, ShoppingCart, X, GripVertical, Pencil, WifiOff, RefreshCw, Tag, ChevronDown, Check, Printer, MoreVertical } from "lucide-react";
 import { formatCurrency, formatNumber, cn } from "@/lib/utils";
 import { normalizeSearch } from "@/lib/normalize";
 import { createPortal } from "react-dom";
@@ -29,6 +29,7 @@ type CartLine = {
   quantity: number;
   lineDiscount?: number;  // giảm giá tay (VND) trên mỗi đơn vị
   manualPrice?: boolean;  // đã sửa giá/giảm giá tay → bỏ qua KM tự động
+  note?: string;
 };
 
 type PayMethod = "cash" | "bank_transfer" | "credit";
@@ -53,6 +54,7 @@ interface Invoice {
   shippingFee: number;
   payMethod: PayMethod;
   paidInput: number | null;
+  note?: string;
 }
 
 const INV_KEY = "pos-invoices";
@@ -201,7 +203,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
   }, [activeId]);
 
   const active = invoices.find((i) => i.id === activeId) ?? invoices[0];
-  const { cart, customerId, projectId, projectName, discountInput, discountMode, taxRate, shippingFee, payMethod, paidInput } = active;
+  const { cart, customerId, projectId, projectName, discountInput, discountMode, taxRate, shippingFee, payMethod, paidInput, note: orderNote } = active;
   const priceBook: PriceBook = active.priceBook ?? ""; // "" = bảng giá mặc định
   const defaultBook = data.priceBooks.find((b) => b.isDefault) ?? data.priceBooks[0];
   const priceBookName = (priceBook && data.priceBooks.find((b) => b.id === priceBook)?.name) || defaultBook?.name || "Giá lẻ";
@@ -222,6 +224,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
   const setDiscountMode = (v: "vnd" | "pct") => patchActive({ discountMode: v });
   const setTaxRate = (v: number) => patchActive({ taxRate: v });
   const setShippingFee = (v: number) => patchActive({ shippingFee: v });
+  const setOrderNote = (v: string) => patchActive({ note: v });
   const setPayMethod = (v: PayMethod) => patchActive({ payMethod: v });
   const setPaidInput = (v: number | null) => patchActive({ paidInput: v });
 
@@ -402,6 +405,10 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
     }));
   }
 
+  function setLineNote(key: string, note: string) {
+    setCart((c) => c.map((l) => (l.key === key ? { ...l, note } : l)));
+  }
+
   function changeCustomer(id: string) {
     patchActive({ customerId: id });
   }
@@ -503,7 +510,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
 
   // Tabs hóa đơn — đặt cạnh thanh tìm kiếm (giống KiotViet).
   const invoiceTabs = (
-    <div className="flex items-stretch gap-1 overflow-x-auto shrink-0">
+    <div className="flex items-stretch gap-1.5 overflow-x-auto">
       {invoices.map((inv, idx) => {
         const count = inv.cart.reduce((s, l) => s + l.quantity, 0);
         const isActive = inv.id === activeId;
@@ -512,17 +519,17 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
             key={inv.id}
             onClick={() => { setActiveId(inv.id); setError(""); }}
             className={cn(
-              "group flex items-center gap-1.5 pl-3 pr-1.5 py-2 rounded-lg cursor-pointer whitespace-nowrap border text-sm transition-colors",
+              "group flex items-center gap-2 pl-4 pr-2 py-2.5 rounded-lg cursor-pointer whitespace-nowrap border text-sm transition-colors",
               isActive
                 ? "bg-primary-50 border-primary-300 text-primary-700 font-semibold dark:bg-primary-950/50 dark:border-primary-800 dark:text-primary-300"
                 : "bg-surface border-border text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             )}
           >
-            <ShoppingCart className={cn("w-3.5 h-3.5 shrink-0", isActive ? "text-primary-600" : "text-slate-400")} />
+            <ShoppingCart className={cn("w-4 h-4 shrink-0", isActive ? "text-primary-600" : "text-slate-400")} />
             <span>{t("pos.invoice.tab", { n: idx + 1 })}</span>
             {count > 0 && (
               <span className={cn(
-                "min-w-[18px] text-center rounded-full px-1 text-[10px] font-bold",
+                "min-w-[20px] text-center rounded-full px-1.5 text-xs font-bold",
                 isActive ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300" : "bg-slate-200 dark:bg-slate-700"
               )}>{count}</span>
             )}
@@ -541,7 +548,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
       <button
         onClick={addInvoice}
         title={t("pos.invoice.add")}
-        className="shrink-0 px-2.5 rounded-lg border border-border text-slate-400 hover:text-primary-600 hover:border-primary-300"
+        className="shrink-0 px-3 py-2.5 rounded-lg border border-border text-slate-400 hover:text-primary-600 hover:border-primary-300"
       >
         <Plus className="w-4 h-4" />
       </button>
@@ -554,11 +561,11 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
       <div className="px-3 py-2 border-b border-border flex items-center">
         <h2 className="font-semibold text-sm">{t("pos.order")} ({cart.length})</h2>
       </div>
-      <div className="flex-1 overflow-auto p-3 space-y-2">
+      <div className="flex-1 overflow-auto">
         {cart.length === 0 && (
           <div className="text-center text-sm text-slate-400 py-12">{t("pos.noItems")}</div>
         )}
-        {cart.map((l) => {
+        {cart.map((l, idx) => {
           const m2 = l.product.m2PerUnit ? Number(l.product.m2PerUnit) * l.unitMultiplier * l.quantity : 0;
           const eff = effPrice(l);
           return (
@@ -580,58 +587,92 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
                 setOverKey(null);
               }}
               className={cn(
-                "relative bg-surface-2 rounded-lg p-3 transition-shadow",
+                "border-b border-border-soft last:border-0 transition-colors",
                 dragKey === l.key && "opacity-50",
-                overKey === l.key && dragKey && dragKey !== l.key &&
-                  "ring-2 ring-primary-500 ring-offset-1 dark:ring-offset-slate-900"
+                overKey === l.key && dragKey && dragKey !== l.key && "bg-primary-50/40 dark:bg-primary-950/20"
               )}
             >
-              <div className="flex items-start justify-between mb-2 gap-2">
-                <button
-                  draggable
-                  onDragStart={(e) => {
-                    setDragKey(l.key);
-                    e.dataTransfer.setData("pos/line", l.key);
-                    e.dataTransfer.effectAllowed = "move";
-                    const card = e.currentTarget.closest("[data-line]");
-                    if (card instanceof HTMLElement) e.dataTransfer.setDragImage(card, 24, 24);
-                  }}
-                  onDragEnd={() => { setDragKey(null); setOverKey(null); }}
-                  title={t("pos.dragToReorder")}
-                  className="shrink-0 -ml-1 mt-0.5 p-0.5 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 cursor-grab active:cursor-grabbing"
-                >
-                  <GripVertical className="w-4 h-4" />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-sm leading-snug">{l.product.name}</div>
-                  <button
-                    onClick={() => setEditKey(editKey === l.key ? null : l.key)}
-                    title={t("pos.priceEditor.editHint")}
-                    className="text-xs text-slate-500 mt-0.5 inline-flex items-center gap-1 rounded px-1 -mx-1 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/40"
-                  >
-                    {eff.pct > 0 ? (
-                      <>
-                        <span className="line-through">{formatCurrency(l.unitPrice)}</span>
-                        <span className={cn("font-semibold", l.manualPrice ? "text-primary-600" : "text-emerald-600")}>{formatCurrency(eff.price)}/{l.unitName}</span>
-                        <span className={cn(
-                          "inline-flex items-center rounded-full px-1.5 py-0 text-[10px] font-bold",
-                          l.manualPrice
-                            ? "bg-primary-100 text-primary-700 dark:bg-primary-950/60 dark:text-primary-300"
-                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                        )}>{l.manualPrice ? `−${eff.pct}%` : `KM −${eff.pct}%`}</span>
-                      </>
-                    ) : (
-                      <span>{formatCurrency(l.unitPrice)}/{l.unitName}</span>
-                    )}
-                    <Pencil className="w-3 h-3 text-primary-500 shrink-0" />
-                  </button>
-                  {m2 > 0 && <div className="text-xs text-primary-600 mt-0.5">≈ {m2.toFixed(2)} m²</div>}
-                </div>
+              <div className="flex items-center gap-2 px-3 py-3">
+                <span className="w-5 text-center text-xs text-slate-400 shrink-0 tabular-nums">{idx + 1}</span>
                 <button onClick={() => setCart((c) => c.filter((x) => x.key !== l.key))} className="text-slate-400 hover:text-er shrink-0">
                   <Trash2 className="w-4 h-4" />
                 </button>
+                <span className="w-24 text-sm text-slate-400 shrink-0 truncate">{l.product.sku ?? ""}</span>
+                <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                  <button
+                    draggable
+                    onDragStart={(e) => {
+                      setDragKey(l.key);
+                      e.dataTransfer.setData("pos/line", l.key);
+                      e.dataTransfer.effectAllowed = "move";
+                      const card = e.currentTarget.closest("[data-line]");
+                      if (card instanceof HTMLElement) e.dataTransfer.setDragImage(card, 24, 24);
+                    }}
+                    onDragEnd={() => { setDragKey(null); setOverKey(null); }}
+                    className="shrink-0 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing"
+                  >
+                    <GripVertical className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="font-medium text-sm line-clamp-2 break-words">{l.product.name}</span>
+                  {eff.pct > 0 && (
+                    <span className={cn(
+                      "shrink-0 text-xs font-bold rounded px-1",
+                      l.manualPrice ? "text-primary-600 bg-primary-50 dark:bg-primary-950/40" : "text-amber-600 bg-amber-50 dark:bg-amber-950/30"
+                    )}>{eff.pct}</span>
+                  )}
+                  {m2 > 0 && <span className="shrink-0 text-xs text-primary-600">≈{m2.toFixed(1)}m²</span>}
+                </div>
+                <select
+                  value={l.unitName}
+                  onChange={(e) => changeUnit(l.key, e.target.value)}
+                  className="shrink-0 text-sm px-2 py-1.5 rounded-md border border-border bg-surface"
+                >
+                  <option value={l.product.baseUnit}>{l.product.baseUnit}</option>
+                  {l.product.units.map((u) => (
+                    <option key={u.unitName} value={u.unitName}>{u.unitName}</option>
+                  ))}
+                </select>
+                <div className="flex items-center shrink-0">
+                  <button onClick={() => updateQty(l.key, -1)} className="w-8 h-8 rounded-l-md border border-border border-r-0 grid place-items-center text-slate-500 hover:text-er hover:bg-surface-2">
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    type="number"
+                    value={l.quantity}
+                    onChange={(e) => setQty(l.key, Number(e.target.value))}
+                    className="no-spinner w-12 py-1.5 text-center text-sm border-y border-border bg-surface"
+                  />
+                  <button onClick={() => updateQty(l.key, 1)} className="w-8 h-8 rounded-r-md border border-border border-l-0 grid place-items-center text-slate-500 hover:text-primary-600 hover:bg-surface-2">
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <button
+                  onClick={() => setEditKey(editKey === l.key ? null : l.key)}
+                  title={t("pos.priceEditor.editHint")}
+                  className="w-28 text-right text-base tabular-nums text-slate-500 hover:text-primary-600 shrink-0"
+                >
+                  {formatCurrency(eff.price)}
+                </button>
+                <span className="w-28 text-right text-base font-bold tabular-nums shrink-0">{formatCurrency(eff.price * l.quantity)}</span>
+                <button onClick={() => setEditKey(editKey === l.key ? null : l.key)} className="w-7 h-7 rounded-md hover:bg-surface-2 grid place-items-center shrink-0 text-slate-400">
+                  <MoreVertical className="w-4 h-4" />
+                </button>
               </div>
-
+              <div className="flex items-center gap-2 px-3 pb-2.5 -mt-1">
+                <span className="w-5 shrink-0" />
+                <span className="w-4 shrink-0" />
+                <span className="w-24 shrink-0" />
+                <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                  <span className="w-3.5 shrink-0" />
+                  <input
+                    type="text"
+                    value={l.note ?? ""}
+                    onChange={(e) => setLineNote(l.key, e.target.value)}
+                    placeholder={t("pos.lineNotePlaceholder")}
+                    className="min-w-0 flex-1 text-left text-xs text-slate-400 bg-transparent outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                  />
+                </div>
+              </div>
               {editKey === l.key && (
                 <LinePriceEditor
                   line={l}
@@ -639,36 +680,18 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
                   onClose={() => setEditKey(null)}
                 />
               )}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  <button onClick={() => updateQty(l.key, -1)} className="w-9 h-9 lg:w-7 lg:h-7 rounded-md bg-surface border border-border grid place-items-center">
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <input
-                    type="number"
-                    value={l.quantity}
-                    onChange={(e) => setQty(l.key, Number(e.target.value))}
-                    className="no-spinner w-14 px-1 py-1 text-center text-sm rounded-md border border-border bg-surface"
-                  />
-                  <button onClick={() => updateQty(l.key, 1)} className="w-9 h-9 lg:w-7 lg:h-7 rounded-md bg-surface border border-border grid place-items-center">
-                    <Plus className="w-3 h-3" />
-                  </button>
-                  <select
-                    value={l.unitName}
-                    onChange={(e) => changeUnit(l.key, e.target.value)}
-                    className="text-xs px-1.5 py-1 rounded-md border border-border bg-surface"
-                  >
-                    <option value={l.product.baseUnit}>{l.product.baseUnit}</option>
-                    {l.product.units.map((u) => (
-                      <option key={u.unitName} value={u.unitName}>{u.unitName}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="font-semibold text-sm tabular-nums">{formatCurrency(eff.price * l.quantity)}</div>
-              </div>
             </div>
           );
         })}
+      </div>
+      <div className="border-t border-border p-2">
+        <input
+          type="text"
+          value={orderNote ?? ""}
+          onChange={(e) => setOrderNote(e.target.value)}
+          placeholder={t("pos.orderNotePlaceholder")}
+          className="w-full px-2 py-1.5 text-sm rounded-md border border-border bg-surface outline-none placeholder:text-slate-400"
+        />
       </div>
     </div>
   );
@@ -700,8 +723,9 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
             <ShoppingCart className="w-4 h-4" /> {t("pos.checkout")} ({cart.reduce((s, l) => s + l.quantity, 0)}) · {formatCurrency(total)}
           </button>
         )}
-        <div className="flex items-center gap-3 mb-3">
-          <div ref={searchRef} className="relative flex-1 min-w-0">
+        <div className="mb-3 space-y-2">
+          {invoiceTabs}
+          <div ref={searchRef} className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
             <input
               type="text"
@@ -750,20 +774,21 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
                             <div className="text-sm font-medium truncate">{p.name}</div>
                             <div className={cn("text-xs", stock <= 0 ? "text-er" : "text-slate-400")}>{t("pos.stockLabel")} {formatNumber(stock)} {p.baseUnit}</div>
                           </div>
-                          {line ? (
-                            <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                              <button onClick={() => updateQty(line.key, -1)} className="w-9 h-9 lg:w-7 lg:h-7 rounded-md border border-border grid place-items-center"><Minus className="w-3 h-3" /></button>
-                              <input
-                                type="number"
-                                value={line.quantity}
-                                onChange={(e) => setQty(line.key, Number(e.target.value))}
-                                className="no-spinner w-12 px-1 py-1 text-center text-sm rounded-md border border-border bg-surface"
-                              />
-                              <button onClick={() => updateQty(line.key, 1)} className="w-9 h-9 lg:w-7 lg:h-7 rounded-md border border-border grid place-items-center"><Plus className="w-3 h-3" /></button>
-                            </div>
-                          ) : (
-                            <div className="text-sm font-semibold text-primary-600 tabular-nums shrink-0">{formatCurrency(basePriceFor(p, priceBook))}/{p.baseUnit}</div>
-                          )}
+                          <div className="flex items-center justify-end gap-2 w-64 shrink-0">
+                            {line && (
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <button onClick={() => updateQty(line.key, -1)} className="w-8 h-8 rounded border border-border grid place-items-center"><Minus className="w-3.5 h-3.5" /></button>
+                                <input
+                                  type="number"
+                                  value={line.quantity}
+                                  onChange={(e) => setQty(line.key, Number(e.target.value))}
+                                  className="no-spinner w-12 px-1 py-1 text-center text-sm rounded border border-border bg-surface"
+                                />
+                                <button onClick={() => updateQty(line.key, 1)} className="w-8 h-8 rounded border border-border grid place-items-center"><Plus className="w-3.5 h-3.5" /></button>
+                              </div>
+                            )}
+                            <div className="text-sm font-semibold text-primary-600 tabular-nums text-right w-32">{formatCurrency(basePriceFor(p, priceBook))}/{p.baseUnit}</div>
+                          </div>
                         </div>
                       );
                     })}
@@ -772,7 +797,6 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
               </div>
             )}
           </div>
-          {invoiceTabs}
         </div>
 
         {orderLinesPanel}
@@ -865,7 +889,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
           </div>
           <div className="flex justify-between items-center gap-2">
             <span className="text-slate-500">{t("pos.discount")}</span>
-            <div className="flex items-center gap-1">
+            <div className="relative w-28">
               {discountMode === "pct" ? (
                 <input
                   type="number"
@@ -874,31 +898,24 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
                   value={discountInput || ""}
                   onChange={(e) => setDiscountInput(Math.max(0, Number(e.target.value)))}
                   placeholder="0"
-                  className="no-spinner w-20 px-2 py-1 text-right text-sm rounded-md border border-border bg-surface"
+                  className="no-spinner w-full pl-2 pr-8 py-1 text-right text-sm rounded-md border border-border bg-surface"
                 />
               ) : (
                 <MoneyInput
                   value={discountInput || ""}
                   onChange={(v) => setDiscountInput(v ?? 0)}
                   placeholder="0"
-                  className="no-spinner w-20 px-2 py-1 text-right text-sm rounded-md border border-border bg-surface"
+                  className="no-spinner w-full pl-2 pr-8 py-1 text-right text-sm rounded-md border border-border bg-surface"
                 />
               )}
-              <div className="flex rounded-md overflow-hidden border border-border shrink-0">
-                {(["vnd", "pct"] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setDiscountMode(m)}
-                    className={cn(
-                      "px-2 py-1 text-xs font-semibold",
-                      discountMode === m ? "bg-primary-600 text-white" : "bg-surface text-slate-500"
-                    )}
-                  >
-                    {m === "vnd" ? "₫" : "%"}
-                  </button>
-                ))}
-              </div>
+              <button
+                type="button"
+                onClick={() => setDiscountMode(discountMode === "vnd" ? "pct" : "vnd")}
+                title="Nhấn để đổi đơn vị"
+                className="absolute right-0 top-0 bottom-0 w-8 flex items-center justify-center rounded-r-md border-l border-border text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors"
+              >
+                {discountMode === "vnd" ? "₫" : "%"}
+              </button>
             </div>
           </div>
           {discountMode === "pct" && discountInput > 0 && (
@@ -908,7 +925,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
           )}
           <div className="flex justify-between items-center gap-2">
             <span className="text-slate-500">{t("pos.tax")}</span>
-            <div className="flex items-center gap-1">
+            <div className="relative">
               <input
                 type="number"
                 min={0}
@@ -916,9 +933,9 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
                 value={taxRate || ""}
                 onChange={(e) => setTaxRate(Math.max(0, Number(e.target.value)))}
                 placeholder="0"
-                className="no-spinner w-20 px-2 py-1 text-right text-sm rounded-md border border-border bg-surface"
+                className="no-spinner w-28 pl-2 pr-6 py-1 text-right text-sm rounded-md border border-border bg-surface"
               />
-              <span className="text-xs text-slate-500 w-8 text-center">%</span>
+              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">%</span>
             </div>
           </div>
           {taxRate > 0 && (
@@ -932,7 +949,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
               value={shippingFee || ""}
               onChange={(v) => setShippingFee(v ?? 0)}
               placeholder="0"
-              className="no-spinner w-32 px-2 py-1 text-right text-sm rounded-md border border-border bg-surface"
+              className="no-spinner w-28 px-2 py-1 text-right text-sm rounded-md border border-border bg-surface"
             />
           </div>
           <div className="flex justify-between text-base font-semibold pt-1">
@@ -1144,8 +1161,9 @@ function LinePriceEditor({
   return (
     <>
       {/* lớp nền để click ra ngoài đóng popup */}
-      <div className="fixed inset-0 z-30" onClick={onClose} />
-      <div className="absolute z-40 left-3 right-3 top-12 bg-surface rounded-xl border border-border shadow-e2 p-3 space-y-2.5 text-sm">
+      <div className="fixed inset-0 z-55" onClick={onClose} />
+      <div className="fixed z-60 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-100 max-w-[calc(100vw-32px)] bg-surface rounded-xl border border-border shadow-e2 p-4 space-y-3 text-sm">
+        <div className="font-semibold text-base mb-1">{line.product.name}</div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-slate-500 shrink-0">{t("pos.priceEditor.unitPrice")}</span>
           <MoneyInput

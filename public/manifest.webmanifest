@@ -1,7 +1,7 @@
 {
   "name": "Sales Mgmt — Quản lý bán hàng",
   "short_name": "Sales Mgmt",
-  "description": "Quản lý bán hàng VLXD — POS, kho, công nợ",
+  "description": "Quản lý bán hàng — POS, kho, công nợ",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
