@@ -439,9 +439,9 @@
   "import": {
     "title": "Nhập dữ liệu",
     "template": "Tải file mẫu",
-    "intro": "Nhập sản phẩm từ KiotViet, Sapo, POS365 hay bảng tính bất kỳ — xuất ra CSV, ghép cột, xem trước rồi xác nhận. Sản phẩm đã có được khớp theo mã hàng (SKU).",
-    "choose": "Chọn file CSV",
-    "csvOnly": "File CSV (.csv) — xuất từ hệ thống hiện tại của bạn",
+    "intro": "Nhập sản phẩm từ KiotViet, Sapo, POS365 hay bảng tính bất kỳ — CSV hoặc Excel (.xlsx). File xuất sản phẩm KiotViet dùng được ngay: tự ghép cột và bỏ qua dòng đơn vị quy đổi. Ghép cột, xem trước rồi xác nhận. Sản phẩm đã có được khớp theo mã hàng (SKU).",
+    "choose": "Chọn file CSV hoặc Excel",
+    "csvOnly": "CSV (.csv) hoặc Excel (.xlsx) — gồm cả file xuất SP KiotViet",
     "mapTitle": "Ghép cột dữ liệu",
     "rows": "dòng",
     "ignore": "— bỏ qua —",
@@ -460,7 +460,7 @@
     "newCats": "Sẽ tạo {count} nhóm hàng mới",
     "rowN": "Dòng {n}",
     "viewProducts": "Xem sản phẩm →",
-    "errors": { "empty": "File không có dòng dữ liệu.", "needName": "Hãy ghép cột Tên hàng trước.", "noName": "thiếu tên hàng" }
+    "errors": { "empty": "File không có dòng dữ liệu.", "parse": "Không đọc được file. Dùng CSV hoặc .xlsx.", "needName": "Hãy ghép cột Tên hàng trước.", "noName": "thiếu tên hàng" }
   },
   "shifts": {
     "openTitle": "Mở ca",

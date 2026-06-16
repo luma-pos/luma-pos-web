@@ -48,10 +48,12 @@ function parseNum(raw: string | undefined): number {
     s = (s.match(/,/g)?.length ?? 0) === 1 ? s.replace(",", ".") : s.replace(/,/g, "");
   }
   const n = parseFloat(s);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  return Number.isFinite(n) ? n : 0;
 }
 
 const norm = (s: string) => s.trim().toLowerCase();
+/** KiotViet "Nhóm hàng(3 Cấp)" = "A>>B>>C" → lấy nhóm lá. */
+const leafCat = (s: string) => (s.includes(">>") ? s.split(">>").pop()!.trim() : s);
 
 /**
  * Nhập sản phẩm từ CSV đã map. dryRun=true chỉ phân tích (không ghi).
@@ -71,7 +73,7 @@ export async function importProducts(rows: unknown, dryRun: boolean): Promise<Ac
     name: r.name?.trim() ?? "",
     sku: r.sku?.trim() ?? "",
     barcode: r.barcode?.trim() ?? "",
-    category: r.category?.trim() ?? "",
+    category: leafCat(r.category?.trim() ?? ""),
     unit: r.unit?.trim() ?? "",
     retailPrice: r.retailPrice,
     costPrice: r.costPrice,
@@ -119,9 +121,9 @@ export async function importProducts(rows: unknown, dryRun: boolean): Promise<Ac
 
       for (const r of valid) {
         const categoryId = r.category ? catByName.get(norm(r.category)) ?? null : null;
-        const retail = parseNum(r.retailPrice);
-        const cost = parseNum(r.costPrice);
-        const stock = parseNum(r.stock);
+        const retail = Math.max(0, parseNum(r.retailPrice));
+        const cost = Math.max(0, parseNum(r.costPrice));
+        const stock = parseNum(r.stock); // cho phép tồn âm (KiotViet)
 
         const existingId = r.sku ? skuToId.get(r.sku) : undefined;
         let productId: string;
