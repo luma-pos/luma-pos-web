@@ -12,6 +12,17 @@ import { recordCashTx, fundForMethod } from "@/lib/cash";
 import { Routes } from "@/lib/routes";
 import { normalizeOrderItems } from "@/lib/orders/normalize";
 
+function revalidateOrderPaths(sourceOrderId?: string) {
+  try {
+    revalidatePath(Routes.Orders);
+    revalidatePath(Routes.Products);
+    if (sourceOrderId) revalidatePath(Routes.order(sourceOrderId));
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("static generation store missing")) return;
+    console.warn("createOrder revalidate failed:", e);
+  }
+}
+
 /**
  * Lõi tạo đơn — KHÔNG phải server action (nhận userId đã xác thực).
  * Dùng bởi server action createOrder (web, lấy userId từ cookie session).
@@ -226,9 +237,7 @@ export async function createOrderForUser(
       return order;
     });
 
-    revalidatePath(Routes.Orders);
-    revalidatePath(Routes.Products);
-    if (v.source?.orderId) revalidatePath(Routes.order(v.source.orderId));
+    revalidateOrderPaths(v.source?.orderId);
     return { ok: true, data: result };
   } catch (e) {
     // Trùng clientId (đua khi đồng bộ song song) → đơn đã tồn tại, trả về đơn cũ.
