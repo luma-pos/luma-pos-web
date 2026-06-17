@@ -4,6 +4,8 @@ import { Routes } from "@/lib/routes";
 import { cn, formatCurrency, formatDate, formatNumber } from "@/lib/utils";
 import { getDashboard, categoryEmoji, type DashboardRange } from "@/lib/data/dashboard";
 import { OrderStatusBadge, PaymentStatusBadge } from "../orders/status-badges";
+import { buttonVariants } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
 
 export const dynamic = "force-dynamic";
 
@@ -23,21 +25,25 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const maxDay = Math.max(1, ...data.revenueByDay.map((d) => Number(d.revenue)));
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 sm:p-6 space-y-5">
       {/* header — theo design: title + Realtime + range seg + nút bán hàng */}
       <div className="flex items-center gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-ok-soft text-ok">
-          ● Realtime
-        </span>
-        <div className="ml-auto flex items-center gap-3 flex-wrap">
-          <div className="inline-flex bg-surface-2 rounded-lg p-0.5 gap-0.5">
+        <Text as="h1" size="2xl" weight="bold" className="min-w-0 flex-1 sm:flex-none" text={t("dashboard.title")} />
+        <Text
+          as="span"
+          size="xs"
+          weight="medium"
+          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 bg-ok-soft text-ok"
+          text={`● ${t("dashboard.realtime")}`}
+        />
+        <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-3 flex-wrap">
+          <div className="inline-flex w-full sm:w-auto bg-surface-2 rounded-lg p-0.5 gap-0.5 overflow-x-auto">
             {RANGES.map((r) => (
               <Link
                 key={r}
                 href={`${Routes.Dashboard}?range=${r}`}
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-xs font-semibold",
+                  "flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs font-semibold text-center whitespace-nowrap",
                   range === r
                     ? "bg-surface text-slate-900 dark:text-slate-100 shadow-sm"
                     : "text-slate-500"
@@ -47,9 +53,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
               </Link>
             ))}
           </div>
-          <Link href={Routes.POS} target="_blank" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium">
+          <Link href={Routes.POS} target="_blank" className={cn(buttonVariants({ block: true }), "sm:w-auto gap-2")}>
             + {t("nav.pos")}
-            <span className="text-[10px] font-mono bg-white/20 rounded px-1.5 py-0.5">F2</span>
+            <Text as="span" className="text-[10px] font-mono bg-white/20 rounded px-1.5 py-0.5 text-current" text="F2" />
           </Link>
         </div>
       </div>
@@ -84,12 +90,12 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       <div className="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-4">
         <div className="bg-surface rounded-card border border-border">
           <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-            <h2 className="font-bold text-sm">{t("dashboard.revenueByDay")}</h2>
-            <span className="text-xs text-slate-400">{t("dashboard.unitMillion")}</span>
+            <Text as="h2" weight="bold" text={t("dashboard.revenueByDay")} />
+            <Text as="span" variant="muted" size="xs" text={t("dashboard.unitMillion")} />
           </div>
           <div className="p-5">
             {data.revenueByDay.length === 0 ? (
-              <p className="text-sm text-slate-400 py-12 text-center">{t("dashboard.noData")}</p>
+              <Text as="p" variant="muted" className="py-12 text-center" text={t("dashboard.noData")} />
             ) : (
               <div className="flex items-end gap-2.5 h-44">
                 {data.revenueByDay.map((d) => {
@@ -100,9 +106,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                         className={cn("w-full rounded-t-md", d.dow === 7 ? "bg-surface-2" : "bg-primary-600/90")}
                         style={{ height: `${Math.max(4, (v / maxDay) * 100)}%` }}
                       />
-                      <span className="text-[10px] text-slate-400 text-center leading-tight">
+                      <Text as="span" variant="muted" className="text-[10px] text-center leading-tight">
                         {DOW_LABEL[d.dow]}<br />{(v / 1e6).toFixed(1).replace(".", ",")}
-                      </span>
+                      </Text>
                     </div>
                   );
                 })}
@@ -114,12 +120,12 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         {/* cảnh báo tồn kho — theo design: thumb emoji + badge */}
         <div className="bg-surface rounded-card border border-border">
           <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-            <h2 className="font-bold text-sm">{t("dashboard.lowStockTitle")}</h2>
+            <Text as="h2" weight="bold" text={t("dashboard.lowStockTitle")} />
             <Link href={`${Routes.Inventory}?low=1`} className="text-xs font-medium text-primary-600 hover:underline">{t("dashboard.viewAll")}</Link>
           </div>
           <div className="p-4">
             {data.lowStock.length === 0 ? (
-              <p className="text-sm text-slate-400 py-10 text-center">{t("dashboard.stockOk")}</p>
+              <Text as="p" variant="muted" className="py-10 text-center" text={t("dashboard.stockOk")} />
             ) : (
               <div className="divide-y divide-border-soft">
                 {data.lowStock.map((p) => {
@@ -152,7 +158,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             )}
             <Link
               href={Routes.PurchaseNew}
-              className="mt-3 w-full inline-flex justify-center px-4 py-2.5 rounded-lg bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 text-sm font-semibold hover:bg-primary-100"
+              className={cn(buttonVariants({ variant: "secondary", block: true }), "mt-3")}
             >
               {t("dashboard.createPurchase")}
             </Link>
@@ -164,13 +170,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       <div className="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-4">
         <div className="bg-surface rounded-card border border-border overflow-hidden">
           <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-            <h2 className="font-bold text-sm">{t("dashboard.recentOrders")}</h2>
+            <Text as="h2" weight="bold" text={t("dashboard.recentOrders")} />
             <Link href={Routes.Orders} className="text-xs font-medium text-primary-600 hover:underline">{t("dashboard.allOrders")}</Link>
           </div>
           {data.recentOrders.length === 0 ? (
-            <p className="text-sm text-slate-400 py-10 text-center">{t("orders.empty")}</p>
+            <Text as="p" variant="muted" className="py-10 text-center" text={t("orders.empty")} />
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="bg-canvas text-left text-[11px] uppercase tracking-wide text-slate-400">
                   <th className="px-4 py-2.5 font-bold">{t("orders.cols.code")}</th>
@@ -188,7 +195,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                     <td className="px-4 py-3">
                       {o.customerName ?? t("orders.walkIn")}
                       {o.customerType && o.customerType !== "retail" && (
-                        <span className="text-xs text-slate-400"> ({t(`customers.types.${o.customerType}` as never)})</span>
+                        <Text as="span" variant="muted" size="xs" text={` (${t(`customers.types.${o.customerType}` as never)})`} />
                       )}
                     </td>
                     <td className="px-4 py-3 text-slate-400 text-xs">{o.projectName ?? "—"}</td>
@@ -199,17 +206,18 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
         <div className="bg-surface rounded-card border border-border">
           <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-            <h2 className="font-bold text-sm">{t("dashboard.topDebtors")}</h2>
+            <Text as="h2" weight="bold" text={t("dashboard.topDebtors")} />
             <Link href={`${Routes.Customers}?owing=1`} className="text-xs font-medium text-primary-600 hover:underline">{t("dashboard.debtLink")}</Link>
           </div>
           <div className="p-4">
             {data.topDebtors.length === 0 ? (
-              <p className="text-sm text-slate-400 py-10 text-center">{t("dashboard.noDebt")}</p>
+              <Text as="p" variant="muted" className="py-10 text-center" text={t("dashboard.noDebt")} />
             ) : (
               <>
                 <div className="divide-y divide-border-soft">
@@ -235,7 +243,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                   })}
                 </div>
                 <div className="border-t border-border mt-2 pt-3 flex justify-between text-sm">
-                  <span className="text-slate-500">{t("dashboard.totalReceivable")}</span>
+                  <Text as="span" variant="muted" text={t("dashboard.totalReceivable")} />
                   <b className="tabular-nums">{formatCurrency(data.debt.total)}</b>
                 </div>
               </>
@@ -243,7 +251,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           </div>
         </div>
       </div>
-      <span className="hidden">{formatDate(new Date())}</span>
+      <Text as="span" className="hidden" text={formatDate(new Date())} />
     </div>
   );
 }

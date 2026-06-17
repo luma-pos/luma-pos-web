@@ -158,6 +158,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  overflow-x: hidden;
 }
 
 /* số liệu (tiền, SL) căn cột — dùng cùng font-mono cho bảng/KPI */
@@ -189,7 +190,7 @@ body {
     position: fixed;
     top: 0; bottom: 0; left: 0;
     z-index: 60;
-    height: 100vh;
+    height: 100dvh;
     transform: translateX(-100%);
     transition: transform 0.22s ease;
     box-shadow: 0 10px 40px rgba(0,0,0,0.18);

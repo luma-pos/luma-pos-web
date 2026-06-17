@@ -5,6 +5,9 @@ import { ChevronDown, Search, Check, Plus, Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { normalizeSearch } from "@/lib/normalize";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
 
 export interface ComboOption {
   value: string;
@@ -86,66 +89,95 @@ export function SearchableSelect({
 
   return (
     <div ref={ref} className={cn("relative", className)}>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        block
         disabled={disabled}
         onClick={() => { setOpen((v) => !v); setQ(""); }}
-        className="w-full pl-3 pr-9 py-2 text-sm text-left rounded-[10px] border border-border bg-surface flex items-center justify-between gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="relative h-10 justify-start pl-3 pr-9 text-left rounded-[10px]"
       >
-        <span className={cn("truncate", !selected && "text-slate-400")}>{selected ? selected.label : (placeholder ?? "—")}</span>
+        <Text
+          as="span"
+          truncate
+          variant={selected ? "default" : "muted"}
+          className="text-current"
+          text={selected ? selected.label : (placeholder ?? "—")}
+        />
         <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 absolute right-2.5" />
-      </button>
+      </Button>
 
       {open && (
         <>
           {/* mobile: nền mờ đóng sheet */}
           <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setOpen(false)} />
           {/* mobile: bottom-sheet · desktop: dropdown */}
-          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] rounded-t-2xl bg-surface border border-border shadow-e2 overflow-hidden flex flex-col animate-[slideUp_180ms_ease] lg:absolute lg:inset-x-0 lg:bottom-auto lg:top-full lg:mt-1 lg:max-h-none lg:rounded-xl lg:animate-[fadeIn_120ms_ease]">
+          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[min(80dvh,640px)] rounded-t-2xl bg-surface border border-border shadow-e2 overflow-hidden flex flex-col pb-[env(safe-area-inset-bottom)] animate-[slideUp_180ms_ease] lg:absolute lg:inset-x-0 lg:bottom-auto lg:top-full lg:mt-1 lg:max-h-none lg:rounded-xl lg:pb-0 lg:animate-[fadeIn_120ms_ease]">
             {/* mobile header: tay nắm + tiêu đề + đóng */}
             <div className="lg:hidden">
               <div className="flex justify-center pt-2"><span className="h-1 w-9 rounded-full bg-border" /></div>
               <div className="flex items-center justify-between px-3 py-1.5 border-b border-border-soft">
-                <span className="text-sm font-semibold truncate">{placeholder ?? t("search")}</span>
-                <button type="button" onClick={() => setOpen(false)} className="w-9 h-9 grid place-items-center rounded-lg text-slate-400 hover:bg-surface-2"><X className="w-5 h-5" /></button>
+                <Text as="span" weight="semibold" truncate text={placeholder ?? t("search")} />
+                <Button type="button" variant="ghost" size="iconSm" onClick={() => setOpen(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
               </div>
             </div>
             {searchable && (
-              <div className="relative border-b border-border-soft">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
+              <div className="border-b border-border-soft">
+                <Input
                   autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onKeyDown}
                   placeholder={placeholder ?? t("search")}
-                  className="w-full pl-8 pr-3 py-2.5 lg:py-2 text-sm bg-transparent outline-none"
+                  leftIcon={<Search />}
+                  className="h-11 rounded-none border-0 bg-transparent focus:ring-0 focus:border-transparent"
                 />
               </div>
             )}
-            <div ref={listRef} className="overflow-auto py-1 max-h-[60vh] lg:max-h-64" onKeyDown={onKeyDown}>
+            <div ref={listRef} className="overflow-auto py-1 max-h-[60dvh] lg:max-h-64" onKeyDown={onKeyDown}>
               {allowClear && (
-                <button type="button" onClick={() => { onChange(""); setOpen(false); }} className="w-full text-left px-3 py-3 lg:py-1.5 text-sm text-slate-400 hover:bg-surface-2">{t("clear")}</button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  block
+                  onClick={() => { onChange(""); setOpen(false); }}
+                  className="justify-start rounded-none px-3 py-3 lg:py-1.5 text-slate-400"
+                  text={t("clear")}
+                />
               )}
               {onCreate && q.trim() && !exact && (
-                <button type="button" onClick={create} disabled={creating} className="w-full text-left px-3 py-3 lg:py-1.5 text-sm flex items-center gap-1.5 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/40 font-medium">
-                  {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} {t("add")} “{q.trim()}”
-                </button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  block
+                  onClick={create}
+                  disabled={creating}
+                  className="justify-start rounded-none px-3 py-3 lg:py-1.5 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/40"
+                >
+                  {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  <Text as="span" weight="medium" className="text-current" text={`${t("add")} “${q.trim()}”`} />
+                </Button>
               )}
               {filtered.length === 0 && !(onCreate && q.trim()) ? (
-                <div className="px-3 py-3 text-sm text-slate-400 text-center">{t("noResults")}</div>
+                <Text as="div" variant="muted" className="px-3 py-3 text-center" text={t("noResults")} />
               ) : filtered.slice(0, 200).map((o, i) => (
-                <button
+                <Button
                   key={o.value}
                   type="button"
+                  variant="ghost"
+                  block
                   onMouseEnter={() => setActive(i)}
                   onClick={() => pick(o.value)}
                   className={cn(
-                    "w-full text-left px-3 py-3 lg:py-1.5 text-sm flex items-center justify-between gap-2 hover:bg-surface-2",
+                    "justify-between rounded-none px-3 py-3 lg:py-1.5 text-left",
                     i === active && "bg-surface-2",
                     o.value === value && "bg-primary-50 dark:bg-primary-950/40"
                   )}
                 >
-                  <span className="min-w-0 truncate">{o.label}{o.hint && <span className="text-xs text-slate-400 ml-1">{o.hint}</span>}</span>
+                  <Text as="span" truncate className="min-w-0 text-current">
+                    {o.label}{o.hint && <Text as="span" variant="muted" size="xs" className="ml-1" text={o.hint} />}
+                  </Text>
                   {o.value === value && <Check className="w-4 h-4 text-primary-600 shrink-0" />}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

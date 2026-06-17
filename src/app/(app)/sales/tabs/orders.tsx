@@ -15,6 +15,16 @@ type SP = Record<string, string | undefined>;
 const STATUS: OrderStatusFilter[] = ["all", "completed", "owing", "returned", "cancelled"];
 const PAYMENTS: OrderPaymentFilter[] = ["all", "paid", "partial", "unpaid"];
 
+function posSourceHref(order: { id: string; code: string; createdAt: Date | string }, mode: "edit" | "copy") {
+  const sp = new URLSearchParams({
+    sourceMode: mode,
+    sourceOrderId: order.id,
+    sourceCode: order.code,
+    sourceSaleTime: formatDate(order.createdAt),
+  });
+  return `${Routes.POS}?${sp.toString()}`;
+}
+
 export async function OrdersTab({ searchParams }: { searchParams: SP }) {
   const t = await getTranslations();
   const params = searchParams;
@@ -73,7 +83,7 @@ export async function OrdersTab({ searchParams }: { searchParams: SP }) {
         )}
       </form>
 
-      <Suspense fallback={<TableSkeleton cols={9} rows={10} />}>
+      <Suspense fallback={<TableSkeleton cols={10} rows={10} />}>
         <OrdersContent searchParams={searchParams} />
       </Suspense>
     </>
@@ -147,6 +157,7 @@ async function OrdersContent({ searchParams }: { searchParams: SP }) {
                   <th className="px-4 py-3 font-semibold text-right">{t("orders.cols.remaining")}</th>
                   <th className="px-4 py-3 font-semibold">{t("orders.cols.payment")}</th>
                   <th className="px-4 py-3 font-semibold">{t("orders.cols.status")}</th>
+                  <th className="px-4 py-3 font-semibold text-right"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-soft">
@@ -165,6 +176,20 @@ async function OrdersContent({ searchParams }: { searchParams: SP }) {
                       </td>
                       <td className="px-4 py-3"><PaymentStatusBadge status={o.paymentStatus} /></td>
                       <td className="px-4 py-3"><OrderStatusBadge status={o.status} /></td>
+                      <td className="px-4 py-3">
+                        {o.status !== "cancelled" && (
+                          <div className="flex items-center justify-end gap-2">
+                            {(o.status === "completed" || o.status === "quote") && (
+                              <Link href={posSourceHref(o, "edit")} target="_blank" className="text-xs font-medium text-primary-600 hover:underline">
+                                {t("common.edit")}
+                              </Link>
+                            )}
+                            <Link href={posSourceHref(o, "copy")} target="_blank" className="text-xs font-medium text-primary-600 hover:underline">
+                              {t("pos.modes.copyShort")}
+                            </Link>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

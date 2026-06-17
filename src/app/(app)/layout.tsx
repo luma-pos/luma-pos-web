@@ -8,6 +8,7 @@ import { ModeSwitcher } from "@/components/mode-switcher";
 import { AppNav } from "@/components/app-nav";
 import { MobileNavBackdrop } from "@/components/mobile-nav";
 import { MobileTabBar } from "@/components/mobile-tabbar";
+import { Text } from "@/components/ui/text";
 import { Routes } from "@/lib/routes";
 import { getTheme, getMode } from "@/lib/theme/cookie";
 import { getStoreSettings } from "@/lib/data/settings";
@@ -30,17 +31,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const mode = await getMode();
 
   return (
-    <div className="min-h-screen flex bg-canvas">
+    <div className="min-h-dvh flex bg-canvas">
       <MobileNavBackdrop />
 
-      <aside className="app-sidebar w-60 shrink-0 bg-surface border-r border-border flex flex-col sticky top-0 h-screen overflow-hidden">
+      <aside className="app-sidebar w-60 shrink-0 bg-surface border-r border-border flex flex-col sticky top-0 h-dvh overflow-hidden">
         <div className="flex items-center gap-2.5 px-4 py-4 border-b border-border">
           <div className="w-9 h-9 rounded-xl shrink-0 grid place-items-center text-white font-extrabold bg-gradient-to-br from-primary-600 to-primary-400">
             L
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="font-bold leading-tight">{t("common.appName")}</h1>
-            <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
+            <Text as="h1" weight="bold" className="leading-tight" text={t("common.appName")} />
+            <Text as="p" variant="muted" truncate className="text-[11px]" text={user.email} />
           </div>
         </div>
         <AppNav industry={store.industry} />
@@ -52,8 +53,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 overflow-auto">
-        <div className="pb-16 lg:pb-0">{children}</div>
+      <main className="flex-1 min-w-0 overflow-auto overflow-x-hidden">
+        <div className="pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
         <MobileTabBar />
       </main>
     </div>

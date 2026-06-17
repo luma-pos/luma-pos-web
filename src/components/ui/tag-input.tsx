@@ -5,6 +5,8 @@ import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { TxValues } from "./_tx";
+import { Button } from "./button";
+import { Text } from "./text";
 
 export interface TagInputProps {
   value: string[];
@@ -50,26 +52,29 @@ export const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
       <div
         onClick={() => inputRef.current?.focus()}
         className={cn(
-          "flex flex-wrap items-center gap-1.5 min-h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-2 py-1.5 cursor-text transition-colors focus-within:ring-2 focus-within:ring-primary-500",
+          "flex flex-wrap items-center gap-1.5 min-h-10 w-full rounded-lg border border-border bg-surface px-2 py-1.5 cursor-text transition-[border-color,box-shadow,background-color] duration-150 focus-within:ring-2 focus-within:ring-primary-500/30 focus-within:border-primary-500",
           disabled && "opacity-50 cursor-not-allowed",
           className
         )}
       >
         {value.map((tag, idx) => (
-          <span
+          <Text
+            as="span"
             key={idx}
             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 text-xs font-medium border border-primary-200"
           >
             {tag}
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="iconSm"
               onClick={(e) => { e.stopPropagation(); remove(idx); }}
               disabled={disabled}
-              className="hover:bg-primary-100 rounded-full p-0.5"
+              className="h-4 w-4 rounded-full p-0 hover:bg-primary-100"
             >
               <X className="w-3 h-3" />
-            </button>
-          </span>
+            </Button>
+          </Text>
         ))}
         <input
           ref={inputRef}

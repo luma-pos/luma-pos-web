@@ -39,8 +39,8 @@ export function SupplierDetailClient({ supplier, purchases }: { supplier: Suppli
   const debt = Number(supplier.currentDebt);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <header className="sticky top-0 z-10 bg-surface border-b border-border px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+    <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
+      <header className="sticky top-0 z-10 bg-surface border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           <Link href={Routes.Suppliers} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
             <ArrowLeft className="w-4 h-4" />
@@ -58,7 +58,7 @@ export function SupplierDetailClient({ supplier, purchases }: { supplier: Suppli
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-5">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-5">
         {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg px-4 py-2 text-sm text-red-700 dark:text-red-400">{error}</div>}
 
         <section className="bg-surface border border-border rounded-card p-5">
@@ -78,7 +78,7 @@ export function SupplierDetailClient({ supplier, purchases }: { supplier: Suppli
             {t("suppliers.purchaseHistory")} ({purchases.length})
           </div>
           {purchases.length === 0 ? (
-            <p className="p-6 text-sm text-slate-400 text-center">{t("suppliers.noPurchases")}</p>
+            <p className="p-4 sm:p-6 text-sm text-slate-400 text-center">{t("suppliers.noPurchases")}</p>
           ) : (
             <table className="w-full min-w-[640px] text-sm">
               <thead>

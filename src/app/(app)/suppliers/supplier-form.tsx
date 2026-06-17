@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Loader2, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
 import { createSupplier } from "@/lib/actions/partners";
 
 export function SupplierQuickCreate() {
@@ -33,36 +37,30 @@ export function SupplierQuickCreate() {
 
   if (!open) {
     return (
-      <button
+      <Button
+        type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium"
+        tx="suppliers.createNew"
       >
         <Plus className="w-4 h-4" />
-        {t("suppliers.createNew")}
-      </button>
+      </Button>
     );
   }
 
   return (
     <div className="flex items-end gap-2 bg-surface border border-border rounded-card p-3">
-      <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1">{t("suppliers.cols.name")} *</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} className="w-48 px-3 py-2 text-sm rounded-lg border border-border bg-surface" />
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1">{t("customers.cols.phone")}</label>
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-36 px-3 py-2 text-sm rounded-lg border border-border bg-surface" />
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1">{t("customers.fields.taxCode")}</label>
-        <input value={taxCode} onChange={(e) => setTaxCode(e.target.value)} className="w-32 px-3 py-2 text-sm rounded-lg border border-border bg-surface" />
-      </div>
-      <button onClick={submit} disabled={busy || !name.trim()} className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium disabled:opacity-50 inline-flex items-center gap-2">
-        {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-        {t("common.save")}
-      </button>
-      <button onClick={() => setOpen(false)} className="p-2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
-      {error && <p className="text-xs text-er">{error}</p>}
+      <Field label={t("suppliers.cols.name")} required>
+        <Input value={name} onChange={(e) => setName(e.target.value)} className="w-48" />
+      </Field>
+      <Field label={t("customers.cols.phone")}>
+        <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-36" />
+      </Field>
+      <Field label={t("customers.fields.taxCode")}>
+        <Input value={taxCode} onChange={(e) => setTaxCode(e.target.value)} className="w-32" />
+      </Field>
+      <Button type="button" onClick={submit} disabled={busy || !name.trim()} loading={busy} tx="common.save" />
+      <Button type="button" variant="ghost" size="iconSm" onClick={() => setOpen(false)}><X className="w-4 h-4" /></Button>
+      {error && <Text as="p" variant="destructive" size="xs" text={error} />}
     </div>
   );
 }

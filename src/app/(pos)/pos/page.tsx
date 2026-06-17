@@ -4,12 +4,32 @@ import { LayoutDashboard } from "lucide-react";
 import { getPosData } from "@/lib/data/pos";
 import { getPrintTemplate } from "@/lib/print/template";
 import { Routes } from "@/lib/routes";
-import { PosClient } from "./pos-client";
+import { PosClient, type PosSourceInvoice } from "./pos-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function POSPage() {
+type PosSearchParams = Record<string, string | string[] | undefined>;
+
+function one(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function sourceInvoiceFromParams(params: PosSearchParams): PosSourceInvoice | null {
+  const mode = one(params.sourceMode);
+  const code = one(params.sourceCode);
+  if ((mode !== "edit" && mode !== "copy") || !code) return null;
+  return {
+    mode,
+    code,
+    id: one(params.sourceOrderId),
+    saleTime: one(params.sourceSaleTime),
+  };
+}
+
+export default async function POSPage({ searchParams }: { searchParams: Promise<PosSearchParams> }) {
+  const params = await searchParams;
   const [data, t, printTemplate] = await Promise.all([getPosData(), getTranslations(), getPrintTemplate("order")]);
+  const sourceInvoice = sourceInvoiceFromParams(params);
   return (
     <div className="h-full flex flex-col">
       {/* top bar gọn — thay cho sidebar admin (giống KiotViet) */}
@@ -28,7 +48,7 @@ export default async function POSPage() {
         </Link>
       </header>
       <div className="flex-1 min-h-0">
-        <PosClient data={data} printTemplate={printTemplate} />
+        <PosClient data={data} printTemplate={printTemplate} initialSourceInvoice={sourceInvoice} />
       </div>
     </div>
   );

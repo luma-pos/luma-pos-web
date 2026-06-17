@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { Text } from "@/components/ui/text";
 
 export interface GroupTab {
   tab: string;
@@ -18,7 +19,7 @@ export function GroupTabs({ base, items }: { base: string; items: GroupTab[] }) 
   const active = sp.get("tab") ?? items[0]?.tab;
 
   return (
-    <div className="flex items-center gap-1 overflow-x-auto -mx-6 px-6 [&::-webkit-scrollbar]:h-0">
+    <div className="flex items-center gap-1 overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 [&::-webkit-scrollbar]:h-0">
       {items.map((it) => {
         const on = it.tab === active;
         return (
@@ -30,9 +31,9 @@ export function GroupTabs({ base, items }: { base: string; items: GroupTab[] }) 
               on ? "bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300" : "text-slate-500 hover:bg-surface-2 hover:text-slate-900 dark:hover:text-slate-200"
             )}
           >
-            {t(it.labelKey)}
+            <Text as="span" size="xs" weight="semibold" className="text-current" text={t(it.labelKey)} />
             {it.count != null && it.count > 0 && (
-              <span className="min-w-4 h-4 px-1 rounded-full bg-surface-2 text-[9px] font-bold font-mono grid place-items-center">{it.count}</span>
+              <Text as="span" weight="bold" className="min-w-4 h-4 px-1 rounded-full bg-surface-2 text-[9px] font-mono grid place-items-center text-current" text={it.count} />
             )}
           </Link>
         );

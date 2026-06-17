@@ -7,20 +7,20 @@ import { cn } from "@/lib/utils";
 import { resolveText, type TxProps } from "./_tx";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:translate-y-px disabled:opacity-50 disabled:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary-600 text-white hover:bg-primary-700",
+          "bg-primary-600 text-white shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-primary-700",
         destructive:
           "bg-red-600 text-white hover:bg-red-700",
         outline:
-          "border border-border bg-transparent hover:bg-surface-2",
+          "border border-border bg-surface text-slate-700 hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 dark:text-slate-200 dark:hover:bg-primary-950/30 dark:hover:text-primary-300",
         secondary:
-          "bg-surface-2 hover:bg-surface",
+          "border border-border bg-surface-2 text-slate-700 hover:bg-surface dark:text-slate-200",
         ghost:
-          "hover:bg-surface-2",
+          "text-slate-600 hover:bg-surface-2 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100",
         link:
           "text-primary-600 underline-offset-4 hover:underline",
         success:

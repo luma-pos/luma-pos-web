@@ -42,7 +42,7 @@ export default async function MergeOrdersPage({ searchParams }: Props) {
   const paid = eligible.reduce((s, o) => s + Number(o.amountPaid), 0);
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="p-4 sm:p-6 max-w-3xl">
       <h1 className="text-2xl font-bold mb-5">{t("merge.title")}</h1>
 
       {rows.length === 0 ? (

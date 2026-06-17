@@ -6,6 +6,8 @@ import { Palette, Check } from "lucide-react";
 import { setTheme } from "@/lib/theme/cookie";
 import { themes, themeMeta, type Theme } from "@/lib/theme/config";
 import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
 
 export function ThemeSwitcher({ current }: { current: Theme }) {
   const router = useRouter();
@@ -33,34 +35,41 @@ export function ThemeSwitcher({ current }: { current: Theme }) {
 
   return (
     <div ref={ref} className="relative">
-      <button
+      <Button
+        type="button"
+        variant="ghost"
+        block
         onClick={() => setOpen(!open)}
         disabled={pending}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50"
+        className="justify-start px-3"
       >
         <Palette className="w-4 h-4" />
-        <span className="flex-1 text-left">{themeMeta[current].label}</span>
+        <Text as="span" variant="subtle" className="flex-1 text-left" text={themeMeta[current].label} />
         <span
           className="w-3.5 h-3.5 rounded-full ring-1 ring-slate-300 dark:ring-slate-700"
           style={{ background: themeMeta[current].swatch }}
         />
-      </button>
+      </Button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-1 z-50">
+        <div className="absolute bottom-full left-0 mb-2 w-full bg-surface border border-border rounded-lg shadow-e2 p-1 z-50">
           {themes.map((t) => (
-            <button
+            <Button
               key={t}
+              type="button"
+              variant="ghost"
+              size="sm"
+              block
               onClick={() => pick(t)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-sm"
+              className="justify-start px-2"
             >
               <span
                 className="w-3.5 h-3.5 rounded-full ring-1 ring-slate-300 dark:ring-slate-700 shrink-0"
                 style={{ background: themeMeta[t].swatch }}
               />
-              <span className="flex-1 text-left">{themeMeta[t].label}</span>
+              <Text as="span" className="flex-1 text-left" text={themeMeta[t].label} />
               {current === t && <Check className="w-3.5 h-3.5 text-primary-600" />}
-            </button>
+            </Button>
           ))}
         </div>
       )}

@@ -4,6 +4,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { resolveText, type TxProps, type TxValues } from "./_tx";
+import { Text } from "./text";
 
 export interface LabelProps
   extends Omit<React.LabelHTMLAttributes<HTMLLabelElement>, "children">,
@@ -68,10 +69,10 @@ export function Field({
       {labelContent && <Label required={required}>{labelContent}</Label>}
       {children}
       {hintContent && !errorContent && (
-        <p className="text-xs text-slate-500">{hintContent}</p>
+        <Text as="p" variant="muted" size="xs" text={hintContent} />
       )}
       {errorContent && (
-        <p className="text-xs text-red-600">{errorContent}</p>
+        <Text as="p" variant="destructive" size="xs" text={errorContent} />
       )}
     </div>
   );

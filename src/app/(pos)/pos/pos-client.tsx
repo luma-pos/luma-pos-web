@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Search, Plus, Minus, Trash2, Loader2, ShoppingCart, X, GripVertical, WifiOff, RefreshCw, Tag, ChevronDown, Check, Printer, MoreVertical } from "lucide-react";
@@ -8,8 +9,9 @@ import { formatCurrency, formatNumber, cn } from "@/lib/utils";
 import { normalizeSearch } from "@/lib/normalize";
 import { createPortal } from "react-dom";
 import { Combobox } from "@/components/combobox";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { MoneyInput } from "@/components/ui/money-input";
+import { Text } from "@/components/ui/text";
 import { PrintDoc } from "@/components/print/print-doc";
 import type { PaperSize, PrintTemplate } from "@/lib/print/template-shared";
 import { createOrder } from "@/lib/actions/orders";
@@ -33,6 +35,12 @@ type CartLine = {
 };
 
 type PayMethod = "cash" | "bank_transfer" | "credit";
+export type PosSourceInvoice = {
+  id?: string;
+  mode: "edit" | "copy";
+  code: string;
+  saleTime?: string;
+};
 
 /**
  * Một hóa đơn đang soạn (tab). Cho phép mở nhiều đơn cùng lúc — bán cho nhiều
@@ -132,10 +140,19 @@ function currentTimestamp(): number {
   return Date.now();
 }
 
-export function PosClient({ data, printTemplate }: { data: PosData; printTemplate: PrintTemplate }) {
+export function PosClient({
+  data,
+  printTemplate,
+  initialSourceInvoice,
+}: {
+  data: PosData;
+  printTemplate: PrintTemplate;
+  initialSourceInvoice?: PosSourceInvoice | null;
+}) {
   const t = useTranslations();
   const router = useRouter();
 
+  const [sourceInvoice] = useState<PosSourceInvoice | null>(initialSourceInvoice ?? null);
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -513,6 +530,8 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
   // Khu chính hiện lưới SP khi đang tìm hoặc khi bấm vào ô tìm; ngược lại hiện dòng hàng đã chọn.
   const showResults = browsing || search.trim() !== "";
   const closeSearch = () => { setBrowsing(false); setSearch(""); };
+  const isEditMode = sourceInvoice?.mode === "edit";
+  const isCopyMode = sourceInvoice?.mode === "copy";
 
   // Tabs hóa đơn — đặt cạnh thanh tìm kiếm (giống KiotViet).
   const invoiceTabs = (
@@ -721,16 +740,53 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
       )}
 
       {/* left: catalog */}
-      <div className={cn("flex-1 flex flex-col p-4 min-w-0", mobileView === "cart" && "hidden lg:flex")}>
+      <div className={cn("flex-1 flex flex-col p-3 sm:p-4 min-w-0", mobileView === "cart" && "hidden lg:flex")}>
         {/* nút sang trang thanh toán — chỉ mobile */}
         {cart.length > 0 && (
           <button onClick={() => setMobileView("cart")}
-            className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40 inline-flex items-center gap-2 px-5 py-3 rounded-full bg-primary-600 text-white font-semibold shadow-e2">
+            className="lg:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 inline-flex max-w-[calc(100vw-2rem)] items-center gap-2 px-5 py-3 rounded-full bg-primary-600 text-white font-semibold shadow-e2">
             <ShoppingCart className="w-4 h-4" /> {t("pos.checkout")} ({cart.reduce((s, l) => s + l.quantity, 0)}) · {formatCurrency(total)}
           </button>
         )}
         <div className="mb-3 space-y-2">
           {invoiceTabs}
+          {sourceInvoice && (
+            <div className={cn(
+              "grid gap-2 rounded-xl border p-3",
+              isEditMode
+                ? "border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20"
+                : "border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/20"
+            )}>
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 text-sm">
+                <div className="min-w-0">
+                  <Text
+                    as="div"
+                    weight="bold"
+                    size="sm"
+                    tx={isEditMode ? "pos.invoiceEdit.editingFrom" : "pos.invoiceEdit.copyingFrom"}
+                    txOptions={{ code: sourceInvoice.code }}
+                  />
+                  <Text
+                    as="div"
+                    variant="muted"
+                    size="xs"
+                    className="mt-0.5"
+                    tx={isEditMode ? "pos.invoiceEdit.editDescription" : "pos.invoiceEdit.copyDescription"}
+                    txOptions={{ dateTime: sourceInvoice.saleTime ?? "—" }}
+                  />
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Link
+                    href={sourceInvoice.id ? Routes.order(sourceInvoice.id) : Routes.Orders}
+                    target="_blank"
+                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 px-3 text-xs font-semibold text-slate-600")}
+                  >
+                    {t("pos.invoiceEdit.viewOriginal")}
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
           <div ref={searchRef} className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
             <input
@@ -754,7 +810,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
 
             {/* dropdown kết quả nổi dưới ô tìm — giỏ hàng vẫn hiện phía sau */}
             {showResults && (
-              <div className="absolute left-0 right-0 top-full mt-1 z-40 bg-surface border border-border rounded-xl shadow-e2 max-h-[64vh] overflow-auto">
+              <div className="absolute left-0 right-0 top-full mt-1 z-40 bg-surface border border-border rounded-xl shadow-e2 max-h-[min(64dvh,520px)] overflow-auto">
                 {searching ? (
                   <div className="px-4 py-6 text-center text-sm text-slate-400">
                     <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />{t("common.search")}…</span>
@@ -780,7 +836,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
                             <div className="text-sm font-medium truncate">{p.name}</div>
                             <div className={cn("text-xs", stock <= 0 ? "text-er" : "text-slate-400")}>{t("pos.stockLabel")} {formatNumber(stock)} {p.baseUnit}</div>
                           </div>
-                          <div className="flex items-center justify-end gap-2 w-64 shrink-0">
+                          <div className="flex items-center justify-end gap-2 w-auto sm:w-64 shrink-0">
                             {line && (
                               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                 <button onClick={() => updateQty(line.key, -1)} className="w-8 h-8 rounded border border-border grid place-items-center"><Minus className="w-3.5 h-3.5" /></button>
@@ -793,7 +849,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
                                 <button onClick={() => updateQty(line.key, 1)} className="w-8 h-8 rounded border border-border grid place-items-center"><Plus className="w-3.5 h-3.5" /></button>
                               </div>
                             )}
-                            <div className="text-sm font-semibold text-primary-600 tabular-nums text-right w-32">{formatCurrency(basePriceFor(p, priceBook))}/{p.baseUnit}</div>
+                            <div className="text-sm font-semibold text-primary-600 tabular-nums text-right w-24 sm:w-32">{formatCurrency(basePriceFor(p, priceBook))}/{p.baseUnit}</div>
                           </div>
                         </div>
                       );
@@ -829,7 +885,7 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
           if (p) addToCart(p);
         }}
         className={cn(
-          "w-full lg:w-[560px] shrink-0 bg-surface border-l border-border flex flex-col transition-colors",
+          "w-full lg:w-[560px] shrink-0 bg-surface border-t lg:border-t-0 lg:border-l border-border flex flex-col transition-colors",
           mobileView === "catalog" && "hidden lg:flex",
           dropHover && "bg-primary-50/60 dark:bg-primary-950/30 border-l-primary-400"
         )}
@@ -893,71 +949,28 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
             <span className="text-slate-500">{t("pos.subtotal")}</span>
             <span className="tabular-nums">{formatCurrency(subtotal)}</span>
           </div>
-          <div className="flex justify-between items-center gap-2">
-            <span className="text-slate-500">{t("pos.discount")}</span>
-            <div className="relative w-28">
-              {discountMode === "pct" ? (
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={discountInput || ""}
-                  onChange={(e) => setDiscountInput(Math.max(0, Number(e.target.value)))}
-                  placeholder="0"
-                  className="no-spinner w-full pl-2 pr-8 py-1 text-right text-sm rounded-md border border-border bg-surface"
-                />
-              ) : (
-                <MoneyInput
-                  value={discountInput || ""}
-                  onChange={(v) => setDiscountInput(v ?? 0)}
-                  placeholder="0"
-                  className="no-spinner w-full pl-2 pr-8 py-1 text-right text-sm rounded-md border border-border bg-surface"
-                />
-              )}
-              <button
-                type="button"
-                onClick={() => setDiscountMode(discountMode === "vnd" ? "pct" : "vnd")}
-                title="Nhấn để đổi đơn vị"
-                className="absolute right-0 top-0 bottom-0 w-8 flex items-center justify-center rounded-r-md border-l border-border text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors"
-              >
-                {discountMode === "vnd" ? "₫" : "%"}
-              </button>
-            </div>
-          </div>
-          {discountMode === "pct" && discountInput > 0 && (
-            <div className="flex justify-end text-xs text-slate-400 -mt-1">
-              − {formatCurrency(discountVnd)}
-            </div>
-          )}
-          <div className="flex justify-between items-center gap-2">
-            <span className="text-slate-500">{t("pos.tax")}</span>
-            <div className="relative">
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={taxRate || ""}
-                onChange={(e) => setTaxRate(Math.max(0, Number(e.target.value)))}
-                placeholder="0"
-                className="no-spinner w-28 pl-2 pr-6 py-1 text-right text-sm rounded-md border border-border bg-surface"
-              />
-              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">%</span>
-            </div>
-          </div>
-          {taxRate > 0 && (
-            <div className="flex justify-end text-xs text-slate-400 -mt-1">
-              + {formatCurrency(taxAmount)}
-            </div>
-          )}
-          <div className="flex justify-between items-center gap-2">
-            <span className="text-slate-500">{t("pos.shipping")}</span>
-            <MoneyInput
-              value={shippingFee || ""}
-              onChange={(v) => setShippingFee(v ?? 0)}
-              placeholder="0"
-              className="no-spinner w-28 px-2 py-1 text-right text-sm rounded-md border border-border bg-surface"
+          <SummaryAdjustRow
+            label={t("pos.discount")}
+            hint={`− ${formatCurrency(discountVnd)}`}
+            hintVisible={discountMode === "pct" && discountInput > 0}
+          >
+            <AmountModeInput
+              value={discountInput}
+              mode={discountMode}
+              onValueChange={setDiscountInput}
+              onModeChange={setDiscountMode}
             />
-          </div>
+          </SummaryAdjustRow>
+          <SummaryAdjustRow
+            label={t("pos.tax")}
+            hint={`+ ${formatCurrency(taxAmount)}`}
+            hintVisible={taxRate > 0}
+          >
+            <AmountModeInput value={taxRate} mode="pct" onValueChange={setTaxRate} />
+          </SummaryAdjustRow>
+          <SummaryAdjustRow label={t("pos.shipping")}>
+            <AmountModeInput value={shippingFee} mode="vnd" onValueChange={setShippingFee} />
+          </SummaryAdjustRow>
           <div className="flex justify-between text-base font-semibold pt-1">
             <span>{t("pos.total")}</span>
             <span className="text-primary-600 tabular-nums">{formatCurrency(total)}</span>
@@ -1043,9 +1056,12 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
               className="flex-1 py-3 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {t("pos.checkout")} · {formatCurrency(total)}
+              {isEditMode ? t("pos.invoiceEdit.saveEdited") : isCopyMode ? t("pos.invoiceEdit.createCopy") : t("pos.checkout")} · {formatCurrency(total)}
             </button>
           </div>
+          {isEditMode && (
+            <Text as="p" variant="muted" className="text-[11px] text-right" tx="pos.invoiceEdit.editFootnote" />
+          )}
         </div>
       </div>
 
@@ -1141,6 +1157,96 @@ export function PosClient({ data, printTemplate }: { data: PosData; printTemplat
   );
 }
 
+function SummaryAdjustRow({
+  label,
+  hint,
+  hintVisible = false,
+  children,
+}: {
+  label: ReactNode;
+  hint?: ReactNode;
+  hintVisible?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(150px,184px)] items-start gap-2">
+      <Text as="span" variant="muted" className="pt-2.5" text={label} />
+      <div className="grid justify-items-end gap-1">
+        {children}
+        <Text
+          as="div"
+          variant="muted"
+          size="xs"
+          aria-hidden={!hintVisible}
+          className={cn(
+            "h-4 tabular-nums transition-opacity duration-150",
+            hintVisible ? "opacity-100" : "opacity-0"
+          )}
+        >
+          {hint ?? "\u00a0"}
+        </Text>
+      </div>
+    </div>
+  );
+}
+
+function AmountModeInput({
+  value,
+  mode,
+  onValueChange,
+  onModeChange,
+  className,
+}: {
+  value: number;
+  mode: "vnd" | "pct";
+  onValueChange: (value: number) => void;
+  onModeChange?: (mode: "vnd" | "pct") => void;
+  className?: string;
+}) {
+  const shown = value || "";
+  return (
+    <div className={cn(
+      "w-full max-w-[184px] h-11 grid grid-cols-[1fr_56px] rounded-lg border border-border bg-surface overflow-hidden",
+      className
+    )}>
+      {mode === "pct" ? (
+        <input
+          type="number"
+          min={0}
+          max={100}
+          value={shown}
+          onChange={(e) => onValueChange(Math.max(0, Number(e.target.value)))}
+          placeholder="0"
+          className="no-spinner h-full min-w-0 px-3 text-right text-sm tabular-nums bg-transparent outline-none"
+        />
+      ) : (
+        <MoneyInput
+          value={shown}
+          onChange={(v) => onValueChange(v ?? 0)}
+          placeholder="0"
+          className="no-spinner h-full min-w-0 px-3 text-right text-sm tabular-nums bg-transparent outline-none border-0"
+        />
+      )}
+      {onModeChange ? (
+        <Button
+          type="button"
+          onClick={() => onModeChange(mode === "vnd" ? "pct" : "vnd")}
+          variant="ghost"
+          size="default"
+          className="h-full rounded-none border-l border-border text-sm font-semibold text-slate-600 hover:text-primary-700 hover:bg-primary-50 dark:hover:bg-primary-950/30"
+        >
+          {mode === "vnd" ? "đ" : "%"}
+          <ChevronDown className="w-3 h-3 text-slate-400" />
+        </Button>
+      ) : (
+        <Text as="span" variant="muted" weight="semibold" className="border-l border-border text-sm grid place-items-center">
+          {mode === "vnd" ? "đ" : "%"}
+        </Text>
+      )}
+    </div>
+  );
+}
+
 /** Popup sửa đơn giá + giảm giá (VND/%) cho 1 dòng — giống KiotViet. */
 function LinePriceEditor({
   line, onApply, onClose,
@@ -1180,27 +1286,12 @@ function LinePriceEditor({
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-slate-500 shrink-0">{t("pos.priceEditor.discount")}</span>
-          <div className="flex items-center gap-1">
-            <input
-              type="number" min={0} value={disc === "0" ? "" : disc} placeholder="0"
-              onChange={(e) => setDisc(e.target.value)}
-              className="no-spinner w-24 px-2 py-1.5 text-right rounded-md border border-border bg-surface"
-            />
-            <div className="flex rounded-md overflow-hidden border border-border">
-              {(["vnd", "pct"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setDiscMode(m)}
-                  className={cn(
-                    "px-2 py-1.5 text-xs font-semibold",
-                    discMode === m ? "bg-primary-600 text-white" : "bg-surface text-slate-500"
-                  )}
-                >
-                  {m === "vnd" ? "VND" : "%"}
-                </button>
-              ))}
-            </div>
-          </div>
+          <AmountModeInput
+            value={discNum}
+            mode={discMode}
+            onValueChange={(v) => setDisc(String(v))}
+            onModeChange={setDiscMode}
+          />
         </div>
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
           <span className="text-slate-500 shrink-0">{t("pos.priceEditor.sellPrice")}</span>

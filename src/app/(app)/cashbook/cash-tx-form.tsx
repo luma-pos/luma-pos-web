@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Loader2, Plus, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Plus, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
+import { Select } from "@/components/ui/select";
+import { Text } from "@/components/ui/text";
 import { createCashTx } from "@/lib/actions/cashbook";
 
 export function CashTxForm() {
@@ -35,48 +38,52 @@ export function CashTxForm() {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium">
+      <Button type="button" onClick={() => setOpen(true)} tx="cashbook.createTx">
         <Plus className="w-4 h-4" />
-        {t("cashbook.createTx")}
-      </button>
+      </Button>
     );
   }
-
-  const inputCls = "px-3 py-2 text-sm rounded-lg border border-border bg-surface";
 
   return (
     <div className="flex items-end gap-2 bg-surface border border-border rounded-card p-3 flex-wrap">
       <div className="flex gap-1">
         {(["in", "out"] as const).map((tp) => (
-          <button key={tp} onClick={() => setType(tp)}
-            className={cn("px-3 py-2 rounded-lg text-xs font-medium border",
-              type === tp ? (tp === "in" ? "bg-emerald-600 text-white border-emerald-600" : "bg-red-600 text-white border-red-600") : "border-slate-200 dark:border-slate-700 text-slate-600")}>
-            {t(`cashbook.typeTabs.${tp}`)}
-          </button>
+          <Button
+            key={tp}
+            type="button"
+            variant={type === tp ? (tp === "in" ? "success" : "destructive") : "outline"}
+            size="sm"
+            onClick={() => setType(tp)}
+            tx={`cashbook.typeTabs.${tp}`}
+          />
         ))}
       </div>
-      <select value={fund} onChange={(e) => setFund(e.target.value as "cash")} className={inputCls}>
-        <option value="cash">{t("cashbook.fundCash")}</option>
-        <option value="bank">{t("cashbook.fundBank")}</option>
-      </select>
-      <select value={category} onChange={(e) => setCategory(e.target.value as "expense")} className={inputCls}>
-        <option value="expense">{t("cashbook.categories.expense")}</option>
-        <option value="debt_collect">{t("cashbook.categories.debt_collect")}</option>
-        <option value="supplier_payment">{t("cashbook.categories.supplier_payment")}</option>
-        <option value="other">{t("cashbook.categories.other")}</option>
-      </select>
+      <Select
+        value={fund}
+        onChange={(e) => setFund(e.target.value as "cash" | "bank")}
+        options={[
+          { value: "cash", label: t("cashbook.fundCash") },
+          { value: "bank", label: t("cashbook.fundBank") },
+        ]}
+      />
+      <Select
+        value={category}
+        onChange={(e) => setCategory(e.target.value as "expense" | "other" | "debt_collect" | "supplier_payment")}
+        options={[
+          { value: "expense", label: t("cashbook.categories.expense") },
+          { value: "debt_collect", label: t("cashbook.categories.debt_collect") },
+          { value: "supplier_payment", label: t("cashbook.categories.supplier_payment") },
+          { value: "other", label: t("cashbook.categories.other") },
+        ]}
+      />
       <MoneyInput value={amount || ""} placeholder={t("orders.detail.amount")}
         onChange={(v) => setAmount(v ?? 0)}
-        className={cn(inputCls, "w-36 text-right tabular-nums")} />
-      <input value={note} placeholder={t("cashbook.notePlaceholder")}
-        onChange={(e) => setNote(e.target.value)} className={cn(inputCls, "w-56")} />
-      <button onClick={submit} disabled={busy || amount <= 0 || !note.trim()}
-        className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium disabled:opacity-50 inline-flex items-center gap-2">
-        {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-        {t("common.save")}
-      </button>
-      <button onClick={() => setOpen(false)} className="p-2 text-slate-400"><X className="w-4 h-4" /></button>
-      {error && <p className="text-xs text-er w-full">{error}</p>}
+        className="w-36 text-right tabular-nums" />
+      <Input value={note} placeholder={t("cashbook.notePlaceholder")}
+        onChange={(e) => setNote(e.target.value)} className="w-56" />
+      <Button type="button" onClick={submit} disabled={busy || amount <= 0 || !note.trim()} loading={busy} tx="common.save" />
+      <Button type="button" variant="ghost" size="iconSm" onClick={() => setOpen(false)}><X className="w-4 h-4" /></Button>
+      {error && <Text as="p" variant="destructive" size="xs" className="w-full" text={error} />}
     </div>
   );
 }

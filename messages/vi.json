@@ -78,6 +78,7 @@
   },
   "dashboard": {
     "title": "Tổng quan",
+    "realtime": "Thời gian thực",
     "subtitle": "Tình hình kinh doanh hôm nay",
     "revenueToday": "Doanh thu hôm nay",
     "ordersToday": "Đơn hàng hôm nay",
@@ -191,6 +192,26 @@
       "add": "Thêm hóa đơn",
       "close": "Đóng hóa đơn",
       "newOrder": "Đơn mới"
+    },
+    "modes": {
+      "sale": "Bán mới",
+      "edit": "Sửa hóa đơn",
+      "copy": "Sao chép hóa đơn",
+      "copyShort": "Sao chép"
+    },
+    "invoiceEdit": {
+      "searchPlaceholder": "Tìm hóa đơn...",
+      "loadEdit": "Tải hóa đơn để sửa",
+      "loadCopy": "Tải hóa đơn để sao chép",
+      "editingFrom": "Sửa từ: {code}",
+      "copyingFrom": "Sao chép từ: {code}",
+      "editDescription": "Hủy hóa đơn gốc + tạo hóa đơn thay thế · Giữ ngày giờ bán cũ: {dateTime}",
+      "copyDescription": "Tạo hóa đơn mới, không đổi hóa đơn gốc · Ngày giờ bán là hiện tại",
+      "viewOriginal": "Xem hóa đơn gốc",
+      "copyFromInvoice": "Sao chép từ hóa đơn này",
+      "saveEdited": "Lưu hóa đơn sửa",
+      "createCopy": "Tạo hóa đơn sao chép",
+      "editFootnote": "Hủy hóa đơn gốc + tạo hóa đơn mới"
     },
     "priceEditor": {
       "unitPrice": "Đơn giá",

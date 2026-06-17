@@ -8,6 +8,8 @@ import { ArrowLeft, Upload, FileText, Loader2, Check, AlertTriangle, Download } 
 import * as XLSX from "xlsx";
 import { cn } from "@/lib/utils";
 import { importProducts, type ImportRow, type ImportSummary } from "@/lib/actions/import";
+import { Button } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
 
 type FieldKey = "name" | "sku" | "barcode" | "category" | "unit" | "retailPrice" | "costPrice" | "stock";
 const FIELDS: { key: FieldKey; required?: boolean }[] = [
@@ -146,11 +148,13 @@ export function ImportClient() {
   const mappedSample = rows.slice(0, 5);
 
   return (
-    <div className="p-6 min-h-screen">
-      <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-5 min-h-13 px-6 py-2.5 bg-surface border-b border-border flex items-center gap-3">
+    <div className="p-4 sm:p-6 min-h-dvh">
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-5 min-h-13 px-4 sm:px-6 py-2.5 bg-surface border-b border-border flex items-center gap-3">
         <Link href="/settings" className="p-1.5 rounded-lg hover:bg-surface-2 text-slate-500"><ArrowLeft className="w-4 h-4" /></Link>
-        <h1 className="text-[17px] font-bold">{t("import.title")}</h1>
-        <button onClick={downloadTemplate} className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-border hover:bg-surface-2"><Download className="w-3.5 h-3.5" />{t("import.template")}</button>
+        <Text as="h1" weight="bold" className="text-[17px]" text={t("import.title")} />
+        <Button type="button" variant="outline" size="sm" onClick={downloadTemplate} className="ml-auto rounded-full whitespace-nowrap">
+          <Download className="w-3.5 h-3.5" />{t("import.template")}
+        </Button>
       </div>
 
       <div className="px-3.5 py-3 bg-in-soft border border-in/20 rounded-card text-[12px] text-in leading-relaxed mb-4">
@@ -160,11 +164,11 @@ export function ImportClient() {
       {/* Step 1 — upload */}
       <div className="bg-surface border border-border rounded-card p-5 mb-4">
         <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls,text/csv" onChange={onFile} className="hidden" />
-        <button onClick={() => fileRef.current?.click()} className="w-full border-2 border-dashed border-border rounded-xl py-8 grid place-items-center gap-2 hover:border-primary-400 transition">
+        <Button type="button" variant="outline" onClick={() => fileRef.current?.click()} className="h-auto w-full flex-col border-2 border-dashed rounded-xl py-8 hover:border-primary-400">
           <Upload className="w-7 h-7 text-slate-400" />
-          <span className="text-sm font-semibold">{fileName || t("import.choose")}</span>
-          <span className="text-[11px] text-slate-400">{t("import.csvOnly")}</span>
-        </button>
+          <Text as="span" weight="semibold" className="text-current" text={fileName || t("import.choose")} />
+          <Text as="span" variant="muted" className="text-[11px]" text={t("import.csvOnly")} />
+        </Button>
       </div>
 
       {/* Step 2 — mapping */}
@@ -197,10 +201,14 @@ export function ImportClient() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 mt-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4">
             {err && <p className="text-xs text-er flex-1">{err}</p>}
-            <button disabled={pending} onClick={() => run(true)} className="ml-auto inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-border text-sm font-semibold hover:bg-surface-2 disabled:opacity-50">{pending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}{t("import.dryRun")}</button>
-            <button disabled={pending} onClick={() => run(false)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary-600 text-white text-sm font-semibold disabled:opacity-50">{pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}{t("import.commit")}</button>
+            <Button type="button" variant="outline" disabled={pending} onClick={() => run(true)} className="sm:ml-auto rounded-full">
+              {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}{t("import.dryRun")}
+            </Button>
+            <Button type="button" disabled={pending} onClick={() => run(false)} className="rounded-full">
+              {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}{t("import.commit")}
+            </Button>
           </div>
         </div>
       )}

@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { RotateCw, RefreshCw, ServerCrash } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Code, Text } from "@/components/ui/text";
 
 /**
  * Bắt lỗi render (kể cả lỗi truy vấn DB ở server component) cho khu vực app —
@@ -37,33 +39,34 @@ export default function AppError({
           </div>
         </div>
 
-        <h2 className="text-xl font-bold tracking-tight">Không tải được dữ liệu</h2>
-        <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+        <Text as="h2" size="xl" weight="bold" className="tracking-tight" text="Không tải được dữ liệu" />
+        <Text as="p" variant="muted" className="mt-2 leading-relaxed">
           Máy chủ phản hồi chậm hoặc kết nối cơ sở dữ liệu bị gián đoạn. Thử lại sau giây lát —
-          nếu vẫn lỗi, kiểm tra mạng hoặc cấu hình <code className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[12px]">DATABASE_URL</code>.
-        </p>
+          nếu vẫn lỗi, kiểm tra mạng hoặc cấu hình <Code text="DATABASE_URL" />.
+        </Text>
 
         <div className="mt-6 flex items-center justify-center gap-2">
-          <button
+          <Button
+            type="button"
             onClick={retry}
             disabled={busy}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium shadow-sm disabled:opacity-60"
           >
             <RotateCw className={`w-4 h-4 ${pending ? "animate-spin" : ""}`} />
             {pending ? "Đang thử lại…" : "Thử lại"}
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
             onClick={hardReload}
             disabled={busy}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60"
           >
             <RefreshCw className={`w-4 h-4 ${reloading ? "animate-spin" : ""}`} />
             Tải lại trang
-          </button>
+          </Button>
         </div>
 
         {error.digest && (
-          <p className="mt-5 text-[11px] text-slate-400 font-mono select-all">mã lỗi: {error.digest}</p>
+          <Text as="p" variant="muted" className="mt-5 text-[11px] font-mono select-all" text={`mã lỗi: ${error.digest}`} />
         )}
       </div>
     </div>

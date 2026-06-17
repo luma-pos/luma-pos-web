@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Loader2, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Text } from "@/components/ui/text";
 import { createProject, toggleProjectStatus } from "@/lib/actions/extras";
 
 export function ProjectQuickCreate({ customers }: { customers: { id: string; name: string }[] }) {
@@ -30,28 +34,27 @@ export function ProjectQuickCreate({ customers }: { customers: { id: string; nam
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium">
+      <Button type="button" onClick={() => setOpen(true)} tx="projects.createNew">
         <Plus className="w-4 h-4" />
-        {t("projects.createNew")}
-      </button>
+      </Button>
     );
   }
 
-  const cls = "px-3 py-2 text-sm rounded-lg border border-border bg-surface";
   return (
     <div className="flex items-end gap-2 bg-surface border border-border rounded-card p-3 flex-wrap">
-      <input value={name} onChange={(e) => setName(e.target.value)} placeholder={`${t("projects.cols.name")} *`} className={`${cls} w-52`} />
-      <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className={cls}>
-        <option value="">{t("projects.noCustomer")}</option>
-        {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-      </select>
-      <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("customers.fields.address")} className={`${cls} w-52`} />
-      <button onClick={submit} disabled={busy || !name.trim()} className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium disabled:opacity-50 inline-flex items-center gap-2">
-        {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-        {t("common.save")}
-      </button>
-      <button onClick={() => setOpen(false)} className="p-2 text-slate-400"><X className="w-4 h-4" /></button>
-      {error && <p className="text-xs text-er w-full">{error}</p>}
+      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={`${t("projects.cols.name")} *`} className="w-52" />
+      <Select
+        value={customerId}
+        onChange={(e) => setCustomerId(e.target.value)}
+        options={[
+          { value: "", label: t("projects.noCustomer") },
+          ...customers.map((c) => ({ value: c.id, label: c.name })),
+        ]}
+      />
+      <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("customers.fields.address")} className="w-52" />
+      <Button type="button" onClick={submit} disabled={busy || !name.trim()} loading={busy} tx="common.save" />
+      <Button type="button" variant="ghost" size="iconSm" onClick={() => setOpen(false)}><X className="w-4 h-4" /></Button>
+      {error && <Text as="p" variant="destructive" size="xs" className="w-full" text={error} />}
     </div>
   );
 }
@@ -69,8 +72,6 @@ export function ProjectToggle({ id, status }: { id: string; status: string }) {
   }
 
   return (
-    <button onClick={toggle} disabled={busy} className="text-xs font-medium text-primary-600 hover:underline disabled:opacity-50">
-      {status === "active" ? t("projects.markDone") : t("projects.reopen")}
-    </button>
+    <Button type="button" variant="link" size="sm" onClick={toggle} disabled={busy} className="h-auto px-0 text-xs" text={status === "active" ? t("projects.markDone") : t("projects.reopen")} />
   );
 }

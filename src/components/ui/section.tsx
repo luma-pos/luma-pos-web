@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { TxValues } from "./_tx";
+import { Text } from "./text";
 
 export interface SectionProps {
   title?: React.ReactNode;
@@ -33,7 +34,7 @@ export function Section({
 
   return (
     <div className={cn(
-      "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl",
+      "bg-surface border border-border rounded-card shadow-e1",
       className
     )}>
       <div
@@ -44,9 +45,9 @@ export function Section({
         onClick={collapsible ? () => setOpen(!open) : undefined}
       >
         <div className="flex-1 min-w-0">
-          {titleContent && <div className="font-semibold">{titleContent}</div>}
+          {titleContent && <Text as="div" weight="semibold">{titleContent}</Text>}
           {descContent && (
-            <div className="text-xs text-slate-500 mt-0.5">{descContent}</div>
+            <Text as="div" variant="muted" size="xs" className="mt-0.5">{descContent}</Text>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -62,7 +63,7 @@ export function Section({
         </div>
       </div>
       {open && (
-        <div className="px-4 pb-4 pt-0 border-t border-slate-100 dark:border-slate-800/60">
+        <div className="px-4 pb-4 pt-0 border-t border-border-soft">
           <div className="pt-4">
             {children}
           </div>

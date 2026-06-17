@@ -78,6 +78,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
+    "realtime": "Realtime",
     "subtitle": "Today's business",
     "revenueToday": "Revenue today",
     "ordersToday": "Orders today",
@@ -191,6 +192,26 @@
       "add": "Add invoice",
       "close": "Close invoice",
       "newOrder": "New order"
+    },
+    "modes": {
+      "sale": "New sale",
+      "edit": "Edit invoice",
+      "copy": "Copy invoice",
+      "copyShort": "Copy"
+    },
+    "invoiceEdit": {
+      "searchPlaceholder": "Find invoice...",
+      "loadEdit": "Load invoice to edit",
+      "loadCopy": "Load invoice to copy",
+      "editingFrom": "Editing: {code}",
+      "copyingFrom": "Copying: {code}",
+      "editDescription": "Cancel original invoice + create replacement · Keep original sale time: {dateTime}",
+      "copyDescription": "Create a new invoice without changing the original · Sale time is now",
+      "viewOriginal": "View original invoice",
+      "copyFromInvoice": "Copy from this invoice",
+      "saveEdited": "Save edited invoice",
+      "createCopy": "Create copied invoice",
+      "editFootnote": "Cancel original invoice + create new invoice"
     },
     "priceEditor": {
       "unitPrice": "Unit price",

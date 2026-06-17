@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Routes } from "@/lib/routes";
 import { GroupTabs } from "@/components/group-tabs";
+import { Text } from "@/components/ui/text";
 import { CashbookTab } from "./tabs/cashbook";
 import { EInvoicesTab } from "./tabs/einvoices";
 import { ShiftsTab } from "./tabs/shifts";
@@ -19,12 +20,12 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   const tab = params.tab ?? "cashbook";
 
   return (
-    <div className="p-6">
-      <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-5 bg-surface border-b border-border">
-        <div className="min-h-13 px-6 pt-2.5 flex items-center">
-          <h1 className="text-[17px] font-bold">{t("nav.groups.finance")}</h1>
+    <div className="p-4 sm:p-6">
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-5 bg-surface border-b border-border">
+        <div className="min-h-13 px-4 sm:px-6 pt-2.5 flex items-center">
+          <Text as="h1" weight="bold" className="text-[17px]" text={t("nav.groups.finance")} />
         </div>
-        <div className="px-6 pb-1.5"><GroupTabs base={Routes.Finance} items={TABS} /></div>
+        <div className="px-4 sm:px-6 pb-1.5"><GroupTabs base={Routes.Finance} items={TABS} /></div>
       </div>
 
       {tab === "einvoices" ? <EInvoicesTab /> : tab === "shifts" ? <ShiftsTab /> : <CashbookTab searchParams={params} />}

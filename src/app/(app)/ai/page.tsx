@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { GroupTabs } from "@/components/group-tabs";
+import { Text } from "@/components/ui/text";
 import { RestockTab } from "./tabs/restock";
 import { Assistant } from "./assistant";
 
@@ -16,12 +17,12 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<R
   const tab = params.tab ?? "restock";
 
   return (
-    <div className="p-6">
-      <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-5 bg-surface border-b border-border">
-        <div className="min-h-13 px-6 pt-2.5 flex items-center gap-2">
-          <h1 className="text-[17px] font-bold">{t("nav.ai")}</h1>
+    <div className="p-4 sm:p-6">
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-5 bg-surface border-b border-border">
+        <div className="min-h-13 px-4 sm:px-6 pt-2.5 flex items-center gap-2">
+          <Text as="h1" weight="bold" className="text-[17px]" text={t("nav.ai")} />
         </div>
-        <div className="px-6 pb-1.5"><GroupTabs base="/ai" items={TABS} /></div>
+        <div className="px-4 sm:px-6 pb-1.5"><GroupTabs base="/ai" items={TABS} /></div>
       </div>
 
       {tab === "assistant" ? <Assistant /> : <RestockTab />}

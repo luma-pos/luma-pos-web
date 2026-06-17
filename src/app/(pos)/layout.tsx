@@ -13,5 +13,5 @@ export default async function PosLayout({ children }: { children: React.ReactNod
     redirect(Routes.Login);
   }
 
-  return <div className="h-screen overflow-hidden bg-canvas">{children}</div>;
+  return <div className="h-dvh overflow-hidden bg-canvas">{children}</div>;
 }

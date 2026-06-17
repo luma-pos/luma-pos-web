@@ -120,7 +120,7 @@ export function SettingsClient({ store, staff, canManage }: { store: StoreSettin
   const sec = SEC_META[active];
 
   return (
-    <div className="flex h-[calc(100vh)] lg:h-screen overflow-hidden">
+    <div className="flex h-dvh overflow-hidden">
       {/* settings nav */}
       <nav className="w-55 shrink-0 bg-surface border-r border-border overflow-y-auto hidden md:flex flex-col">
         <div className="px-4 py-3.5 border-b border-border">

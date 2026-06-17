@@ -3,11 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Loader2, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, Trash2 } from "lucide-react";
 import { Routes } from "@/lib/routes";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Combobox } from "@/components/combobox";
 import { MoneyInput } from "@/components/ui/money-input";
+import { Button } from "@/components/ui/button";
+import { Input, Textarea } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Text } from "@/components/ui/text";
 import { createPurchase } from "@/lib/actions/purchases";
 import { searchPurchaseProducts } from "@/lib/actions/purchase-search";
 import type { PurchaseFormOptions, PurchaseProductRow } from "@/lib/data/inventory";
@@ -107,38 +111,41 @@ export function PurchaseForm({ options }: { options: PurchaseFormOptions }) {
   }
 
   const numCls = "no-spinner w-full px-2 py-1.5 text-right text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-surface tabular-nums";
-  const fieldCls = "w-full px-3 py-2 text-sm rounded-lg border border-border bg-surface";
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-dvh flex flex-col">
       <header className="shrink-0 h-12 px-4 flex items-center gap-3 bg-surface border-b border-border">
-        <button onClick={() => router.push(Routes.Purchases)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"><ArrowLeft className="w-4 h-4" /></button>
-        <h1 className="font-bold">{t("purchases.createNew")}</h1>
+        <Button type="button" variant="ghost" size="iconSm" onClick={() => router.push(Routes.Purchases)} aria-label={t("common.back")}>
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+        <Text as="h1" weight="bold" text={t("purchases.createNew")} />
       </header>
 
-      <div className="flex-1 min-h-0 flex">
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden">
         {/* trái: tìm + bảng hàng */}
-        <div className="flex-1 min-w-0 flex flex-col p-4">
+        <div className="flex-1 min-w-0 min-h-[420px] lg:min-h-0 flex flex-col p-3 sm:p-4">
           <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("purchases.searchProduct")} className={cn(fieldCls, "pl-9")} />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("purchases.searchProduct")} leftIcon={<Search />} />
             {results.length > 0 && (
               <div className="absolute z-20 left-0 right-0 mt-1 max-h-80 overflow-auto bg-surface border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg">
                 {results.map((p) => (
-                  <button key={p.id} onClick={() => addProduct(p)} className="w-full text-left px-3 py-2 hover:bg-surface-2 flex justify-between gap-2">
-                    <span className="min-w-0"><span className="font-medium text-sm">{p.name}</span><span className="text-xs text-slate-400 ml-1">{p.sku}</span></span>
-                    <span className="text-xs text-slate-500 shrink-0">{formatCurrency(Number(p.costPrice))}</span>
-                  </button>
+                  <Button key={p.id} type="button" variant="ghost" block onClick={() => addProduct(p)} className="h-auto justify-between rounded-none px-3 py-2 text-left">
+                    <Text as="span" className="min-w-0 text-current">
+                      <Text as="span" weight="medium" text={p.name} />
+                      <Text as="span" variant="muted" size="xs" className="ml-1" text={p.sku} />
+                    </Text>
+                    <Text as="span" variant="muted" size="xs" className="shrink-0 tabular-nums" text={formatCurrency(Number(p.costPrice))} />
+                  </Button>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="flex-1 overflow-auto bg-surface border border-border rounded-card">
+          <div className="flex-1 min-h-[280px] overflow-auto bg-surface border border-border rounded-card">
             {lines.length === 0 ? (
-              <div className="h-full grid place-items-center text-sm text-slate-400">{t("purchases.pickProduct")}</div>
+              <Text as="div" variant="muted" className="h-full grid place-items-center" text={t("purchases.pickProduct")} />
             ) : (
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[760px] text-sm">
                 <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800/80">
                   <tr className="text-left text-xs uppercase text-slate-500">
                     <th className="px-3 py-2.5 font-semibold">{t("orders.cols.product")}</th>
@@ -155,11 +162,15 @@ export function PurchaseForm({ options }: { options: PurchaseFormOptions }) {
                     <tr key={l.productId}>
                       <td className="px-3 py-2"><div className="font-medium">{l.name}</div><div className="text-xs text-slate-400">{l.sku}</div></td>
                       <td className="px-2 py-2">
-                        <select value={l.unitName} onChange={(e) => changeUnit(l.productId, e.target.value)}
-                          className="w-full px-2 py-1.5 text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-surface">
-                          <option value={l.baseUnit}>{l.baseUnit}</option>
-                          {l.units.map((u) => <option key={u.unitName} value={u.unitName}>{u.unitName} (×{u.multiplier})</option>)}
-                        </select>
+                        <Select
+                          size="sm"
+                          value={l.unitName}
+                          onChange={(e) => changeUnit(l.productId, e.target.value)}
+                          options={[
+                            { value: l.baseUnit, label: l.baseUnit },
+                            ...l.units.map((u) => ({ value: u.unitName, label: `${u.unitName} (×${u.multiplier})` })),
+                          ]}
+                        />
                       </td>
                       <td className="px-2 py-2"><input type="number" min={0} value={l.quantity} onChange={(e) => patch(l.productId, { quantity: Math.max(0, Number(e.target.value)) })} className={numCls} /></td>
                       <td className="px-2 py-2"><MoneyInput value={l.unitCost} onChange={(v) => patch(l.productId, { unitCost: v ?? 0 })} className={numCls} /></td>
@@ -168,16 +179,26 @@ export function PurchaseForm({ options }: { options: PurchaseFormOptions }) {
                           <input type="number" min={0} value={l.discInput || ""} placeholder="0" onChange={(e) => patch(l.productId, { discInput: Math.max(0, Number(e.target.value)) })} className={numCls} />
                           <div className="flex rounded-md overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
                             {(["vnd", "pct"] as const).map((m) => (
-                              <button key={m} type="button" onClick={() => patch(l.productId, { discMode: m })}
-                                className={cn("px-1.5 py-1 text-[11px] font-semibold", l.discMode === m ? "bg-primary-600 text-white" : "bg-surface text-slate-500")}>
+                              <Button
+                                key={m}
+                                type="button"
+                                onClick={() => patch(l.productId, { discMode: m })}
+                                variant={l.discMode === m ? "default" : "ghost"}
+                                size="sm"
+                                className="h-8 rounded-none px-2 text-[11px] font-semibold"
+                              >
                                 {m === "vnd" ? "đ" : "%"}
-                              </button>
+                              </Button>
                             ))}
                           </div>
                         </div>
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums font-medium">{formatCurrency(lineTotal(l))}</td>
-                      <td className="px-2 py-2 text-right"><button onClick={() => setLines((ls) => ls.filter((x) => x.productId !== l.productId))} className="text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button></td>
+                      <td className="px-2 py-2 text-right">
+                        <Button type="button" variant="ghost" size="iconSm" onClick={() => setLines((ls) => ls.filter((x) => x.productId !== l.productId))} className="text-slate-400 hover:text-red-500">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -187,21 +208,21 @@ export function PurchaseForm({ options }: { options: PurchaseFormOptions }) {
         </div>
 
         {/* phải: NCC + tổng tiền */}
-        <div className="w-[380px] shrink-0 bg-surface border-l border-border flex flex-col p-4 gap-3 overflow-auto">
+        <div className="w-full lg:w-[380px] shrink-0 bg-surface border-t lg:border-t-0 lg:border-l border-border flex flex-col p-3 sm:p-4 gap-3 overflow-auto">
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">{t("purchases.cols.supplier")} *</label>
+            <Text as="div" variant="muted" size="xs" weight="medium" className="mb-1" text={`${t("purchases.cols.supplier")} *`} />
             <Combobox value={supplierId} onChange={setSupplierId} allowClear={false}
               placeholder={t("purchases.noSuppliers")}
               options={options.suppliers.map((s) => ({ value: s.id, label: s.name }))} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">{t("purchases.cols.warehouse")}</label>
+            <Text as="div" variant="muted" size="xs" weight="medium" className="mb-1" text={t("purchases.cols.warehouse")} />
             <Combobox value={warehouseId} onChange={setWarehouseId} allowClear={false}
               options={options.warehouses.map((w) => ({ value: w.id, label: w.name }))} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">{t("purchases.invoiceNumber")}</label>
-            <input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder={t("purchases.invoiceNumberPlaceholder")} className={fieldCls} />
+            <Text as="div" variant="muted" size="xs" weight="medium" className="mb-1" text={t("purchases.invoiceNumber")} />
+            <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder={t("purchases.invoiceNumberPlaceholder")} />
           </div>
 
           <div className="mt-1 pt-3 border-t border-border space-y-2.5 text-sm">
@@ -223,14 +244,14 @@ export function PurchaseForm({ options }: { options: PurchaseFormOptions }) {
             <div className="flex justify-between items-center"><span className="text-slate-500">{t("purchases.cols.owed")}</span><span className={cn("tabular-nums font-semibold", owed > 0 ? "text-warn" : "text-slate-400")}>{formatCurrency(owed)}</span></div>
           </div>
 
-          <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("orders.detail.notePlaceholder")} rows={2} className={cn(fieldCls, "resize-none")} />
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("orders.detail.notePlaceholder")} rows={2} className="resize-none" />
 
-          {error && <p className="text-sm text-er">{error}</p>}
+          {error && <Text as="p" variant="destructive" text={error} />}
 
-          <button onClick={submit} disabled={busy || lines.length === 0 || !supplierId} className="mt-auto py-3 rounded-card bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-semibold inline-flex items-center justify-center gap-2">
-            {busy && <Loader2 className="w-4 h-4 animate-spin" />}{t("purchases.receiveNow")} · {formatCurrency(total)}
-          </button>
-          <p className="text-[11px] text-slate-400">{t("purchases.receiveHint")}</p>
+          <Button type="button" onClick={submit} disabled={lines.length === 0 || !supplierId} loading={busy} block className="mt-auto h-12 rounded-card font-semibold">
+            {t("purchases.receiveNow")} · {formatCurrency(total)}
+          </Button>
+          <Text as="p" variant="muted" className="text-[11px]" text={t("purchases.receiveHint")} />
         </div>
       </div>
     </div>

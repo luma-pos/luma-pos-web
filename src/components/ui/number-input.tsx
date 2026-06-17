@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Input, type InputProps } from "./input";
+import { Text } from "./text";
 
 export interface NumberInputProps
   extends Omit<InputProps, "type" | "value" | "onChange" | "defaultValue"> {
@@ -76,9 +77,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
     return (
       <div className="relative">
         {prefix && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 pointer-events-none">
-            {prefix}
-          </span>
+          <Text as="span" variant="muted" className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" text={prefix} />
         )}
         <Input
           ref={ref}
@@ -96,9 +95,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
           {...props}
         />
         {suffix && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 pointer-events-none">
-            {suffix}
-          </span>
+          <Text as="span" variant="muted" className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" text={suffix} />
         )}
       </div>
     );

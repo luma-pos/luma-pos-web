@@ -22,8 +22,8 @@ export default async function ProductDetailPage({ params }: Props) {
   const lbl = "text-slate-500 shrink-0";
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <header className="sticky top-0 z-10 bg-surface border-b border-border px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+    <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
+      <header className="sticky top-0 z-10 bg-surface border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           <Link href={Routes.Products} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
             <ArrowLeft className="w-4 h-4" />
@@ -45,7 +45,7 @@ export default async function ProductDetailPage({ params }: Props) {
         </Link>
       </header>
 
-      <div className="max-w-4xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
         {product.imageUrls && product.imageUrls.length > 0 && (
           <div className="md:col-span-2 flex flex-wrap gap-3">
             {product.imageUrls.map((url) => (

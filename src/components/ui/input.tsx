@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import type { TxValues } from "./_tx";
 
 const inputVariants = cva(
-  "flex w-full rounded-lg border bg-transparent px-3 text-sm transition-colors placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50",
+  "flex w-full rounded-lg border bg-surface px-3 text-sm transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       size: {
@@ -84,7 +84,7 @@ Input.displayName = "Input";
 
 // Textarea
 const textareaVariants = cva(
-  "flex w-full rounded-lg border bg-transparent px-3 py-2 text-sm transition-colors placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50",
+  "flex w-full rounded-lg border bg-surface px-3 py-2 text-sm transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       variant: {

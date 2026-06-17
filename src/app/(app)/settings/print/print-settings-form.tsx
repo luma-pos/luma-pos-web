@@ -74,7 +74,7 @@ export function PrintSettingsForm({ templates }: { templates: Record<PrintDocTyp
   const inputCls = "w-full px-3 py-2 text-sm rounded-lg border border-border bg-surface";
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-4 sm:p-6 max-w-5xl">
       <div className="flex items-center gap-3 mb-5">
         <Link href={Routes.Settings} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
           <ArrowLeft className="w-4 h-4" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /** Mở/đóng drawer điều hướng trên mobile qua data-mobilenav trên <html>. */
 function setMobileNav(open: boolean) {
@@ -9,9 +10,9 @@ function setMobileNav(open: boolean) {
 
 export function MobileNavButton() {
   return (
-    <button onClick={() => setMobileNav(true)} className="p-2 -ml-1 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-surface-2" aria-label="menu">
+    <Button type="button" variant="ghost" size="iconSm" onClick={() => setMobileNav(true)} className="-ml-1" aria-label="menu">
       <Menu className="w-5 h-5" />
-    </button>
+    </Button>
   );
 }
 

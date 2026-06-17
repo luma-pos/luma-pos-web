@@ -26,7 +26,7 @@ export function CustomerForm() {
   }
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="p-4 sm:p-6 max-w-2xl">
       <div className="flex items-center gap-3 mb-6">
         <Button type="button" variant="ghost" size="iconSm" onClick={() => router.push(Routes.Customers)}>
           <ArrowLeft className="w-4 h-4" />
@@ -34,7 +34,7 @@ export function CustomerForm() {
         <Heading as="h1" size="lg" tx="customers.createNew" />
       </div>
 
-      <Form form={form} onSubmit={onSubmit} className="bg-surface border border-border rounded-card p-6 space-y-4">
+      <Form form={form} onSubmit={onSubmit} className="bg-surface border border-border rounded-card p-4 sm:p-6 space-y-4">
         <FormField name="name" labelTx="customers.fields.name" required>
           {(field) => <Input {...field} placeholderTx="customers.fields.namePlaceholder" />}
         </FormField>

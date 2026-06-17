@@ -11,6 +11,8 @@ import { getOrder } from "@/lib/data/orders";
 import { OrderStatusBadge, PaymentStatusBadge } from "../status-badges";
 import { OrderActions, PaymentForm } from "./order-actions";
 import { EInvoiceForm } from "./einvoice-form";
+import { buttonVariants } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,35 +26,54 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const remaining = Math.max(0, total - paid);
   // merged: đơn gốc đã gộp — khóa mọi thao tác như đơn hủy
   const cancelled = order.status === "cancelled" || order.status === "merged";
+  const posSourceHref = (mode: "edit" | "copy") => {
+    const sp = new URLSearchParams({
+      sourceMode: mode,
+      sourceOrderId: order.id,
+      sourceCode: order.code,
+      sourceSaleTime: formatDate(order.createdAt),
+    });
+    return `${Routes.POS}?${sp.toString()}`;
+  };
 
   return (
-    <div className="p-6 max-w-5xl">
-      <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-5 min-h-[58px] px-6 py-2.5 bg-surface border-b border-border flex items-center gap-3 flex-wrap">
+    <div className="p-4 sm:p-6 max-w-5xl">
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-5 min-h-[58px] px-4 sm:px-6 py-2.5 bg-surface border-b border-border flex items-center gap-3 flex-wrap">
         <Link href={Routes.Orders} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
           <ArrowLeft className="w-4 h-4" />
         </Link>
-        <h1 className="text-[17px] font-bold">{order.code}</h1>
+        <Text as="h1" weight="bold" className="text-[17px]" text={order.code} />
         <OrderStatusBadge status={order.status} />
         <PaymentStatusBadge status={order.paymentStatus} />
-        <div className="ml-auto flex items-center gap-2">
+        <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 overflow-x-auto sm:overflow-visible pb-1 sm:pb-0">
           <Link
             href={`${Routes.order(order.id)}/print`}
-            className="px-3 py-2 text-sm font-medium rounded-lg border border-border hover:bg-surface-2"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 shrink-0")}
           >
             🖨 {t("print.printBtn")}
           </Link>
           {(order.status === "completed" || order.status === "quote") && order.returns.length === 0 && (
             <Link
-              href={`${Routes.order(order.id)}/edit`}
-              className="px-3 py-2 text-sm font-medium rounded-lg border border-border hover:bg-surface-2"
+              href={posSourceHref("edit")}
+              target="_blank"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 shrink-0")}
             >
               ✏️ {t("orderEdit.action")}
+            </Link>
+          )}
+          {!cancelled && (
+            <Link
+              href={posSourceHref("copy")}
+              target="_blank"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 shrink-0")}
+            >
+              {t("pos.modes.copyShort")}
             </Link>
           )}
           {order.status === "completed" && (
             <Link
               href={`${Routes.order(order.id)}/return`}
-              className="px-3 py-2 text-sm font-medium rounded-lg border border-border hover:bg-surface-2"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 shrink-0")}
             >
               ↩ {t("returns.action")}
             </Link>
@@ -68,7 +89,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <div className="px-4 py-3 border-b border-border font-semibold text-sm">
               {t("orders.detail.items")} ({order.items.length})
             </div>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-sm">
               <thead>
                 <tr className="bg-canvas text-left text-xs uppercase text-slate-500">
                   <th className="px-4 py-2.5 font-semibold">{t("orders.cols.product")}</th>
@@ -97,6 +119,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 ))}
               </tbody>
             </table>
+            </div>
             <div className="px-4 py-3 border-t border-border text-sm space-y-1.5">
               <div className="flex justify-between text-slate-500"><span>{t("pos.subtotal")}</span><span className="tabular-nums">{formatCurrency(Number(order.subtotal))}</span></div>
               {Number(order.discount) > 0 && (
@@ -119,7 +142,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             {order.payments.length === 0 ? (
               <p className="px-4 py-6 text-sm text-slate-400 text-center">{t("orders.detail.noPayments")}</p>
             ) : (
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[620px] text-sm">
                 <tbody className="divide-y divide-border-soft">
                   {order.payments.map((p) => (
                     <tr key={p.id}>
@@ -131,6 +155,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
             <div className="px-4 py-3 border-t border-border text-sm flex justify-between">
               <span className="text-slate-500">{t("orders.detail.remaining")}</span>
@@ -148,7 +173,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               <div className="px-4 py-3 border-b border-border font-semibold text-sm">
                 {t("returns.sectionTitle")} ({order.returns.length})
               </div>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-sm">
                 <tbody className="divide-y divide-border-soft">
                   {order.returns.map((r) => (
                     <tr key={r.id}>
@@ -164,6 +190,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>

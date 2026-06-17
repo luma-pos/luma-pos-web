@@ -103,8 +103,8 @@ export function NewProductForm({ categories, brands, mode = "create", productId,
   }
 
   return (
-    <Form form={form} onSubmit={onSubmit} className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 space-y-0">
-      <header className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between">
+    <Form form={form} onSubmit={onSubmit} className="min-h-dvh flex flex-col bg-slate-50 dark:bg-slate-950 space-y-0">
+      <header className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button type="button" variant="ghost" size="iconSm" onClick={() => router.push(Routes.Products)}>
             <ArrowLeft className="w-4 h-4" />
@@ -126,8 +126,8 @@ export function NewProductForm({ categories, brands, mode = "create", productId,
         </div>
       </header>
 
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6">
-        <div className="flex gap-6">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6">
+        <div className="flex gap-6 overflow-x-auto">
           {(["info", "variants", "description"] as Tab[]).map((tk) => (
             <button
               key={tk}
@@ -147,12 +147,12 @@ export function NewProductForm({ categories, brands, mode = "create", productId,
       </div>
 
       {form.formState.errors.root && (
-        <div className="bg-red-50 dark:bg-red-950/40 border-b border-red-200 dark:border-red-900 px-6 py-2 text-sm text-red-700 dark:text-red-400">
+        <div className="bg-red-50 dark:bg-red-950/40 border-b border-red-200 dark:border-red-900 px-4 sm:px-6 py-2 text-sm text-red-700 dark:text-red-400">
           {t(form.formState.errors.root.message ?? "errors.serverError")}
         </div>
       )}
 
-      <div className="flex-1 overflow-auto p-6 max-w-5xl mx-auto w-full space-y-4">
+      <div className="flex-1 overflow-auto p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-4">
         {tab === "info" && <InfoTab categories={categories} brands={brands} />}
         {tab === "variants" && <VariantsTab />}
         {tab === "description" && <DescriptionTab />}
@@ -435,4 +435,3 @@ function PhysicalFields() {
     </div>
   );
 }
-

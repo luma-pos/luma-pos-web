@@ -108,8 +108,8 @@ export function ProductDetailForm({
   const label = "text-xs font-medium text-slate-500 mb-1 block";
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <header className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+    <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
+      <header className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           <Link href={Routes.Products} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
             <ArrowLeft className="w-4 h-4" />
@@ -132,7 +132,7 @@ export function ProductDetailForm({
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-5">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-5">
         {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg px-4 py-2 text-sm text-red-700 dark:text-red-400">{error}</div>}
 
         {/* thông tin cơ bản */}

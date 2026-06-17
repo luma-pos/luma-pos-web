@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { Text } from "@/components/ui/text";
 
 type Item = { href: string; icon: React.ComponentType<{ className?: string }>; key: string; newTab?: boolean };
 type Group = { labelKey: string; items: Item[] };
@@ -55,9 +56,13 @@ export function AppNav({ industry }: { industry?: string }) {
     <nav className="flex-1 overflow-y-auto px-3 py-2 text-sm">
       {groups.map((g) => (
         <div key={g.labelKey}>
-          <div className="px-3 pt-4 pb-1.5 text-[10.5px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-600">
-            {t(g.labelKey)}
-          </div>
+          <Text
+            as="div"
+            variant="muted"
+            weight="bold"
+            className="px-3 pt-4 pb-1.5 text-[10.5px] uppercase tracking-wider"
+            text={t(g.labelKey)}
+          />
           <div className="space-y-0.5">
             {g.items.map((item) => {
               const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
@@ -75,7 +80,7 @@ export function AppNav({ industry }: { industry?: string }) {
                   )}
                 >
                   <item.icon className="w-4 h-4 shrink-0" />
-                  <span>{t(item.key)}</span>
+                  <Text as="span" size="sm" weight="medium" text={t(item.key)} />
                 </Link>
               );
             })}

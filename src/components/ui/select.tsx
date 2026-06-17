@@ -48,7 +48,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           className={cn(
-            "ui-select appearance-none w-full rounded-lg border bg-surface transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50",
+            "ui-select appearance-none w-full rounded-lg border bg-surface transition-[border-color,box-shadow,background-color] duration-150 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 disabled:cursor-not-allowed disabled:opacity-50",
             sizeCls,
             variantCls,
             !props.value && "text-slate-400",

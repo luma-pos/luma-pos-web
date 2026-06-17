@@ -86,7 +86,7 @@ export function OrderEditForm({ orderId, orderCode, initial, productOptions }: P
   const inputCls = "px-2 py-1.5 text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-surface tabular-nums";
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl">
       <div className="flex items-center gap-3 mb-5">
         <button onClick={() => router.push(Routes.order(orderId))} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
           <ArrowLeft className="w-4 h-4" />

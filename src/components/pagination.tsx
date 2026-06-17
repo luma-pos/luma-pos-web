@@ -4,7 +4,10 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { PAGE_SIZES } from "@/lib/pagination";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Text } from "@/components/ui/text";
 
 /**
  * Phân trang dùng chung (kiểu KiotViet): chọn số dòng + |< < [n] > >| + "X–Y trong N".
@@ -36,40 +39,43 @@ export function Pagination({
 
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, total);
-  const btn = "w-8 h-8 grid place-items-center rounded-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800";
 
   return (
     <div className="flex items-center gap-x-4 gap-y-2 flex-wrap mt-4 text-sm">
       <div className="flex items-center gap-2">
-        <span className="text-slate-500">{t("pagination.show")}</span>
-        <select
+        <Text variant="muted" text={t("pagination.show")} />
+        <Select
           value={pageSize}
           onChange={(e) => go({ size: e.target.value, page: undefined })}
-          className="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
-        >
-          {PAGE_SIZES.map((s) => <option key={s} value={s}>{t("pagination.rows", { n: s })}</option>)}
-        </select>
+          size="sm"
+          options={PAGE_SIZES.map((s) => ({ value: String(s), label: t("pagination.rows", { n: s }) }))}
+          className="min-w-[116px]"
+        />
       </div>
 
       <div className="flex items-center gap-1">
-        <button className={btn} disabled={page <= 1} onClick={() => go({ page: undefined })} title={t("pagination.first")}><ChevronsLeft className="w-4 h-4" /></button>
-        <button className={btn} disabled={page <= 1} onClick={() => go({ page: page - 1 <= 1 ? undefined : String(page - 1) })} title={t("pagination.prev")}><ChevronLeft className="w-4 h-4" /></button>
-        <input
+        <Button variant="outline" size="iconSm" disabled={page <= 1} onClick={() => go({ page: undefined })} title={t("pagination.first")}><ChevronsLeft className="w-4 h-4" /></Button>
+        <Button variant="outline" size="iconSm" disabled={page <= 1} onClick={() => go({ page: page - 1 <= 1 ? undefined : String(page - 1) })} title={t("pagination.prev")}><ChevronLeft className="w-4 h-4" /></Button>
+        <Input
           type="number" min={1} max={pageCount}
           value={page}
           onChange={(e) => {
             const p = Math.min(pageCount, Math.max(1, Number(e.target.value) || 1));
             go({ page: p <= 1 ? undefined : String(p) });
           }}
-          className="no-spinner w-12 h-8 text-center rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 tabular-nums"
+          size="sm"
+          className="no-spinner w-12 text-center tabular-nums"
         />
-        <button className={btn} disabled={page >= pageCount} onClick={() => go({ page: String(page + 1) })} title={t("pagination.next")}><ChevronRight className="w-4 h-4" /></button>
-        <button className={btn} disabled={page >= pageCount} onClick={() => go({ page: String(pageCount) })} title={t("pagination.last")}><ChevronsRight className="w-4 h-4" /></button>
+        <Button variant="outline" size="iconSm" disabled={page >= pageCount} onClick={() => go({ page: String(page + 1) })} title={t("pagination.next")}><ChevronRight className="w-4 h-4" /></Button>
+        <Button variant="outline" size="iconSm" disabled={page >= pageCount} onClick={() => go({ page: String(pageCount) })} title={t("pagination.last")}><ChevronsRight className="w-4 h-4" /></Button>
       </div>
 
-      <div className={cn("text-slate-500 tabular-nums", "ml-auto sm:ml-0")}>
-        {t("pagination.range", { start, end, total })}{unitLabel ? ` ${unitLabel}` : ""}
-      </div>
+      <Text
+        as="div"
+        variant="muted"
+        className="ml-auto sm:ml-0 tabular-nums"
+        text={`${t("pagination.range", { start, end, total })}${unitLabel ? ` ${unitLabel}` : ""}`}
+      />
     </div>
   );
 }

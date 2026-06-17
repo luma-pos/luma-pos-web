@@ -100,20 +100,20 @@ export function TableOrder({ id, name, initialCart, modifierGroups }: { id: stri
   function toggleSelect(lineId: string) { setSelected((s) => (s.includes(lineId) ? s.filter((x) => x !== lineId) : [...s, lineId])); }
 
   return (
-    <div className="p-6">
-      <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-5 min-h-13 px-6 py-2.5 bg-surface border-b border-border flex items-center gap-3">
+    <div className="p-4 sm:p-6">
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-5 min-h-13 px-4 sm:px-6 py-2.5 bg-surface border-b border-border flex items-center gap-3">
         <button onClick={() => router.push("/tables")} className="p-1.5 rounded-lg hover:bg-surface-2 text-slate-500"><ArrowLeft className="w-4 h-4" /></button>
         <h1 className="text-[17px] font-bold">{name}</h1>
-        <button onClick={close} disabled={pending} className="ml-auto text-xs text-slate-500 hover:text-er">{t("tables.close")}</button>
+        <button onClick={close} disabled={pending} className="ml-auto shrink-0 text-xs text-slate-500 hover:text-er">{t("tables.close")}</button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4">
         <div>
-          <div className="relative max-w-md mb-3">
+          <div className="relative w-full max-w-md mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input value={q} onChange={(e) => onSearch(e.target.value)} placeholder={t("pos.searchPlaceholder")} className="w-full pl-9 pr-3 py-2.5 text-sm rounded-[10px] border border-border bg-surface" />
             {(results.length > 0 || searching) && q.trim() && (
-              <div className="absolute z-30 left-0 right-0 mt-1 bg-surface border border-border rounded-xl shadow-e2 overflow-hidden">
+              <div className="absolute z-30 left-0 right-0 mt-1 bg-surface border border-border rounded-xl shadow-e2 overflow-hidden max-h-[min(70dvh,520px)] overflow-y-auto">
                 {searching ? <div className="px-4 py-4 text-center text-sm text-slate-400"><Loader2 className="w-4 h-4 animate-spin inline" /></div>
                   : results.slice(0, 30).map((p) => (
                     <button key={p.id} onClick={() => choose(p)} className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left text-sm hover:bg-surface-2">
