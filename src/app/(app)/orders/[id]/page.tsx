@@ -11,7 +11,7 @@ import { getOrder } from "@/lib/data/orders";
 import { OrderStatusBadge, PaymentStatusBadge } from "../status-badges";
 import { OrderActions, PaymentForm } from "./order-actions";
 import { EInvoiceForm } from "./einvoice-form";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Text } from "@/components/ui/text";
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -125,6 +125,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               {Number(order.discount) > 0 && (
                 <div className="flex justify-between text-slate-500"><span>{t("pos.discount")}</span><span className="tabular-nums text-ok">− {formatCurrency(Number(order.discount))}</span></div>
               )}
+              {Number(order.tax) > 0 && (
+                <div className="flex justify-between text-slate-500"><span>{t("pos.tax")}</span><span className="tabular-nums">{formatCurrency(Number(order.tax))}</span></div>
+              )}
               {Number(order.shippingFee) > 0 && (
                 <div className="flex justify-between text-slate-500"><span>{t("pos.shipping")}</span><span className="tabular-nums">{formatCurrency(Number(order.shippingFee))}</span></div>
               )}
@@ -235,6 +238,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             {order.projectName && <div className="flex justify-between"><span className="text-slate-500">{t("orders.cols.project")}</span><span className="text-right">{order.projectName}</span></div>}
             {order.warehouseName && <div className="flex justify-between"><span className="text-slate-500">{t("orders.detail.warehouse")}</span><span>{order.warehouseName}</span></div>}
             {order.sellerName && <div className="flex justify-between"><span className="text-slate-500">{t("orders.detail.seller")}</span><span>{order.sellerName}</span></div>}
+            {order.sourceOrderId && (
+              <div className="flex justify-between gap-3">
+                <span className="text-slate-500">{t("orders.detail.sourceInvoice")}</span>
+                <Link href={Routes.order(order.sourceOrderId)} className="font-medium text-primary-600 hover:underline">{t("orders.detail.viewSource")}</Link>
+              </div>
+            )}
+            {order.replacedByOrderId && (
+              <div className="flex justify-between gap-3">
+                <span className="text-slate-500">{t("orders.detail.replacementInvoice")}</span>
+                <Link href={Routes.order(order.replacedByOrderId)} className="font-medium text-primary-600 hover:underline">{t("orders.detail.viewReplacement")}</Link>
+              </div>
+            )}
             {order.note && <p className="text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">{order.note}</p>}
           </div>
         </div>

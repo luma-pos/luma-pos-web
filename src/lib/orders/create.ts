@@ -2,9 +2,9 @@ import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  orders, orderItems, payments, customers, stockLevels, stockMovements,
+  orders, orderItems, payments, customers, stockLevels, stockMovements, einvoices, returns,
 } from "@/db/schema";
-import { createOrderSchema, type CreateOrderOutput } from "@/lib/schemas/order";
+import { createOrderSchema, type CreateOrderInput } from "@/lib/schemas/order";
 import {
   type ActionResult, getProfileId, generateCode, toMoney, toQty, isUniqueViolation,
 } from "@/lib/actions/common";
@@ -21,7 +21,7 @@ import { normalizeOrderItems } from "@/lib/orders/normalize";
  */
 export async function createOrderForUser(
   userId: string,
-  input: CreateOrderOutput
+  input: CreateOrderInput
 ): Promise<ActionResult<{ id: string; code: string }>> {
   const parsed = createOrderSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "errors.invalidData" };
@@ -46,7 +46,9 @@ export async function createOrderForUser(
     throw e;
   }
   const subtotal = trustedItems.reduce((s, i) => s + i.total, 0);
-  const total = Math.max(0, subtotal - v.discount + v.shippingFee);
+  const afterDiscount = Math.max(0, subtotal - v.discount);
+  const tax = Math.round((afterDiscount * v.taxRate) / 100);
+  const total = Math.max(0, afterDiscount + tax + v.shippingFee);
   const paid = isQuote || v.payment.method === "credit" ? 0 : Math.min(v.payment.amount, total);
   const remaining = total - paid;
   const paymentStatus = paid >= total ? "paid" : paid > 0 ? "deposit" : "unpaid";
@@ -55,7 +57,71 @@ export async function createOrderForUser(
     const profileId = await getProfileId(userId);
 
     const result = await db.transaction(async (tx) => {
-      const [order] = await tx.insert(orders).values({
+      if (v.source && isQuote) throw new Error("SOURCE_NOT_EDITABLE");
+
+      const [sourceOrder] = v.source
+        ? await tx.select().from(orders).where(eq(orders.id, v.source.orderId)).limit(1)
+        : [];
+      if (v.source && !sourceOrder) throw new Error("SOURCE_NOT_FOUND");
+
+      if (v.source?.mode === "copy") {
+        if (sourceOrder.status === "cancelled" || sourceOrder.status === "merged") throw new Error("SOURCE_NOT_COPYABLE");
+      }
+
+      if (v.source?.mode === "edit") {
+        if (sourceOrder.status !== "completed") throw new Error("SOURCE_NOT_EDITABLE");
+        if (sourceOrder.replacedByOrderId) throw new Error("SOURCE_ALREADY_REPLACED");
+        const [hasReturn] = await tx.select({ id: returns.id }).from(returns).where(eq(returns.orderId, sourceOrder.id)).limit(1);
+        if (hasReturn) throw new Error("SOURCE_HAS_RETURNS");
+        const [hasEInvoice] = await tx.select({ id: einvoices.id }).from(einvoices).where(eq(einvoices.orderId, sourceOrder.id)).limit(1);
+        if (hasEInvoice) throw new Error("SOURCE_HAS_EINVOICE");
+
+        const sourceItems = await tx.select().from(orderItems).where(eq(orderItems.orderId, sourceOrder.id));
+        if (sourceOrder.warehouseId) {
+          for (const i of sourceItems) {
+            const baseQty = Number(i.quantity) * Number(i.unitMultiplier);
+            await tx.update(stockLevels).set({
+              quantity: sql`${stockLevels.quantity} + ${toQty(baseQty)}`,
+              updatedAt: sql`now()`,
+            }).where(sql`${stockLevels.productId} = ${i.productId} and ${stockLevels.warehouseId} = ${sourceOrder.warehouseId}`);
+            await tx.insert(stockMovements).values({
+              productId: i.productId,
+              warehouseId: sourceOrder.warehouseId,
+              type: "return_in",
+              quantity: toQty(baseQty),
+              refType: "order_edit_cancel",
+              refId: sourceOrder.id,
+              note: `Hủy đơn gốc ${sourceOrder.code} để sửa`,
+              createdBy: profileId,
+            });
+          }
+        }
+
+        if (sourceOrder.customerId) {
+          const sourceRemaining = Number(sourceOrder.total) - Number(sourceOrder.amountPaid);
+          await tx.update(customers).set({
+            currentDebt: sql`greatest(${customers.currentDebt} - ${toMoney(Math.max(0, sourceRemaining))}, 0)`,
+            totalSpent: sql`greatest(${customers.totalSpent} - ${sourceOrder.total}, 0)`,
+          }).where(eq(customers.id, sourceOrder.customerId));
+        }
+
+        const sourcePayments = await tx.select().from(payments).where(eq(payments.orderId, sourceOrder.id));
+        for (const p of sourcePayments) {
+          if (p.method === "credit") continue;
+          await recordCashTx(tx, {
+            type: "out",
+            fund: fundForMethod(p.method),
+            amount: Number(p.amount),
+            category: "refund",
+            refType: "order_edit_cancel",
+            refId: sourceOrder.id,
+            note: `Hủy đơn gốc ${sourceOrder.code} để sửa`,
+            createdBy: profileId,
+          });
+        }
+      }
+
+      const orderInsert: typeof orders.$inferInsert = {
         code: generateCode(isQuote ? "BG" : "DH"),
         clientId: v.clientId ?? null,
         status: isQuote ? "quote" : "completed",
@@ -67,12 +133,28 @@ export async function createOrderForUser(
         deliveryAddress: v.deliveryAddress || null,
         subtotal: toMoney(subtotal),
         discount: toMoney(v.discount),
+        tax: toMoney(tax),
         shippingFee: toMoney(v.shippingFee),
         total: toMoney(total),
         amountPaid: toMoney(paid),
+        sourceOrderId: v.source?.orderId ?? null,
+        sourceMode: v.source?.mode ?? null,
+        sourceSaleTime: v.source?.mode === "edit" ? sourceOrder.createdAt : null,
         note: v.note || null,
         createdBy: profileId,
-      }).returning({ id: orders.id, code: orders.code });
+      };
+      if (v.source?.mode === "edit") orderInsert.createdAt = sourceOrder.createdAt;
+
+      const [order] = await tx.insert(orders).values(orderInsert).returning({ id: orders.id, code: orders.code });
+
+      if (v.source?.mode === "edit") {
+        await tx.update(orders).set({
+          status: "cancelled",
+          replacedByOrderId: order.id,
+          note: `${sourceOrder.note ? `${sourceOrder.note} · ` : ""}Đã hủy để sửa, thay bằng ${order.code}`,
+          updatedAt: sql`now()`,
+        }).where(eq(orders.id, sourceOrder.id));
+      }
 
       await tx.insert(orderItems).values(
         trustedItems.map((i) => ({
@@ -146,6 +228,7 @@ export async function createOrderForUser(
 
     revalidatePath(Routes.Orders);
     revalidatePath(Routes.Products);
+    if (v.source?.orderId) revalidatePath(Routes.order(v.source.orderId));
     return { ok: true, data: result };
   } catch (e) {
     // Trùng clientId (đua khi đồng bộ song song) → đơn đã tồn tại, trả về đơn cũ.
@@ -153,6 +236,16 @@ export async function createOrderForUser(
       const [existing] = await db.select({ id: orders.id, code: orders.code }).from(orders).where(eq(orders.clientId, v.clientId)).limit(1);
       if (existing) return { ok: true, data: existing };
     }
+    const known: Record<string, string> = {
+      SOURCE_NOT_FOUND: "orders.errors.sourceNotFound",
+      SOURCE_NOT_COPYABLE: "orders.errors.sourceNotCopyable",
+      SOURCE_NOT_EDITABLE: "orderEdit.errors.notEditable",
+      SOURCE_ALREADY_REPLACED: "orderEdit.errors.notEditable",
+      SOURCE_HAS_RETURNS: "orderEdit.errors.hasReturns",
+      SOURCE_HAS_EINVOICE: "orderEdit.errors.hasEInvoice",
+    };
+    const msg = e instanceof Error ? e.message : "";
+    if (known[msg]) return { ok: false, error: known[msg] };
     console.error("createOrder failed:", e);
     return { ok: false, error: "errors.serverError" };
   }

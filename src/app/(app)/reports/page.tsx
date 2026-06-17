@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Routes } from "@/lib/routes";
 import { cn, formatCurrency, formatNumber } from "@/lib/utils";
 import { getReports } from "@/lib/data/reports";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Text } from "@/components/ui/text";
 
 interface PageProps {

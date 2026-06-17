@@ -211,7 +211,9 @@
       "copyFromInvoice": "Copy from this invoice",
       "saveEdited": "Save edited invoice",
       "createCopy": "Create copied invoice",
-      "editFootnote": "Cancel original invoice + create new invoice"
+      "editFootnote": "Cancel original invoice + create new invoice",
+      "onlineRequired": "Editing/copying an invoice requires an online connection.",
+      "saleOnly": "Edited/copied invoices can only be saved with checkout."
     },
     "priceEditor": {
       "unitPrice": "Unit price",
@@ -589,12 +591,18 @@
       "info": "Order info",
       "warehouse": "Warehouse",
       "seller": "Seller",
+      "sourceInvoice": "Original invoice",
+      "replacementInvoice": "Replacement invoice",
+      "viewSource": "View original",
+      "viewReplacement": "View replacement",
       "cancel": "Cancel order",
       "cancelConfirm": "Cancel this order? Stock will be restored and debt adjusted."
     },
     "errors": {
       "nothingToPay": "Nothing left to collect.",
-      "alreadyCancelled": "Order already cancelled."
+      "alreadyCancelled": "Order already cancelled.",
+      "sourceNotFound": "Original invoice not found.",
+      "sourceNotCopyable": "This invoice cannot be copied."
     },
     "batchHint": "Tick orders to print together (max 20)",
     "printSelected": "Print selected",

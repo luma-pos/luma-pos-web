@@ -9,7 +9,8 @@ import { formatCurrency, formatNumber, cn } from "@/lib/utils";
 import { normalizeSearch } from "@/lib/normalize";
 import { createPortal } from "react-dom";
 import { Combobox } from "@/components/combobox";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Text } from "@/components/ui/text";
 import { PrintDoc } from "@/components/print/print-doc";
@@ -40,6 +41,22 @@ export type PosSourceInvoice = {
   mode: "edit" | "copy";
   code: string;
   saleTime?: string;
+  customerId?: string;
+  projectId?: string;
+  projectName?: string;
+  note?: string;
+  discount?: number;
+  shippingFee?: number;
+  tax?: number;
+  subtotal?: number;
+  items?: Array<{
+    productId: string;
+    unitName: string;
+    quantity: number;
+    unitPrice: number;
+    lineDiscount?: number;
+    note?: string;
+  }>;
 };
 
 /**
@@ -76,6 +93,38 @@ function makeInvoice(id?: string): Invoice {
     cart: [], customerId: "", projectId: "", projectName: "", priceBook: "",
     discountInput: 0, discountMode: "vnd", taxRate: 0,
     shippingFee: 0, payMethod: "cash", paidInput: null,
+  };
+}
+
+function makeInvoiceFromSource(source: PosSourceInvoice, products: PosProduct[], id = FIRST_INV_ID): Invoice {
+  const afterDiscount = Math.max(0, (source.subtotal ?? 0) - (source.discount ?? 0));
+  const taxRate = afterDiscount > 0 && source.tax ? Math.round(((source.tax / afterDiscount) * 100) * 100) / 100 : 0;
+  return {
+    ...makeInvoice(id),
+    cart: (source.items ?? []).flatMap((item) => {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) return [];
+      const unit = item.unitName === product.baseUnit ? null : product.units.find((u) => u.unitName === item.unitName) ?? null;
+      return [{
+        key: `${item.productId}-${item.unitName}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+        product,
+        unitName: item.unitName,
+        unitMultiplier: unit ? Number(unit.multiplier) : 1,
+        unitPrice: Math.max(0, item.unitPrice),
+        quantity: item.quantity,
+        lineDiscount: Math.max(0, item.lineDiscount ?? 0),
+        manualPrice: true,
+        note: item.note || undefined,
+      }];
+    }),
+    customerId: source.customerId ?? "",
+    projectId: source.projectId ?? "",
+    projectName: source.projectName ?? "",
+    discountInput: source.discount ?? 0,
+    discountMode: "vnd",
+    taxRate,
+    shippingFee: source.shippingFee ?? 0,
+    note: source.note || undefined,
   };
 }
 
@@ -191,11 +240,14 @@ export function PosClient({
   const [editKey, setEditKey] = useState<string | null>(null); // dòng đang mở popup sửa giá
 
   // nhiều hóa đơn cùng lúc (tab). id đầu cố định để khớp SSR.
-  const [invoices, setInvoices] = useState<Invoice[]>(() => [makeInvoice(FIRST_INV_ID)]);
+  const [invoices, setInvoices] = useState<Invoice[]>(() => [
+    initialSourceInvoice ? makeInvoiceFromSource(initialSourceInvoice, data.products, FIRST_INV_ID) : makeInvoice(FIRST_INV_ID),
+  ]);
   const [activeId, setActiveId] = useState(FIRST_INV_ID);
 
   // load đơn đang soạn sau khi mount (tránh lệch SSR; defer cho react-compiler)
   useEffect(() => {
+    if (sourceInvoice) return;
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
@@ -207,21 +259,22 @@ export function PosClient({
       }
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [sourceInvoice]);
 
   // ghi localStorage mỗi khi đơn đổi (bỏ qua lần đầu để không ghi đè bản đã lưu)
   const hydratedRef = useRef(false);
   useEffect(() => {
+    if (sourceInvoice) return;
     if (!hydratedRef.current) { hydratedRef.current = true; return; }
     saveInvoices(invoices);
-  }, [invoices]);
+  }, [invoices, sourceInvoice]);
 
   // nhớ tab đang mở (giữ khi chuyển trang rồi quay lại)
   useEffect(() => {
-    if (hydratedRef.current) {
+    if (!sourceInvoice && hydratedRef.current) {
       try { localStorage.setItem(ACT_KEY, activeId); } catch { /* bỏ qua */ }
     }
-  }, [activeId]);
+  }, [activeId, sourceInvoice]);
 
   const active = invoices.find((i) => i.id === activeId) ?? invoices[0];
   const { cart, customerId, projectId, projectName, discountInput, discountMode, taxRate, shippingFee, payMethod, paidInput, note: orderNote } = active;
@@ -463,14 +516,24 @@ export function PosClient({
       setError(t("pos.errors.creditNeedsCustomer"));
       return;
     }
+    if (sourceInvoice && mode === "quote") {
+      setError(t("pos.invoiceEdit.saleOnly"));
+      return;
+    }
+    if (sourceInvoice && typeof navigator !== "undefined" && !navigator.onLine) {
+      setError(t("pos.invoiceEdit.onlineRequired"));
+      return;
+    }
     const payload = {
       mode,
       clientId: makeClientId(), // khử trùng khi đồng bộ offline
+      source: sourceInvoice?.id ? { mode: sourceInvoice.mode, orderId: sourceInvoice.id } : undefined,
       customerId: customerId || null,
       warehouseId: data.warehouse.id,
       projectId: projectId || null,
       projectName: projectName || undefined,
       discount: discountVnd,
+      taxRate,
       shippingFee,
       priceBookId: priceBook || null,
       items: cart.map((l) => ({
@@ -1044,7 +1107,7 @@ export function PosClient({
               )}
             </div>
             <button
-              disabled={cart.length === 0 || submitting || !data.warehouse}
+              disabled={cart.length === 0 || submitting || !data.warehouse || !!sourceInvoice}
               onClick={() => submitOrder("quote")}
               className="px-3 py-3 rounded-xl border border-border text-sm font-medium disabled:opacity-50 whitespace-nowrap"
             >

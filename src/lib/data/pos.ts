@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, customers, products, productPrices, productUnits, projects, promotions, stockLevels, warehouses } from "@/db/schema";
 import { isPromoActive, type PromoTier } from "@/lib/promo";
@@ -48,14 +48,15 @@ function posProductSelect(warehouseId: string | null) {
 }
 
 /** Toàn bộ data POS cần khi mở trang: SP active + đơn vị + tồn kho mặc định, KH, kho. */
-export async function getPosData() {
+export async function getPosData(options?: { includeProductIds?: string[] }) {
   const [defaultWh] = await db
     .select({ id: warehouses.id, name: warehouses.name })
     .from(warehouses)
     .orderBy(desc(warehouses.isDefault))
     .limit(1);
 
-  const [productRows, customerRows] = await Promise.all([
+  const includeProductIds = [...new Set(options?.includeProductIds ?? [])];
+  const [productRows, sourceProductRows, customerRows] = await Promise.all([
     db
       .select(posProductSelect(defaultWh?.id ?? null))
       .from(products)
@@ -63,6 +64,13 @@ export async function getPosData() {
       .where(eq(products.isActive, true))
       .orderBy(asc(products.name))
       .limit(200),
+    includeProductIds.length
+      ? db
+          .select(posProductSelect(defaultWh?.id ?? null))
+          .from(products)
+          .leftJoin(categories, eq(products.categoryId, categories.id))
+          .where(inArray(products.id, includeProductIds))
+      : Promise.resolve([]),
     db
       .select({
         id: customers.id,
@@ -77,6 +85,10 @@ export async function getPosData() {
       .orderBy(asc(customers.name))
       .limit(500),
   ]);
+
+  const byId = new Map(productRows.map((p) => [p.id, p]));
+  for (const p of sourceProductRows) byId.set(p.id, p);
+  const productsForPos = [...byId.values()];
 
   const priceBookRows = await getPriceBooks();
 
@@ -107,7 +119,7 @@ export async function getPosData() {
 
   return {
     warehouse: defaultWh ?? null,
-    products: productRows,
+    products: productsForPos,
     customers: customerRows,
     promoByProduct,
     projects: projectRows,

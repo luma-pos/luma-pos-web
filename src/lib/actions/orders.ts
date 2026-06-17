@@ -7,7 +7,7 @@ import {
   orders, orderItems, customers, einvoices, stockLevels, stockMovements,
 } from "@/db/schema";
 import {
-  type CreateOrderOutput, type AddPaymentInput,
+  type CreateOrderInput, type AddPaymentInput,
 } from "@/lib/schemas/order";
 import {
   type ActionResult, requireSalesAccess, requireManager, getProfileId, toMoney, toQty,
@@ -18,7 +18,7 @@ import { addPaymentForUser } from "@/lib/orders/payment";
 import { convertQuoteToOrderForUser } from "@/lib/orders/convert";
 
 export async function createOrder(
-  input: CreateOrderOutput
+  input: CreateOrderInput
 ): Promise<ActionResult<{ id: string; code: string }>> {
   const gate = await requireSalesAccess();
   if (!gate.ok) return gate;

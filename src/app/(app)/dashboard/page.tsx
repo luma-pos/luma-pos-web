@@ -4,7 +4,7 @@ import { Routes } from "@/lib/routes";
 import { cn, formatCurrency, formatDate, formatNumber } from "@/lib/utils";
 import { getDashboard, categoryEmoji, type DashboardRange } from "@/lib/data/dashboard";
 import { OrderStatusBadge, PaymentStatusBadge } from "../orders/status-badges";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Text } from "@/components/ui/text";
 
 export const dynamic = "force-dynamic";

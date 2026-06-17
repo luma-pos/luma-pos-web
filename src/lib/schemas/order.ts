@@ -16,6 +16,10 @@ export const createOrderSchema = z.object({
   mode: z.enum(["sale", "quote"]).default("sale"),
   // id sinh ở client để khử trùng khi đồng bộ offline (sync lại không tạo đơn trùng)
   clientId: z.string().max(40).optional(),
+  source: z.object({
+    mode: z.enum(["edit", "copy"]),
+    orderId: z.uuid(),
+  }).optional(),
   customerId: z.uuid().nullable().optional(),
   warehouseId: z.uuid(),
   priceBookId: z.uuid().nullable().optional(),
@@ -24,6 +28,7 @@ export const createOrderSchema = z.object({
   deliveryAddress: z.string().optional(),
   note: z.string().optional(),
   discount: z.number().min(0).default(0),
+  taxRate: z.number().min(0).max(100).default(0),
   shippingFee: z.number().min(0).default(0),
   items: z.array(orderItemSchema).min(1, { error: "pos.errors.emptyCart" }),
   payment: z.object({

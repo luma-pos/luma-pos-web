@@ -211,7 +211,9 @@
       "copyFromInvoice": "Sao chép từ hóa đơn này",
       "saveEdited": "Lưu hóa đơn sửa",
       "createCopy": "Tạo hóa đơn sao chép",
-      "editFootnote": "Hủy hóa đơn gốc + tạo hóa đơn mới"
+      "editFootnote": "Hủy hóa đơn gốc + tạo hóa đơn mới",
+      "onlineRequired": "Sửa/sao chép hóa đơn cần có mạng để đồng bộ ngay.",
+      "saleOnly": "Hóa đơn sửa/sao chép chỉ lưu bằng nút thanh toán."
     },
     "priceEditor": {
       "unitPrice": "Đơn giá",
@@ -589,12 +591,18 @@
       "info": "Thông tin đơn",
       "warehouse": "Kho xuất",
       "seller": "Người bán",
+      "sourceInvoice": "Hóa đơn gốc",
+      "replacementInvoice": "Hóa đơn thay thế",
+      "viewSource": "Xem hóa đơn gốc",
+      "viewReplacement": "Xem hóa đơn thay thế",
       "cancel": "Hủy đơn",
       "cancelConfirm": "Hủy đơn này? Kho sẽ được hoàn lại và công nợ được điều chỉnh."
     },
     "errors": {
       "nothingToPay": "Đơn này không còn gì để thu.",
-      "alreadyCancelled": "Đơn đã hủy trước đó."
+      "alreadyCancelled": "Đơn đã hủy trước đó.",
+      "sourceNotFound": "Không tìm thấy hóa đơn gốc.",
+      "sourceNotCopyable": "Hóa đơn này không thể sao chép."
     },
     "batchHint": "Tick chọn nhiều đơn để in cùng lúc (tối đa 20)",
     "printSelected": "In đã chọn",

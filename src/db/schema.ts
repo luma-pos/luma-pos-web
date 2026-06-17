@@ -267,6 +267,12 @@ export const orders = pgTable("orders", {
   total: decimal("total", { precision: 14, scale: 2 }).notNull().default("0"),
   amountPaid: decimal("amount_paid", { precision: 14, scale: 2 }).notNull().default("0"),
 
+  // Hóa đơn tạo từ thao tác sửa/sao chép hóa đơn gốc trên POS.
+  sourceOrderId: uuid("source_order_id"),
+  sourceMode: varchar("source_mode", { length: 20 }),
+  sourceSaleTime: timestamp("source_sale_time", { withTimezone: true }),
+  replacedByOrderId: uuid("replaced_by_order_id"),
+
   note: text("note"),
   createdBy: uuid("created_by").references(() => profiles.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -275,6 +281,8 @@ export const orders = pgTable("orders", {
   index("orders_status_idx").on(t.status),
   index("orders_customer_idx").on(t.customerId),
   index("orders_created_idx").on(t.createdAt),
+  index("orders_source_idx").on(t.sourceOrderId),
+  index("orders_replaced_by_idx").on(t.replacedByOrderId),
 ]);
 
 export const orderItems = pgTable("order_items", {

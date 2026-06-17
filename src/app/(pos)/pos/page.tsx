@@ -2,8 +2,10 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { LayoutDashboard } from "lucide-react";
 import { getPosData } from "@/lib/data/pos";
+import { getOrder } from "@/lib/data/orders";
 import { getPrintTemplate } from "@/lib/print/template";
 import { Routes } from "@/lib/routes";
+import { formatDate } from "@/lib/utils";
 import { PosClient, type PosSourceInvoice } from "./pos-client";
 
 export const dynamic = "force-dynamic";
@@ -14,22 +16,46 @@ function one(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function sourceInvoiceFromParams(params: PosSearchParams): PosSourceInvoice | null {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function sourceInvoiceFromParams(params: PosSearchParams): Promise<PosSourceInvoice | null> {
   const mode = one(params.sourceMode);
-  const code = one(params.sourceCode);
-  if ((mode !== "edit" && mode !== "copy") || !code) return null;
+  const orderId = one(params.sourceOrderId);
+  if ((mode !== "edit" && mode !== "copy") || !orderId || !UUID_RE.test(orderId)) return null;
+  const order = await getOrder(orderId);
+  if (!order) return null;
   return {
     mode,
-    code,
-    id: one(params.sourceOrderId),
-    saleTime: one(params.sourceSaleTime),
+    id: order.id,
+    code: order.code,
+    saleTime: formatDate(order.createdAt),
+    customerId: order.customerId ?? "",
+    projectId: order.projectId ?? "",
+    projectName: order.projectName ?? "",
+    note: order.note ?? "",
+    discount: Number(order.discount),
+    shippingFee: Number(order.shippingFee),
+    tax: Number(order.tax ?? 0),
+    subtotal: Number(order.subtotal),
+    items: order.items.map((item) => ({
+      productId: item.productId,
+      unitName: item.unitName,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+      lineDiscount: Number(item.discount ?? 0),
+      note: item.note ?? "",
+    })),
   };
 }
 
 export default async function POSPage({ searchParams }: { searchParams: Promise<PosSearchParams> }) {
   const params = await searchParams;
-  const [data, t, printTemplate] = await Promise.all([getPosData(), getTranslations(), getPrintTemplate("order")]);
-  const sourceInvoice = sourceInvoiceFromParams(params);
+  const sourceInvoice = await sourceInvoiceFromParams(params);
+  const [data, t, printTemplate] = await Promise.all([
+    getPosData({ includeProductIds: sourceInvoice?.items?.map((item) => item.productId) }),
+    getTranslations(),
+    getPrintTemplate("order"),
+  ]);
   return (
     <div className="h-full flex flex-col">
       {/* top bar gọn — thay cho sidebar admin (giống KiotViet) */}
