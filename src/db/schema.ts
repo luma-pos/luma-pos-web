@@ -23,6 +23,9 @@ export const stockMovementTypeEnum = pgEnum("stock_movement_type", [
 export const customerTypeEnum = pgEnum("customer_type", [
   "retail", "wholesale", "contractor", "agent",
 ]);
+export const customerConsentStatusEnum = pgEnum("customer_consent_status", [
+  "pending", "granted", "withdrawn",
+]);
 
 // ============= Users (linked to Supabase auth.users) =============
 
@@ -223,6 +226,32 @@ export const customers = pgTable("customers", {
 }, (t) => [
   index("customers_phone_idx").on(t.phone),
   index("customers_name_idx").on(t.name),
+]);
+
+// ============= Customer PDPL Consent =============
+
+export const customerConsents = pgTable("customer_consents", {
+  customerId: uuid("customer_id").primaryKey().references(() => customers.id, { onDelete: "cascade" }),
+  status: customerConsentStatusEnum("status").notNull().default("pending"),
+  purposes: jsonb("purposes").$type<Record<string, boolean>>().notNull().default({}),
+  source: text("source").notNull().default("mobile"),
+  note: text("note"),
+  updatedBy: uuid("updated_by").references(() => profiles.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const customerConsentEvents = pgTable("customer_consent_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+  status: customerConsentStatusEnum("status").notNull(),
+  purposes: jsonb("purposes").$type<Record<string, boolean>>().notNull().default({}),
+  source: text("source").notNull().default("mobile"),
+  note: text("note"),
+  createdBy: uuid("created_by").references(() => profiles.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index("customer_consent_events_customer_idx").on(t.customerId, t.createdAt),
 ]);
 
 // ============= Suppliers =============

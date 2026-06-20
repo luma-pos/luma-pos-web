@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import { createClient as createBearerClient } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
-import { createClient } from "@/lib/supabase/server";
+import { createClient as createCookieClient } from "@/lib/supabase/server";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
@@ -13,8 +16,29 @@ export class UnauthorizedError extends Error {
 
 /** Lấy user đang đăng nhập, throw nếu chưa login. */
 export async function requireUser() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  let user: User | null = null;
+  const authorization = (await headers()).get("authorization");
+  const bearer = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+
+  if (bearer) {
+    const supabase = createBearerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
+    const result = await supabase.auth.getUser(bearer);
+    user = result.data.user;
+  } else {
+    const supabase = await createCookieClient();
+    const result = await supabase.auth.getUser();
+    user = result.data.user;
+  }
+
   if (!user) throw new UnauthorizedError();
   const [p] = await db
     .select({ isActive: profiles.isActive })

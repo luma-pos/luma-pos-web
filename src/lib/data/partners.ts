@@ -1,6 +1,6 @@
 import { and, count, desc, eq, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { customers, orders, suppliers } from "@/db/schema";
+import { customerConsents, customers, orders, suppliers } from "@/db/schema";
 import { accentInsensitiveLike } from "@/lib/search";
 import { coercePageSize } from "@/lib/pagination";
 
@@ -25,7 +25,30 @@ export async function getCustomers(filters: { q?: string; type?: string; owing?:
   const where = and(...conditions);
 
   const [rows, [{ total }]] = await Promise.all([
-    db.select().from(customers).where(where)
+    db
+      .select({
+        id: customers.id,
+        code: customers.code,
+        name: customers.name,
+        phone: customers.phone,
+        email: customers.email,
+        address: customers.address,
+        type: customers.type,
+        taxCode: customers.taxCode,
+        debtLimit: customers.debtLimit,
+        currentDebt: customers.currentDebt,
+        totalSpent: customers.totalSpent,
+        portalToken: customers.portalToken,
+        note: customers.note,
+        isActive: customers.isActive,
+        createdAt: customers.createdAt,
+        consentStatus: customerConsents.status,
+        consentPurposes: customerConsents.purposes,
+        consentUpdatedAt: customerConsents.updatedAt,
+      })
+      .from(customers)
+      .leftJoin(customerConsents, eq(customerConsents.customerId, customers.id))
+      .where(where)
       .orderBy(desc(customers.currentDebt), desc(customers.createdAt))
       .limit(size).offset((page - 1) * size),
     db.select({ total: count() }).from(customers).where(where),
@@ -44,7 +67,31 @@ export async function getCustomers(filters: { q?: string; type?: string; owing?:
 }
 
 export async function getCustomer(id: string) {
-  const [customer] = await db.select().from(customers).where(eq(customers.id, id)).limit(1);
+  const [customer] = await db
+    .select({
+      id: customers.id,
+      code: customers.code,
+      name: customers.name,
+      phone: customers.phone,
+      email: customers.email,
+      address: customers.address,
+      type: customers.type,
+      taxCode: customers.taxCode,
+      debtLimit: customers.debtLimit,
+      currentDebt: customers.currentDebt,
+      totalSpent: customers.totalSpent,
+      portalToken: customers.portalToken,
+      note: customers.note,
+      isActive: customers.isActive,
+      createdAt: customers.createdAt,
+      consentStatus: customerConsents.status,
+      consentPurposes: customerConsents.purposes,
+      consentUpdatedAt: customerConsents.updatedAt,
+    })
+    .from(customers)
+    .leftJoin(customerConsents, eq(customerConsents.customerId, customers.id))
+    .where(eq(customers.id, id))
+    .limit(1);
   if (!customer) return null;
 
   const customerOrders = await db
