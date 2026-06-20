@@ -254,6 +254,17 @@ export const customerConsentEvents = pgTable("customer_consent_events", {
   index("customer_consent_events_customer_idx").on(t.customerId, t.createdAt),
 ]);
 
+export const mobileNotificationStates = pgTable("mobile_notification_states", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+  notificationId: text("notification_id").notNull(),
+  read: boolean("read").notNull().default(false),
+  dismissed: boolean("dismissed").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex("mobile_notification_states_user_notification_idx").on(t.userId, t.notificationId),
+]);
+
 // ============= Suppliers =============
 
 export const suppliers = pgTable("suppliers", {

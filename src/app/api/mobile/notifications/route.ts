@@ -1,9 +1,12 @@
 import { getProfileId } from "@/lib/actions/common";
+import { db } from "@/db";
+import { mobileNotificationStates } from "@/db/schema";
 import { getRestockSuggestions } from "@/lib/data/ai-restock";
 import { getCurrentShift } from "@/lib/data/shifts";
 import { getStoreSettings } from "@/lib/data/settings";
 import { requireMobileUser } from "@/lib/mobile/auth";
 import { mobileGate, mobileOk } from "@/lib/mobile/response";
+import { and, eq, inArray } from "drizzle-orm";
 
 export async function GET() {
   const gate = await requireMobileUser();
@@ -15,6 +18,7 @@ export async function GET() {
     getRestockSuggestions(30),
     getCurrentShift(profileId ?? gate.userId),
   ]);
+  const stateUserId = profileId ?? gate.userId;
   const rows = [
     ...restock.slice(0, 10).map((row) => ({
       id: `restock-${row.id}`,
@@ -37,12 +41,35 @@ export async function GET() {
       action: { type: "open", target: "shift" },
     },
   ];
+  const ids = rows.map((row) => row.id);
+  const states = ids.length
+    ? await db
+        .select({
+          notificationId: mobileNotificationStates.notificationId,
+          read: mobileNotificationStates.read,
+          dismissed: mobileNotificationStates.dismissed,
+        })
+        .from(mobileNotificationStates)
+        .where(
+          and(
+            eq(mobileNotificationStates.userId, stateUserId),
+            inArray(mobileNotificationStates.notificationId, ids)
+          )
+        )
+    : [];
+  const stateById = new Map(states.map((state) => [state.notificationId, state]));
+  const visibleRows = rows
+    .filter((row) => stateById.get(row.id)?.dismissed !== true)
+    .map((row) => ({
+      ...row,
+      unread: row.unread && stateById.get(row.id)?.read !== true,
+    }));
 
   return mobileOk({
-    rows,
+    rows: visibleRows,
     counts: {
-      all: rows.length,
-      unread: rows.filter((row) => row.unread).length,
+      all: visibleRows.length,
+      unread: visibleRows.filter((row) => row.unread).length,
       lowStock: restock.length,
       shiftClose: 1,
     },
