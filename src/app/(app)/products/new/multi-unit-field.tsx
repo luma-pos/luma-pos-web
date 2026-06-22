@@ -9,7 +9,8 @@ import type { CreateProductInput } from "./schema";
 
 export function MultiUnitField() {
   const t = useTranslations();
-  const { control, register, watch, setValue } = useFormContext<CreateProductInput>();
+  const { control, register, watch, setValue } =
+    useFormContext<CreateProductInput>();
   const baseUnit = watch("baseUnit") || "cái";
   const { fields, append, remove } = useFieldArray({
     control,
@@ -31,9 +32,9 @@ export function MultiUnitField() {
           {fields.map((field, idx) => (
             <div
               key={field.id}
-              className="grid grid-cols-1 md:grid-cols-[1fr_140px_1fr_1fr_auto] gap-2 items-end p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg"
+              className="grid grid-cols-1 md:grid-cols-[1fr_140px_1fr_1fr_auto] gap-2 items-start p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg"
             >
-              <Field labelTx="products.units.unitName">
+              <Field labelTx="products.units.unitName" className="min-w-0">
                 <Input
                   {...register(`units.${idx}.unitName`)}
                   placeholderTx="products.units.unitNamePlaceholder"
@@ -42,6 +43,7 @@ export function MultiUnitField() {
 
               <Field
                 labelTx="products.units.multiplier"
+                className="min-w-0"
                 hint={t("products.units.multiplierHint", {
                   unit: watch(`units.${idx}.unitName`) || "?",
                   count: formatNumber(watch(`units.${idx}.multiplier`) || 1),
@@ -57,11 +59,14 @@ export function MultiUnitField() {
                 />
               </Field>
 
-              <Field labelTx="products.units.barcode">
-                <Input {...register(`units.${idx}.barcode`)} placeholderTx="products.fields.barcodePlaceholder" />
+              <Field labelTx="products.units.barcode" className="min-w-0">
+                <Input
+                  {...register(`units.${idx}.barcode`)}
+                  placeholderTx="products.fields.barcodePlaceholder"
+                />
               </Field>
 
-              <Field labelTx="products.units.priceOverride">
+              <Field labelTx="products.units.priceOverride" className="min-w-0">
                 <NumberInput
                   value={watch(`units.${idx}.priceOverride`) ?? null}
                   onChange={(v) => setValue(`units.${idx}.priceOverride`, v)}
@@ -75,7 +80,7 @@ export function MultiUnitField() {
                 variant="ghost"
                 size="icon"
                 onClick={() => remove(idx)}
-                className="h-10"
+                className="h-10 md:mt-[26px] md:self-start"
               >
                 <Trash2 className="w-4 h-4 text-slate-400" />
               </Button>
@@ -88,7 +93,14 @@ export function MultiUnitField() {
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => append({ unitName: "", multiplier: 1, barcode: "", priceOverride: null })}
+        onClick={() =>
+          append({
+            unitName: "",
+            multiplier: 1,
+            barcode: "",
+            priceOverride: null,
+          })
+        }
       >
         <Plus className="w-4 h-4" />
         {t("products.units.addUnit")}
