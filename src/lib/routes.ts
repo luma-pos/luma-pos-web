@@ -39,7 +39,8 @@ export const Routes = {
 
   // Param routes
   order: (id: string) => `/orders/${id}` as const,
-  product: (id: string) => `/products/${id}` as const,
+  product: (id: string) => `/inventory?tab=products&expanded=${id}` as const,
+  productEdit: (id: string) => `/products/${id}/edit` as const,
   customer: (id: string) => `/customers/${id}` as const,
   supplier: (id: string) => `/suppliers/${id}` as const,
 } as const;

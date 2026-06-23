@@ -112,9 +112,21 @@ export async function getProducts(filters: ProductListFilters = {}) {
         isActive: products.isActive,
         createdAt: products.createdAt,
         categoryName: categories.name,
+        brandName: brands.name,
+        location: products.location,
+        weight: products.weight,
+        dimensions: products.dimensions,
+        specs: products.specs,
+        imageUrls: products.imageUrls,
         childCount: sql<number>`(
           select count(*)::int from products child where child.parent_product_id = ${products.id}
         )`,
+        minCostPrice: sql<string>`case when ${products.isVariantParent} then coalesce((
+          select min(child.cost_price) from products child where child.parent_product_id = ${products.id}
+        ), ${products.costPrice}) else ${products.costPrice} end`,
+        maxCostPrice: sql<string>`case when ${products.isVariantParent} then coalesce((
+          select max(child.cost_price) from products child where child.parent_product_id = ${products.id}
+        ), ${products.costPrice}) else ${products.costPrice} end`,
         minRetailPrice: sql<string>`case when ${products.isVariantParent} then coalesce((
           select min(child.retail_price) from products child where child.parent_product_id = ${products.id}
         ), ${products.retailPrice}) else ${products.retailPrice} end`,
@@ -140,9 +152,10 @@ export async function getProducts(filters: ProductListFilters = {}) {
       })
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id))
+      .leftJoin(brands, eq(products.brandId, brands.id))
       .leftJoin(stockLevels, eq(stockLevels.productId, products.id))
       .where(where)
-      .groupBy(products.id, categories.name)
+      .groupBy(products.id, categories.name, brands.name)
       .orderBy(desc(products.createdAt))
       .limit(size)
       .offset((page - 1) * size),
@@ -173,7 +186,15 @@ export async function getProducts(filters: ProductListFilters = {}) {
           isActive: products.isActive,
           createdAt: products.createdAt,
           categoryName: categories.name,
+          brandName: brands.name,
+          location: products.location,
+          weight: products.weight,
+          dimensions: products.dimensions,
+          specs: products.specs,
+          imageUrls: products.imageUrls,
           childCount: sql<number>`0`,
+          minCostPrice: products.costPrice,
+          maxCostPrice: products.costPrice,
           minRetailPrice: products.retailPrice,
           maxRetailPrice: products.retailPrice,
           totalStock: sql<string>`coalesce(sum(${stockLevels.quantity}), 0)`,
@@ -185,9 +206,10 @@ export async function getProducts(filters: ProductListFilters = {}) {
         })
         .from(products)
         .leftJoin(categories, eq(products.categoryId, categories.id))
+        .leftJoin(brands, eq(products.brandId, brands.id))
         .leftJoin(stockLevels, eq(stockLevels.productId, products.id))
         .where(inArray(products.parentProductId, parentIds))
-        .groupBy(products.id, categories.name)
+        .groupBy(products.id, categories.name, brands.name)
         .orderBy(asc(products.name))
     : [];
 

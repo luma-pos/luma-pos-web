@@ -244,6 +244,14 @@
   "stub": {
     "wip": "Đang phát triển..."
   },
+  "appError": {
+    "title": "Không tải được dữ liệu",
+    "descriptionBefore": "Máy chủ phản hồi chậm hoặc kết nối cơ sở dữ liệu bị gián đoạn. Thử lại sau giây lát — nếu vẫn lỗi, kiểm tra mạng hoặc cấu hình",
+    "retry": "Thử lại",
+    "retrying": "Đang thử lại…",
+    "reload": "Tải lại trang",
+    "digest": "mã lỗi: {digest}"
+  },
   "products": {
     "title": "Sản phẩm",
     "create": "Tạo hàng hóa",
@@ -350,18 +358,59 @@
       "colProduct": "Sản phẩm",
       "colCategory": "Danh mục",
       "colUnits": "Đơn vị",
+      "colCost": "Giá nhập",
+      "colSalePrice": "Giá bán",
       "colRetail": "Giá lẻ",
       "colContractor": "Giá thầu",
       "colStock": "Tồn kho",
       "colStatus": "Trạng thái",
       "active": "Đang bán",
       "inactive": "Ngừng bán",
+      "group": "Nhóm",
+      "childSkuCount": "{count} SKU",
+      "viewGrouped": "Xem theo nhóm",
+      "viewFlat": "Xem từng SKU",
       "pageOf": "Trang {page} / {pageCount}",
       "prev": "← Trước",
       "next": "Sau →",
       "statusActive": "Đang bán",
       "statusInactive": "Ngừng bán",
       "statusAll": "Tất cả trạng thái"
+    },
+    "expand": {
+      "normalProduct": "Hàng hóa thường",
+      "childSkus": "Hàng hóa con",
+      "tabs": {
+        "info": "Thông tin",
+        "description": "Mô tả, ghi chú",
+        "stockCard": "Thẻ kho",
+        "stock": "Tồn kho",
+        "channels": "Liên kết kênh bán"
+      }
+    },
+    "variants": {
+      "applyTitle": "Áp dụng cho hàng hóa con cùng loại",
+      "applyToSiblings": "Áp dụng thay đổi cho {count} hàng hóa con còn lại",
+      "applyHint": "Không áp dụng hàng loạt mã SKU, mã vạch và tồn kho.",
+      "childHint": "Nhập từ 2 lựa chọn thuộc tính trở lên để tự sinh hàng hóa con.",
+      "childTitle": "Hàng hóa con",
+      "childCount": "{count} SKU con sẽ được tạo dưới {name}",
+      "parentFallback": "sản phẩm cha",
+      "variant": "Biến thể",
+      "autoSku": "Tự sinh",
+      "initialStock": "Tồn đầu",
+      "sale": "Bán",
+      "applyFields": {
+        "name": "Tên hàng hóa",
+        "imageUrls": "Hình ảnh",
+        "description": "Mô tả",
+        "category": "Nhóm hàng",
+        "brand": "Thương hiệu",
+        "pricing": "Giá",
+        "units": "Đơn vị tính",
+        "directSale": "Bán trực tiếp",
+        "attributes": "Thuộc tính"
+      }
     },
     "errors": {
       "skuExists": "SKU đã tồn tại — chọn mã khác."

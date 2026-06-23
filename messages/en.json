@@ -244,6 +244,14 @@
   "stub": {
     "wip": "Work in progress..."
   },
+  "appError": {
+    "title": "Could not load data",
+    "descriptionBefore": "The server is slow or the database connection was interrupted. Try again shortly — if it still fails, check the network or",
+    "retry": "Try again",
+    "retrying": "Retrying…",
+    "reload": "Reload page",
+    "digest": "error id: {digest}"
+  },
   "products": {
     "title": "Products",
     "create": "Create Product",
@@ -350,18 +358,59 @@
       "colProduct": "Product",
       "colCategory": "Category",
       "colUnits": "Units",
+      "colCost": "Purchase price",
+      "colSalePrice": "Sale price",
       "colRetail": "Retail price",
       "colContractor": "Contractor price",
       "colStock": "Stock",
       "colStatus": "Status",
       "active": "Active",
       "inactive": "Inactive",
+      "group": "Group",
+      "childSkuCount": "{count} SKUs",
+      "viewGrouped": "Grouped view",
+      "viewFlat": "Each SKU",
       "pageOf": "Page {page} / {pageCount}",
       "prev": "← Prev",
       "next": "Next →",
       "statusActive": "On sale",
       "statusInactive": "Stopped",
       "statusAll": "All statuses"
+    },
+    "expand": {
+      "normalProduct": "Standard product",
+      "childSkus": "Child products",
+      "tabs": {
+        "info": "Info",
+        "description": "Description, notes",
+        "stockCard": "Stock card",
+        "stock": "Stock",
+        "channels": "Sales channels"
+      }
+    },
+    "variants": {
+      "applyTitle": "Apply to sibling child products",
+      "applyToSiblings": "Apply changes to {count} remaining child products",
+      "applyHint": "Bulk changes do not apply SKU, barcode, or stock.",
+      "childHint": "Enter at least 2 attribute choices to auto-generate child products.",
+      "childTitle": "Child products",
+      "childCount": "{count} child SKUs will be created under {name}",
+      "parentFallback": "parent product",
+      "variant": "Variant",
+      "autoSku": "Auto",
+      "initialStock": "Initial stock",
+      "sale": "Sale",
+      "applyFields": {
+        "name": "Product name",
+        "imageUrls": "Images",
+        "description": "Description",
+        "category": "Category",
+        "brand": "Brand",
+        "pricing": "Pricing",
+        "units": "Units",
+        "directSale": "Direct sale",
+        "attributes": "Attributes"
+      }
     },
     "errors": {
       "skuExists": "SKU already exists — choose another."

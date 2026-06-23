@@ -233,23 +233,24 @@ function VariantsTab({
 }
 
 const APPLY_FIELD_OPTIONS = [
-  { value: "name", label: "Tên hàng hóa" },
-  { value: "imageUrls", label: "Hình ảnh" },
-  { value: "description", label: "Mô tả" },
-  { value: "category", label: "Nhóm hàng" },
-  { value: "brand", label: "Thương hiệu" },
-  { value: "pricing", label: "Giá" },
-  { value: "units", label: "Đơn vị tính" },
-  { value: "directSale", label: "Bán trực tiếp" },
-  { value: "attributes", label: "Thuộc tính" },
+  "name",
+  "imageUrls",
+  "description",
+  "category",
+  "brand",
+  "pricing",
+  "units",
+  "directSale",
+  "attributes",
 ] as const;
 
 function SiblingApplySection({ siblingCount }: { siblingCount: number }) {
+  const t = useTranslations();
   const { register, watch } = useFormCtx();
   const enabled = Boolean(watch("applyToSiblings.enabled"));
 
   return (
-    <Section title="Áp dụng cho hàng hóa con cùng loại" collapsible={false}>
+    <Section title={t("products.variants.applyTitle")} collapsible={false}>
       <div className="space-y-3">
         <label className="flex items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3">
           <input
@@ -259,11 +260,11 @@ function SiblingApplySection({ siblingCount }: { siblingCount: number }) {
           />
           <span className="min-w-0">
             <span className="flex items-center gap-1.5 text-sm font-semibold">
-              Áp dụng thay đổi cho {siblingCount} hàng hóa con còn lại
+              {t("products.variants.applyToSiblings", { count: siblingCount })}
               <Info className="h-4 w-4 text-slate-400" />
             </span>
             <span className="mt-1 block text-xs text-slate-500">
-              Không áp dụng hàng loạt mã SKU, mã vạch và tồn kho.
+              {t("products.variants.applyHint")}
             </span>
           </span>
         </label>
@@ -271,14 +272,14 @@ function SiblingApplySection({ siblingCount }: { siblingCount: number }) {
         {enabled && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 rounded-xl border border-dashed border-border bg-slate-50 p-3 dark:bg-slate-900/40">
             {APPLY_FIELD_OPTIONS.map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2 text-sm">
+              <label key={opt} className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2 text-sm">
                 <input
                   type="checkbox"
-                  value={opt.value}
+                  value={opt}
                   {...register("applyToSiblings.fields")}
                   className="rounded text-primary-600 focus:ring-primary-500"
                 />
-                <span>{opt.label}</span>
+                <span>{t(`products.variants.applyFields.${opt}`)}</span>
               </label>
             ))}
           </div>
@@ -323,6 +324,7 @@ function buildVariantCombinations(attributes: CreateProductInput["attributes"]) 
 }
 
 function VariantChildrenPreview() {
+  const t = useTranslations();
   const { register, watch, setValue } = useFormCtx();
   const attributes = watch("attributes") ?? EMPTY_ATTRIBUTES;
   const children = watch("variantChildren") ?? EMPTY_VARIANT_CHILDREN;
@@ -371,7 +373,7 @@ function VariantChildrenPreview() {
   if (generated.length === 0) {
     return (
       <p className="mt-4 rounded-lg border border-dashed border-border bg-surface-2 px-3 py-2 text-sm text-slate-500">
-        Nhập từ 2 lựa chọn thuộc tính trở lên để tự sinh hàng hóa con.
+        {t("products.variants.childHint")}
       </p>
     );
   }
@@ -380,22 +382,22 @@ function VariantChildrenPreview() {
     <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface">
       <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
         <div>
-          <div className="text-sm font-semibold">Hàng hóa con</div>
-          <div className="text-xs text-slate-500">{children.length} SKU con sẽ được tạo dưới {parentName || "sản phẩm cha"}</div>
+          <div className="text-sm font-semibold">{t("products.variants.childTitle")}</div>
+          <div className="text-xs text-slate-500">{t("products.variants.childCount", { count: children.length, name: parentName || t("products.variants.parentFallback") })}</div>
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[860px] text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/60">
             <tr>
-              <th className="px-3 py-2 font-semibold">Biến thể</th>
+              <th className="px-3 py-2 font-semibold">{t("products.variants.variant")}</th>
               <th className="px-3 py-2 font-semibold">SKU</th>
-              <th className="px-3 py-2 font-semibold">Mã vạch</th>
-              <th className="px-3 py-2 font-semibold">ĐVT</th>
-              <th className="px-3 py-2 font-semibold text-right">Giá vốn</th>
-              <th className="px-3 py-2 font-semibold text-right">Giá bán</th>
-              <th className="px-3 py-2 font-semibold text-right">Tồn đầu</th>
-              <th className="px-3 py-2 font-semibold text-center">Bán</th>
+              <th className="px-3 py-2 font-semibold">{t("products.fields.barcode")}</th>
+              <th className="px-3 py-2 font-semibold">{t("pos.unit")}</th>
+              <th className="px-3 py-2 font-semibold text-right">{t("products.pricing.costPrice")}</th>
+              <th className="px-3 py-2 font-semibold text-right">{t("products.pricing.retailPrice")}</th>
+              <th className="px-3 py-2 font-semibold text-right">{t("products.variants.initialStock")}</th>
+              <th className="px-3 py-2 font-semibold text-center">{t("products.variants.sale")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-soft">
@@ -405,7 +407,7 @@ function VariantChildrenPreview() {
                   <input type="hidden" {...register(`variantChildren.${idx}.variantName`)} />
                   <div className="font-medium">{child.variantName}</div>
                 </td>
-                <td className="px-3 py-2"><Input {...register(`variantChildren.${idx}.sku`)} placeholder="Tự sinh" /></td>
+                <td className="px-3 py-2"><Input {...register(`variantChildren.${idx}.sku`)} placeholder={t("products.variants.autoSku")} /></td>
                 <td className="px-3 py-2"><Input {...register(`variantChildren.${idx}.barcode`)} /></td>
                 <td className="px-3 py-2"><Input {...register(`variantChildren.${idx}.baseUnit`)} /></td>
                 <td className="px-3 py-2"><input type="number" min={0} {...register(`variantChildren.${idx}.costPrice`, { valueAsNumber: true })} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-right" /></td>

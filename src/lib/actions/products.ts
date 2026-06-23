@@ -328,6 +328,7 @@ export async function updateProduct(input: UpdateProductInput): Promise<ActionRe
     });
 
     revalidatePath(Routes.Products);
+    revalidatePath(Routes.Inventory);
     revalidatePath(`/products/${v.id}`);
     revalidatePath(Routes.POS);
     return { ok: true, data: undefined };
@@ -524,6 +525,7 @@ export async function createProduct(
     });
 
     revalidatePath(Routes.Products);
+    revalidatePath(Routes.Inventory);
     return { ok: true, data: { id: result.id } };
   } catch (e) {
     // Drizzle bọc lỗi PG vào DrizzleQueryError — lỗi gốc nằm ở e.cause

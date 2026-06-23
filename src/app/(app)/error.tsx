@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { RotateCw, RefreshCw, ServerCrash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Code, Text } from "@/components/ui/text";
@@ -17,6 +18,7 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations();
   const [pending, startTransition] = useTransition();
   const [reloading, setReloading] = useState(false);
 
@@ -39,10 +41,9 @@ export default function AppError({
           </div>
         </div>
 
-        <Text as="h2" size="xl" weight="bold" className="tracking-tight" text="Không tải được dữ liệu" />
+        <Text as="h2" size="xl" weight="bold" className="tracking-tight" text={t("appError.title")} />
         <Text as="p" variant="muted" className="mt-2 leading-relaxed">
-          Máy chủ phản hồi chậm hoặc kết nối cơ sở dữ liệu bị gián đoạn. Thử lại sau giây lát —
-          nếu vẫn lỗi, kiểm tra mạng hoặc cấu hình <Code text="DATABASE_URL" />.
+          {t("appError.descriptionBefore")} <Code text="DATABASE_URL" />.
         </Text>
 
         <div className="mt-6 flex items-center justify-center gap-2">
@@ -52,7 +53,7 @@ export default function AppError({
             disabled={busy}
           >
             <RotateCw className={`w-4 h-4 ${pending ? "animate-spin" : ""}`} />
-            {pending ? "Đang thử lại…" : "Thử lại"}
+            {pending ? t("appError.retrying") : t("appError.retry")}
           </Button>
           <Button
             type="button"
@@ -61,12 +62,12 @@ export default function AppError({
             disabled={busy}
           >
             <RefreshCw className={`w-4 h-4 ${reloading ? "animate-spin" : ""}`} />
-            Tải lại trang
+            {t("appError.reload")}
           </Button>
         </div>
 
         {error.digest && (
-          <Text as="p" variant="muted" className="mt-5 text-[11px] font-mono select-all" text={`mã lỗi: ${error.digest}`} />
+          <Text as="p" variant="muted" className="mt-5 text-[11px] font-mono select-all" text={t("appError.digest", { digest: error.digest })} />
         )}
       </div>
     </div>
