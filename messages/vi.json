@@ -420,8 +420,7 @@
         "description": "Mô tả, ghi chú",
         "stockCard": "Thẻ kho",
         "stock": "Tồn kho",
-        "related": "Hàng hóa cùng loại",
-        "channels": "Liên kết kênh bán"
+        "related": "Hàng hóa cùng loại"
       },
       "descriptionTitle": "Mô tả",
       "orderNoteTitle": "Ghi chú đặt hàng",
@@ -430,7 +429,6 @@
       "stockCardEmpty": "Chưa có giao dịch kho",
       "stockEmpty": "Chưa có dữ liệu tồn kho",
       "relatedEmpty": "Chưa có hàng hóa cùng loại",
-      "channelsEmpty": "Chưa liên kết kênh bán",
       "defaultWarehouse": "Kho mặc định",
       "lowStock": "Sắp hết hàng",
       "selling": "Đang kinh doanh",

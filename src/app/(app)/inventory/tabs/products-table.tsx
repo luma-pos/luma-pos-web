@@ -29,8 +29,7 @@ type ProductExpandTab =
   | "description"
   | "stockCard"
   | "stock"
-  | "related"
-  | "channels";
+  | "related";
 
 const PRODUCT_ORDER_NOTE_SPEC_KEY = "__orderNote";
 const PRODUCT_EXPAND_TABS: ProductExpandTab[] = [
@@ -39,7 +38,6 @@ const PRODUCT_EXPAND_TABS: ProductExpandTab[] = [
   "stockCard",
   "stock",
   "related",
-  "channels",
 ];
 const MOVEMENT_TYPE_KEYS: Record<string, string> = {
   purchase: "purchase",
@@ -329,9 +327,6 @@ function ExpandedProduct({ product }: { product: ProductRow }) {
           />
         )}
         {tab === "related" && <RelatedProductsPanel product={product} />}
-        {tab === "channels" && (
-          <EmptyPanel message={t("products.expand.channelsEmpty")} />
-        )}
       </div>
 
       <ProductActionBar product={product} />

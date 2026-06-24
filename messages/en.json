@@ -420,8 +420,7 @@
         "description": "Description, notes",
         "stockCard": "Stock card",
         "stock": "Stock",
-        "related": "Same type products",
-        "channels": "Sales channels"
+        "related": "Same type products"
       },
       "descriptionTitle": "Description",
       "orderNoteTitle": "Order note",
@@ -430,7 +429,6 @@
       "stockCardEmpty": "No stock transactions",
       "stockEmpty": "No stock data",
       "relatedEmpty": "No same type products",
-      "channelsEmpty": "No sales channel links",
       "defaultWarehouse": "Default warehouse",
       "lowStock": "Low stock",
       "selling": "Selling",
