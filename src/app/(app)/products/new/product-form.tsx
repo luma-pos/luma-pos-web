@@ -2,22 +2,51 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useFormContext, type UseFormRegisterReturn } from "react-hook-form";
+import {
+  useForm,
+  useFormContext,
+  type UseFormRegisterReturn,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, ImagePlus, Info, Loader2, Tag, Trash2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ImagePlus,
+  Info,
+  Loader2,
+  Tag,
+  Trash2,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import {
-  Form, FormField, Section, Input, NumberInput, Select, Button,
-  Field, Heading, Textarea,
+  Form,
+  FormField,
+  Section,
+  Input,
+  NumberInput,
+  Select,
+  Button,
+  Field,
+  Heading,
+  Textarea,
 } from "@/components/ui";
 import { Routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
-import { createProductSchema, type CreateProductInput, type CreateProductOutput } from "./schema";
+import {
+  createProductSchema,
+  type CreateProductInput,
+  type CreateProductOutput,
+} from "./schema";
 import { MultiUnitField } from "./multi-unit-field";
 import { AttributesField } from "./attributes-field";
-import { createProduct, updateProduct, createCategory, createBrand } from "@/lib/actions/products";
+import {
+  createProduct,
+  updateProduct,
+  createCategory,
+  createBrand,
+} from "@/lib/actions/products";
 import { Combobox } from "@/components/combobox";
 import type { ProductFormOptions } from "@/lib/data/products";
 import type { PriceBookRow } from "@/lib/data/price-books";
@@ -26,8 +55,22 @@ type Tab = "info" | "description" | "variants";
 
 const useFormCtx = () => useFormContext<CreateProductInput>();
 const EMPTY_ATTRIBUTES: NonNullable<CreateProductInput["attributes"]> = [];
-const EMPTY_VARIANT_CHILDREN: NonNullable<CreateProductInput["variantChildren"]> = [];
+const EMPTY_VARIANT_CHILDREN: NonNullable<
+  CreateProductInput["variantChildren"]
+> = [];
 const EMPTY_IMAGE_URLS: string[] = [];
+const PRODUCT_ORDER_NOTE_SPEC_KEY = "__orderNote";
+
+function specsWithOrderNote(
+  specs: Record<string, string[]> | null,
+  invoiceNote: string | undefined,
+) {
+  const note = invoiceNote?.trim();
+  const next = { ...(specs ?? {}) };
+  if (note) next[PRODUCT_ORDER_NOTE_SPEC_KEY] = [note];
+  else delete next[PRODUCT_ORDER_NOTE_SPEC_KEY];
+  return Object.keys(next).length > 0 ? next : null;
+}
 
 export interface NewProductFormProps {
   categories: ProductFormOptions["categories"];
@@ -84,7 +127,10 @@ export function NewProductForm({
       units: [],
       attributes: [],
       variantChildren: [],
-      applyToSiblings: { enabled: false, fields: ["name", "imageUrls", "description"] },
+      applyToSiblings: {
+        enabled: false,
+        fields: ["name", "imageUrls", "description"],
+      },
       directSale: true,
       ...initialValues,
     },
@@ -92,9 +138,14 @@ export function NewProductForm({
 
   async function onSubmit(values: CreateProductOutput) {
     if (isEdit && productId) {
-      const specs = values.attributes.length > 0
-        ? Object.fromEntries(values.attributes.filter((a) => a.name.trim()).map((a) => [a.name, a.values]))
-        : null;
+      const specs =
+        values.attributes.length > 0
+          ? Object.fromEntries(
+              values.attributes
+                .filter((a) => a.name.trim())
+                .map((a) => [a.name, a.values]),
+            )
+          : null;
       const res = await updateProduct({
         id: productId,
         sku: values.sku?.trim() || "",
@@ -105,22 +156,31 @@ export function NewProductForm({
         baseUnit: values.baseUnit,
         costPrice: values.costPrice,
         retailPrice: values.retailPrice,
-      wholesalePrice: values.wholesalePrice ?? null,
-      contractorPrice: values.contractorPrice ?? null,
-      agentPrice: values.agentPrice ?? null,
-      priceBookPrices: values.priceBookPrices,
-      location: values.location,
+        wholesalePrice: values.wholesalePrice ?? null,
+        contractorPrice: values.contractorPrice ?? null,
+        agentPrice: values.agentPrice ?? null,
+        priceBookPrices: values.priceBookPrices,
+        location: values.location,
         description: values.description,
         imageUrls: values.imageUrls,
         isActive: values.directSale,
-        specs,
+        specs: specsWithOrderNote(specs, values.invoiceNote),
         applyToSiblings: values.applyToSiblings,
         units: values.units.map((u) => ({
-          unitName: u.unitName, multiplier: u.multiplier, barcode: u.barcode, priceOverride: u.priceOverride ?? null,
+          unitName: u.unitName,
+          multiplier: u.multiplier,
+          barcode: u.barcode,
+          priceOverride: u.priceOverride ?? null,
         })),
       });
       if (res.ok) {
-        router.push(submitIntent === "sameType" ? sameTypeHref(productId) : (isModal ? doneHref : Routes.product(productId)));
+        router.push(
+          submitIntent === "sameType"
+            ? sameTypeHref(productId)
+            : isModal
+              ? doneHref
+              : Routes.product(productId),
+        );
         router.refresh();
         return;
       }
@@ -129,7 +189,9 @@ export function NewProductForm({
     }
     const res = await createProduct(values);
     if (res.ok) {
-      router.push(submitIntent === "sameType" ? sameTypeHref(res.data.id) : doneHref);
+      router.push(
+        submitIntent === "sameType" ? sameTypeHref(res.data.id) : doneHref,
+      );
       router.refresh();
       return;
     }
@@ -154,23 +216,43 @@ export function NewProductForm({
       onSubmit={onSubmit}
       className={cn(
         "flex flex-col space-y-0",
-        isModal ? "h-full bg-surface" : "min-h-dvh bg-slate-50 dark:bg-slate-950"
+        isModal
+          ? "h-full bg-surface"
+          : "min-h-dvh bg-slate-50 dark:bg-slate-950",
       )}
     >
-      <header className={cn(
-        "z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between gap-3",
-        !isModal && "sticky top-0"
-      )}>
+      <header
+        className={cn(
+          "z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between gap-3",
+          !isModal && "sticky top-0",
+        )}
+      >
         <div className="flex items-center gap-3">
           {!isModal && (
-            <Button type="button" variant="ghost" size="iconSm" onClick={close} aria-label={t("common.back")}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="iconSm"
+              onClick={close}
+              aria-label={t("common.back")}
+            >
               <ArrowLeft className="w-4 h-4" />
             </Button>
           )}
-          <Heading as="h1" size="lg" tx={isEdit ? "products.editTitle" : "products.create"} />
+          <Heading
+            as="h1"
+            size="lg"
+            tx={isEdit ? "products.editTitle" : "products.create"}
+          />
         </div>
         {isModal ? (
-          <Button type="button" variant="ghost" size="iconSm" onClick={close} aria-label={t("common.close")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="iconSm"
+            onClick={close}
+            aria-label={t("common.close")}
+          >
             <X className="w-4 h-4" />
           </Button>
         ) : (
@@ -194,7 +276,7 @@ export function NewProductForm({
                 "py-3 text-sm font-medium border-b-2 transition-colors",
                 tab === tk
                   ? "border-primary-600 text-primary-600"
-                  : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400"
+                  : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400",
               )}
             >
               {t(`products.tabs.${tk}`)}
@@ -209,9 +291,26 @@ export function NewProductForm({
         </div>
       )}
 
-      <div className={cn("flex-1 overflow-auto p-4 sm:p-6 w-full space-y-4", isModal ? "mx-auto max-w-7xl" : "mx-auto max-w-5xl")}>
-        {tab === "info" && <InfoTab categories={categories} brands={brands} priceBooks={priceBooks} />}
-        {tab === "variants" && <VariantsTab isEdit={isEdit} isVariantChild={isVariantChild} siblingCount={siblingCount} />}
+      <div
+        className={cn(
+          "flex-1 overflow-auto p-4 sm:p-6 w-full space-y-4",
+          isModal ? "mx-auto max-w-7xl" : "mx-auto max-w-5xl",
+        )}
+      >
+        {tab === "info" && (
+          <InfoTab
+            categories={categories}
+            brands={brands}
+            priceBooks={priceBooks}
+          />
+        )}
+        {tab === "variants" && (
+          <VariantsTab
+            isEdit={isEdit}
+            isVariantChild={isVariantChild}
+            siblingCount={siblingCount}
+          />
+        )}
         {tab === "description" && <DescriptionTab />}
       </div>
 
@@ -245,7 +344,12 @@ function FormActions({
 }) {
   const t = useTranslations();
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", align === "footer" && "justify-between")}>
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-2",
+        align === "footer" && "justify-between",
+      )}
+    >
       <label className="flex items-center gap-2 text-sm cursor-pointer">
         <input
           type="checkbox"
@@ -255,25 +359,58 @@ function FormActions({
         <span>{t("products.directSale")}</span>
       </label>
       <div className="ml-auto flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" onClick={onCancel} tx="common.cancel" />
-        <Button type="submit" variant="secondary" onClick={() => onIntent("sameType")} tx="products.saveAndCreateSameType" />
-        <Button type="submit" loading={loading} onClick={() => onIntent("save")} tx="common.save" />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          tx="common.cancel"
+        />
+        <Button
+          type="submit"
+          variant="secondary"
+          onClick={() => onIntent("sameType")}
+          tx="products.saveAndCreateSameType"
+        />
+        <Button
+          type="submit"
+          loading={loading}
+          onClick={() => onIntent("save")}
+          tx="common.save"
+        />
       </div>
     </div>
   );
 }
 
-function InfoTab({ categories, brands, suppliers, priceBooks }: NewProductFormProps) {
+function InfoTab({
+  categories,
+  brands,
+  suppliers,
+  priceBooks,
+}: NewProductFormProps) {
   return (
     <>
-      <BasicInfoSection categories={categories} brands={brands} suppliers={suppliers} />
-      <Section titleTx="products.sections.pricing" descriptionTx="products.sections.pricingDesc">
+      <BasicInfoSection
+        categories={categories}
+        brands={brands}
+        suppliers={suppliers}
+      />
+      <Section
+        titleTx="products.sections.pricing"
+        descriptionTx="products.sections.pricingDesc"
+      >
         <PricingFields priceBooks={priceBooks ?? []} />
       </Section>
-      <Section titleTx="products.sections.stock" descriptionTx="products.sections.stockDesc">
+      <Section
+        titleTx="products.sections.stock"
+        descriptionTx="products.sections.stockDesc"
+      >
         <StockFields />
       </Section>
-      <Section titleTx="products.sections.physical" descriptionTx="products.sections.physicalDesc">
+      <Section
+        titleTx="products.sections.physical"
+        descriptionTx="products.sections.physicalDesc"
+      >
         <PhysicalFields />
       </Section>
     </>
@@ -305,14 +442,24 @@ function VariantsTab({
 }) {
   return (
     <div className="space-y-4">
-      <Section titleTx="products.sections.units" descriptionTx="products.sections.unitsDesc" collapsible={false}>
+      <Section
+        titleTx="products.sections.units"
+        descriptionTx="products.sections.unitsDesc"
+        collapsible={false}
+      >
         <MultiUnitField />
       </Section>
-      <Section titleTx="products.sections.attributes" descriptionTx="products.sections.attributesDesc" collapsible={false}>
+      <Section
+        titleTx="products.sections.attributes"
+        descriptionTx="products.sections.attributesDesc"
+        collapsible={false}
+      >
         <AttributesField />
         {!isEdit && <VariantChildrenPreview />}
       </Section>
-      {isEdit && isVariantChild && <SiblingApplySection siblingCount={siblingCount} />}
+      {isEdit && isVariantChild && (
+        <SiblingApplySection siblingCount={siblingCount} />
+      )}
     </div>
   );
 }
@@ -357,7 +504,10 @@ function SiblingApplySection({ siblingCount }: { siblingCount: number }) {
         {enabled && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 rounded-xl border border-dashed border-border bg-slate-50 p-3 dark:bg-slate-900/40">
             {APPLY_FIELD_OPTIONS.map((opt) => (
-              <label key={opt} className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2 text-sm">
+              <label
+                key={opt}
+                className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2 text-sm"
+              >
                 <input
                   type="checkbox"
                   value={opt}
@@ -374,12 +524,16 @@ function SiblingApplySection({ siblingCount }: { siblingCount: number }) {
   );
 }
 
-function buildVariantCombinations(attributes: CreateProductInput["attributes"]) {
+function buildVariantCombinations(
+  attributes: CreateProductInput["attributes"],
+) {
   const grouped = new Map<string, Set<string>>();
   for (const attr of attributes ?? []) {
     const name = attr.name?.trim() ?? "";
     if (!name) continue;
-    const values = (attr.values ?? []).map((value) => value.trim()).filter(Boolean);
+    const values = (attr.values ?? [])
+      .map((value) => value.trim())
+      .filter(Boolean);
     if (values.length === 0) continue;
     const set = grouped.get(name) ?? new Set<string>();
     for (const value of values) set.add(value);
@@ -390,11 +544,18 @@ function buildVariantCombinations(attributes: CreateProductInput["attributes"]) 
     name,
     values: Array.from(values),
   }));
-  const valueCount = usable.reduce((total, attr) => total + attr.values.length, 0);
+  const valueCount = usable.reduce(
+    (total, attr) => total + attr.values.length,
+    0,
+  );
   if (valueCount < 2) return [];
 
-  const rows: Array<{ variantName: string; specs: Record<string, string[]> }> = [];
-  const walk = (idx: number, picked: Array<{ name: string; value: string }>) => {
+  const rows: Array<{ variantName: string; specs: Record<string, string[]> }> =
+    [];
+  const walk = (
+    idx: number,
+    picked: Array<{ name: string; value: string }>,
+  ) => {
     if (idx === usable.length) {
       rows.push({
         variantName: picked.map((p) => p.value).join(" / "),
@@ -402,7 +563,8 @@ function buildVariantCombinations(attributes: CreateProductInput["attributes"]) 
       });
       return;
     }
-    for (const value of usable[idx].values) walk(idx + 1, [...picked, { name: usable[idx].name, value }]);
+    for (const value of usable[idx].values)
+      walk(idx + 1, [...picked, { name: usable[idx].name, value }]);
   };
   walk(0, []);
   return rows;
@@ -423,11 +585,15 @@ function VariantChildrenPreview() {
   const minLevel = Number(watch("minLevel") ?? 0);
   const imageUrls = watch("imageUrls") ?? EMPTY_IMAGE_URLS;
 
-  const generated = useMemo(() => buildVariantCombinations(attributes), [attributes]);
+  const generated = useMemo(
+    () => buildVariantCombinations(attributes),
+    [attributes],
+  );
 
   useEffect(() => {
     if (generated.length === 0) {
-      if (children.length > 0) setValue("variantChildren", [], { shouldDirty: true });
+      if (children.length > 0)
+        setValue("variantChildren", [], { shouldDirty: true });
       return;
     }
     const byName = new Map(children.map((child) => [child.variantName, child]));
@@ -453,7 +619,19 @@ function VariantChildrenPreview() {
     if (JSON.stringify(next) !== JSON.stringify(children)) {
       setValue("variantChildren", next, { shouldDirty: true });
     }
-  }, [agentPrice, baseUnit, children, contractorPrice, costPrice, generated, imageUrls, minLevel, retailPrice, setValue, wholesalePrice]);
+  }, [
+    agentPrice,
+    baseUnit,
+    children,
+    contractorPrice,
+    costPrice,
+    generated,
+    imageUrls,
+    minLevel,
+    retailPrice,
+    setValue,
+    wholesalePrice,
+  ]);
 
   if (generated.length === 0) {
     return (
@@ -467,39 +645,101 @@ function VariantChildrenPreview() {
     <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface">
       <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
         <div>
-          <div className="text-sm font-semibold">{t("products.variants.childTitle")}</div>
-          <div className="text-xs text-slate-500">{t("products.variants.childCount", { count: children.length, name: parentName || t("products.variants.parentFallback") })}</div>
+          <div className="text-sm font-semibold">
+            {t("products.variants.childTitle")}
+          </div>
+          <div className="text-xs text-slate-500">
+            {t("products.variants.childCount", {
+              count: children.length,
+              name: parentName || t("products.variants.parentFallback"),
+            })}
+          </div>
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[860px] text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/60">
             <tr>
-              <th className="px-3 py-2 font-semibold">{t("products.variants.variant")}</th>
+              <th className="px-3 py-2 font-semibold">
+                {t("products.variants.variant")}
+              </th>
               <th className="px-3 py-2 font-semibold">SKU</th>
-              <th className="px-3 py-2 font-semibold">{t("products.fields.barcode")}</th>
+              <th className="px-3 py-2 font-semibold">
+                {t("products.fields.barcode")}
+              </th>
               <th className="px-3 py-2 font-semibold">{t("pos.unit")}</th>
-              <th className="px-3 py-2 font-semibold text-right">{t("products.pricing.costPrice")}</th>
-              <th className="px-3 py-2 font-semibold text-right">{t("products.pricing.retailPrice")}</th>
-              <th className="px-3 py-2 font-semibold text-right">{t("products.variants.initialStock")}</th>
-              <th className="px-3 py-2 font-semibold text-center">{t("products.variants.sale")}</th>
+              <th className="px-3 py-2 font-semibold text-right">
+                {t("products.pricing.costPrice")}
+              </th>
+              <th className="px-3 py-2 font-semibold text-right">
+                {t("products.pricing.retailPrice")}
+              </th>
+              <th className="px-3 py-2 font-semibold text-right">
+                {t("products.variants.initialStock")}
+              </th>
+              <th className="px-3 py-2 font-semibold text-center">
+                {t("products.variants.sale")}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-soft">
             {children.map((child, idx) => (
               <tr key={child.variantName}>
                 <td className="px-3 py-2">
-                  <input type="hidden" {...register(`variantChildren.${idx}.variantName`)} />
+                  <input
+                    type="hidden"
+                    {...register(`variantChildren.${idx}.variantName`)}
+                  />
                   <div className="font-medium">{child.variantName}</div>
                 </td>
-                <td className="px-3 py-2"><Input {...register(`variantChildren.${idx}.sku`)} placeholder={t("products.variants.autoSku")} /></td>
-                <td className="px-3 py-2"><Input {...register(`variantChildren.${idx}.barcode`)} /></td>
-                <td className="px-3 py-2"><Input {...register(`variantChildren.${idx}.baseUnit`)} /></td>
-                <td className="px-3 py-2"><input type="number" min={0} {...register(`variantChildren.${idx}.costPrice`, { valueAsNumber: true })} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-right" /></td>
-                <td className="px-3 py-2"><input type="number" min={0} {...register(`variantChildren.${idx}.retailPrice`, { valueAsNumber: true })} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-right" /></td>
-                <td className="px-3 py-2"><input type="number" min={0} {...register(`variantChildren.${idx}.initialStock`, { valueAsNumber: true })} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-right" /></td>
+                <td className="px-3 py-2">
+                  <Input
+                    {...register(`variantChildren.${idx}.sku`)}
+                    placeholder={t("products.variants.autoSku")}
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <Input {...register(`variantChildren.${idx}.barcode`)} />
+                </td>
+                <td className="px-3 py-2">
+                  <Input {...register(`variantChildren.${idx}.baseUnit`)} />
+                </td>
+                <td className="px-3 py-2">
+                  <input
+                    type="number"
+                    min={0}
+                    {...register(`variantChildren.${idx}.costPrice`, {
+                      valueAsNumber: true,
+                    })}
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-right"
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <input
+                    type="number"
+                    min={0}
+                    {...register(`variantChildren.${idx}.retailPrice`, {
+                      valueAsNumber: true,
+                    })}
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-right"
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <input
+                    type="number"
+                    min={0}
+                    {...register(`variantChildren.${idx}.initialStock`, {
+                      valueAsNumber: true,
+                    })}
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-right"
+                  />
+                </td>
                 <td className="px-3 py-2 text-center">
-                  <input type="checkbox" {...register(`variantChildren.${idx}.directSale`)} className="rounded text-primary-600 focus:ring-primary-500" />
+                  <input
+                    type="checkbox"
+                    {...register(`variantChildren.${idx}.directSale`)}
+                    className="rounded text-primary-600 focus:ring-primary-500"
+                  />
                 </td>
               </tr>
             ))}
@@ -513,8 +753,12 @@ function VariantChildrenPreview() {
 function BasicInfoSection({ categories, brands }: NewProductFormProps) {
   const t = useTranslations();
   const { register, watch, setValue } = useFormCtx();
-  const [extraCats, setExtraCats] = useState<{ id: string; name: string }[]>([]);
-  const [extraBrands, setExtraBrands] = useState<{ id: string; name: string }[]>([]);
+  const [extraCats, setExtraCats] = useState<{ id: string; name: string }[]>(
+    [],
+  );
+  const [extraBrands, setExtraBrands] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   return (
     <Section title="" collapsible={false}>
@@ -522,27 +766,52 @@ function BasicInfoSection({ categories, brands }: NewProductFormProps) {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Field labelTx="products.fields.sku">
-              <Input {...register("sku")} placeholderTx="products.fields.skuPlaceholder" />
+              <Input
+                {...register("sku")}
+                placeholderTx="products.fields.skuPlaceholder"
+              />
             </Field>
             <Field labelTx="products.fields.barcode">
-              <Input {...register("barcode")} placeholderTx="products.fields.barcodePlaceholder" />
+              <Input
+                {...register("barcode")}
+                placeholderTx="products.fields.barcodePlaceholder"
+              />
             </Field>
           </div>
 
           <FormField name="name" labelTx="products.fields.name" required>
-            {(field) => <Input {...field} placeholderTx="products.fields.namePlaceholder" />}
+            {(field) => (
+              <Input
+                {...field}
+                placeholderTx="products.fields.namePlaceholder"
+              />
+            )}
           </FormField>
 
           <div className="grid grid-cols-2 gap-4">
-            <FormField name="categoryId" labelTx="products.fields.category" required>
+            <FormField
+              name="categoryId"
+              labelTx="products.fields.category"
+              required
+            >
               {(field) => (
                 <Combobox
                   value={field.value ?? ""}
                   onChange={field.onChange}
                   allowClear={false}
                   placeholder={t("products.fields.categoryPlaceholder")}
-                  options={[...categories, ...extraCats].map((c) => ({ value: c.id, label: c.name }))}
-                  onCreate={async (name) => { const r = await createCategory(name); if (r.ok) { setExtraCats((x) => [...x, r.data]); return r.data.id; } return null; }}
+                  options={[...categories, ...extraCats].map((c) => ({
+                    value: c.id,
+                    label: c.name,
+                  }))}
+                  onCreate={async (name) => {
+                    const r = await createCategory(name);
+                    if (r.ok) {
+                      setExtraCats((x) => [...x, r.data]);
+                      return r.data.id;
+                    }
+                    return null;
+                  }}
                 />
               )}
             </FormField>
@@ -551,8 +820,18 @@ function BasicInfoSection({ categories, brands }: NewProductFormProps) {
                 value={watch("brandId") ?? ""}
                 onChange={(v) => setValue("brandId", v)}
                 placeholder={t("products.fields.brandPlaceholder")}
-                options={[...brands, ...extraBrands].map((b) => ({ value: b.id, label: b.name }))}
-                onCreate={async (name) => { const r = await createBrand(name); if (r.ok) { setExtraBrands((x) => [...x, r.data]); return r.data.id; } return null; }}
+                options={[...brands, ...extraBrands].map((b) => ({
+                  value: b.id,
+                  label: b.name,
+                }))}
+                onCreate={async (name) => {
+                  const r = await createBrand(name);
+                  if (r.ok) {
+                    setExtraBrands((x) => [...x, r.data]);
+                    return r.data.id;
+                  }
+                  return null;
+                }}
               />
             </Field>
           </div>
@@ -588,20 +867,29 @@ function ImageUploadGrid() {
       const added: string[] = [];
       for (const file of Array.from(files).slice(0, MAX_IMAGES - urls.length)) {
         const path = randomImagePath(file.name);
-        const { error } = await supabase.storage.from("products").upload(path, file, { upsert: false });
+        const { error } = await supabase.storage
+          .from("products")
+          .upload(path, file, { upsert: false });
         if (error) throw error;
         const { data } = supabase.storage.from("products").getPublicUrl(path);
         added.push(data.publicUrl);
       }
       setValue("imageUrls", [...urls, ...added], { shouldDirty: true });
     } catch (e) {
-      setErr(e instanceof Error ? e.message : t("products.fields.imageUploadError"));
+      setErr(
+        e instanceof Error ? e.message : t("products.fields.imageUploadError"),
+      );
     } finally {
       setUploading(false);
     }
   }
 
-  const remove = (u: string) => setValue("imageUrls", urls.filter((x) => x !== u), { shouldDirty: true });
+  const remove = (u: string) =>
+    setValue(
+      "imageUrls",
+      urls.filter((x) => x !== u),
+      { shouldDirty: true },
+    );
 
   return (
     <div>
@@ -611,10 +899,17 @@ function ImageUploadGrid() {
             key={u}
             className={cn(
               "relative aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 group",
-              i === 0 && "col-span-2"
+              i === 0 && "col-span-2",
             )}
           >
-            <Image src={u} alt="" fill sizes="240px" className="object-cover" unoptimized />
+            <Image
+              src={u}
+              alt=""
+              fill
+              sizes="240px"
+              className="object-cover"
+              unoptimized
+            />
             {i === 0 && (
               <span className="absolute top-1 left-1 bg-primary-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                 {t("products.fields.primaryImage")}
@@ -634,17 +929,24 @@ function ImageUploadGrid() {
           <label
             className={cn(
               "aspect-square border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg flex flex-col items-center justify-center gap-1 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:border-primary-500 transition text-slate-400",
-              urls.length === 0 && "col-span-2"
+              urls.length === 0 && "col-span-2",
             )}
           >
-            {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <ImagePlus className="w-6 h-6" />}
+            {uploading ? (
+              <Loader2 className="w-6 h-6 animate-spin" />
+            ) : (
+              <ImagePlus className="w-6 h-6" />
+            )}
             <span className="text-xs">{t("products.fields.addImage")}</span>
             <input
               type="file"
               accept="image/*"
               multiple
               disabled={uploading}
-              onChange={(e) => { upload(e.target.files); e.target.value = ""; }}
+              onChange={(e) => {
+                upload(e.target.files);
+                e.target.value = "";
+              }}
               className="hidden"
             />
           </label>
@@ -653,7 +955,9 @@ function ImageUploadGrid() {
       {err ? (
         <p className="text-xs text-red-600 mt-2">{err}</p>
       ) : (
-        <p className="text-xs text-slate-500 mt-2">{t("products.fields.imageHint")}</p>
+        <p className="text-xs text-slate-500 mt-2">
+          {t("products.fields.imageHint")}
+        </p>
       )}
     </div>
   );
@@ -666,7 +970,8 @@ function PricingFields({ priceBooks }: { priceBooks: PriceBookRow[] }) {
   const priceBookPrices = watch("priceBookPrices") ?? {};
   const [open, setOpen] = useState(false);
   const [draftRetail, setDraftRetail] = useState(retailPrice);
-  const [draftOverrides, setDraftOverrides] = useState<Record<string, number | null>>(priceBookPrices);
+  const [draftOverrides, setDraftOverrides] =
+    useState<Record<string, number | null>>(priceBookPrices);
 
   function openPriceBooks() {
     setDraftRetail(Number(watch("retailPrice") ?? 0));
@@ -675,23 +980,47 @@ function PricingFields({ priceBooks }: { priceBooks: PriceBookRow[] }) {
   }
 
   function applyPriceBooks() {
-    setValue("retailPrice", draftRetail, { shouldDirty: true, shouldValidate: true });
-    setValue("priceBookPrices", draftOverrides, { shouldDirty: true, shouldValidate: true });
+    setValue("retailPrice", draftRetail, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setValue("priceBookPrices", draftOverrides, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
     setOpen(false);
   }
 
-  const activeBooks = priceBooks.length > 0
-    ? priceBooks
-    : [{ id: "retail", name: t("products.pricing.retailPrice"), isDefault: true, sortOrder: 0 }];
+  const activeBooks =
+    priceBooks.length > 0
+      ? priceBooks
+      : [
+          {
+            id: "retail",
+            name: t("products.pricing.retailPrice"),
+            isDefault: true,
+            sortOrder: 0,
+          },
+        ];
 
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] lg:grid-cols-[1fr_1fr_auto] gap-4 items-end">
         <Field labelTx="products.pricing.costPrice">
-          <NumberInput value={watch("costPrice")} onChange={(v) => setValue("costPrice", v ?? 0)} suffix="đ" min={0} />
+          <NumberInput
+            value={watch("costPrice")}
+            onChange={(v) => setValue("costPrice", v ?? 0)}
+            suffix="đ"
+            min={0}
+          />
         </Field>
         <Field labelTx="products.pricing.retailPrice">
-          <NumberInput value={watch("retailPrice")} onChange={(v) => setValue("retailPrice", v ?? 0)} suffix="đ" min={0} />
+          <NumberInput
+            value={watch("retailPrice")}
+            onChange={(v) => setValue("retailPrice", v ?? 0)}
+            suffix="đ"
+            min={0}
+          />
         </Field>
         <button
           type="button"
@@ -708,10 +1037,21 @@ function PricingFields({ priceBooks }: { priceBooks: PriceBookRow[] }) {
           <div className="flex max-h-[88dvh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl">
             <header className="flex items-start justify-between gap-3 px-5 py-4 sm:px-6">
               <div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t("products.pricing.choosePriceBooks")}</h3>
-                <p className="mt-1 text-sm text-slate-500">{t("products.pricing.activeBookCount", { count: activeBooks.length })}</p>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                  {t("products.pricing.choosePriceBooks")}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  {t("products.pricing.activeBookCount", {
+                    count: activeBooks.length,
+                  })}
+                </p>
               </div>
-              <button type="button" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-surface-2" aria-label={t("common.close")}>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-surface-2"
+                aria-label={t("common.close")}
+              >
                 <X className="h-5 w-5" />
               </button>
             </header>
@@ -719,14 +1059,20 @@ function PricingFields({ priceBooks }: { priceBooks: PriceBookRow[] }) {
               <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="bg-canvas text-left text-xs uppercase text-slate-500">
-                    <th className="px-4 py-3 font-semibold">{t("pricing.cols.name")}</th>
-                    <th className="px-4 py-3 text-right font-semibold">{t("products.pricing.retailPrice")}</th>
+                    <th className="px-4 py-3 font-semibold">
+                      {t("pricing.cols.name")}
+                    </th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      {t("products.pricing.retailPrice")}
+                    </th>
                     <th className="w-12 px-4 py-3" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-soft">
                   {activeBooks.map((book) => {
-                    const value = book.isDefault ? draftRetail : (draftOverrides[book.id] ?? null);
+                    const value = book.isDefault
+                      ? draftRetail
+                      : (draftOverrides[book.id] ?? null);
                     return (
                       <tr key={book.id}>
                         <td className="px-4 py-3 font-medium">{book.name}</td>
@@ -735,7 +1081,11 @@ function PricingFields({ priceBooks }: { priceBooks: PriceBookRow[] }) {
                             value={value}
                             onChange={(next) => {
                               if (book.isDefault) setDraftRetail(next ?? 0);
-                              else setDraftOverrides((current) => ({ ...current, [book.id]: next }));
+                              else
+                                setDraftOverrides((current) => ({
+                                  ...current,
+                                  [book.id]: next,
+                                }));
                             }}
                             suffix="đ"
                             min={0}
@@ -746,7 +1096,12 @@ function PricingFields({ priceBooks }: { priceBooks: PriceBookRow[] }) {
                           {!book.isDefault && (
                             <button
                               type="button"
-                              onClick={() => setDraftOverrides((current) => ({ ...current, [book.id]: null }))}
+                              onClick={() =>
+                                setDraftOverrides((current) => ({
+                                  ...current,
+                                  [book.id]: null,
+                                }))
+                              }
                               className="grid h-9 w-9 place-items-center rounded-lg text-slate-400 hover:bg-surface-2 hover:text-er"
                               aria-label={t("common.clear")}
                             >
@@ -761,8 +1116,17 @@ function PricingFields({ priceBooks }: { priceBooks: PriceBookRow[] }) {
               </table>
             </div>
             <footer className="flex justify-end gap-2 border-t border-border px-5 py-4 sm:px-6">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} tx="common.cancel" />
-              <Button type="button" onClick={applyPriceBooks} tx="common.done" />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                tx="common.cancel"
+              />
+              <Button
+                type="button"
+                onClick={applyPriceBooks}
+                tx="common.done"
+              />
             </footer>
           </div>
         </div>
@@ -776,13 +1140,25 @@ function StockFields() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <Field labelTx="products.stock.current">
-        <NumberInput value={watch("initialStock")} onChange={(v) => setValue("initialStock", v ?? 0)} min={0} />
+        <NumberInput
+          value={watch("initialStock")}
+          onChange={(v) => setValue("initialStock", v ?? 0)}
+          min={0}
+        />
       </Field>
       <Field labelTx="products.stock.min">
-        <NumberInput value={watch("minLevel")} onChange={(v) => setValue("minLevel", v ?? 0)} min={0} />
+        <NumberInput
+          value={watch("minLevel")}
+          onChange={(v) => setValue("minLevel", v ?? 0)}
+          min={0}
+        />
       </Field>
       <Field labelTx="products.stock.max">
-        <NumberInput value={watch("maxLevel")} onChange={(v) => setValue("maxLevel", v ?? 999_999_999)} min={0} />
+        <NumberInput
+          value={watch("maxLevel")}
+          onChange={(v) => setValue("maxLevel", v ?? 999_999_999)}
+          min={0}
+        />
       </Field>
     </div>
   );
@@ -795,7 +1171,10 @@ function PhysicalFields() {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field labelTx="products.physical.location">
-          <Input {...register("location")} placeholderTx="products.physical.locationPlaceholder" />
+          <Input
+            {...register("location")}
+            placeholderTx="products.physical.locationPlaceholder"
+          />
         </Field>
         <Field labelTx="products.physical.weight">
           <div className="flex gap-2">
@@ -820,9 +1199,24 @@ function PhysicalFields() {
 
       <Field labelTx="products.physical.dimensions">
         <div className="grid grid-cols-4 gap-2">
-          <NumberInput value={watch("width") ?? null} onChange={(v) => setValue("width", v)} placeholder={t("products.physical.width")} min={0} />
-          <NumberInput value={watch("length") ?? null} onChange={(v) => setValue("length", v)} placeholder={t("products.physical.length")} min={0} />
-          <NumberInput value={watch("thickness") ?? null} onChange={(v) => setValue("thickness", v)} placeholder={t("products.physical.thickness")} min={0} />
+          <NumberInput
+            value={watch("width") ?? null}
+            onChange={(v) => setValue("width", v)}
+            placeholder={t("products.physical.width")}
+            min={0}
+          />
+          <NumberInput
+            value={watch("length") ?? null}
+            onChange={(v) => setValue("length", v)}
+            placeholder={t("products.physical.length")}
+            min={0}
+          />
+          <NumberInput
+            value={watch("thickness") ?? null}
+            onChange={(v) => setValue("thickness", v)}
+            placeholder={t("products.physical.thickness")}
+            min={0}
+          />
           <Select
             {...register("dimUnit")}
             options={[

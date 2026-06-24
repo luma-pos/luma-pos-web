@@ -420,7 +420,50 @@
         "description": "Mô tả, ghi chú",
         "stockCard": "Thẻ kho",
         "stock": "Tồn kho",
+        "related": "Hàng hóa cùng loại",
         "channels": "Liên kết kênh bán"
+      },
+      "descriptionTitle": "Mô tả",
+      "orderNoteTitle": "Ghi chú đặt hàng",
+      "emptyDescription": "Chưa có mô tả",
+      "emptyOrderNote": "Chưa có ghi chú đặt hàng",
+      "stockCardEmpty": "Chưa có giao dịch kho",
+      "stockEmpty": "Chưa có dữ liệu tồn kho",
+      "relatedEmpty": "Chưa có hàng hóa cùng loại",
+      "channelsEmpty": "Chưa liên kết kênh bán",
+      "defaultWarehouse": "Kho mặc định",
+      "lowStock": "Sắp hết hàng",
+      "selling": "Đang kinh doanh",
+      "stopped": "Ngừng kinh doanh",
+      "notTaxed": "KCT",
+      "cols": {
+        "document": "Chứng từ",
+        "time": "Thời gian",
+        "transactionType": "Loại giao dịch",
+        "partner": "Đối tác",
+        "transactionPrice": "Giá GD",
+        "costPrice": "Giá vốn",
+        "quantity": "Số lượng",
+        "stockAfter": "Tồn cuối",
+        "warehouse": "Chi nhánh",
+        "stock": "Tồn kho",
+        "reserved": "KH đặt",
+        "daysToOut": "Dự kiến hết hàng",
+        "status": "Trạng thái",
+        "sku": "Mã hàng",
+        "name": "Tên hàng",
+        "salePrice": "Giá bán",
+        "vat": "VAT hàng bán (%)"
+      },
+      "movementTypes": {
+        "purchase": "Nhập hàng",
+        "sale": "Bán hàng",
+        "returnIn": "Trả hàng nhập kho",
+        "returnOut": "Trả hàng xuất kho",
+        "transfer": "Chuyển kho",
+        "adjust": "Điều chỉnh",
+        "init": "Tồn đầu",
+        "internalUse": "Xuất sử dụng nội bộ"
       }
     },
     "actions": {
@@ -501,12 +544,23 @@
     "perDay": "ngày",
     "createPo": "Tạo phiếu nhập",
     "priority": { "high": "Cao", "medium": "Trung bình", "low": "Thấp" },
-    "cols": { "onHand": "Tồn", "velocity": "TB/ngày", "daysLeft": "Ngày còn", "suggested": "Đề xuất", "priority": "Ưu tiên" },
+    "cols": {
+      "onHand": "Tồn",
+      "velocity": "TB/ngày",
+      "daysLeft": "Ngày còn",
+      "suggested": "Đề xuất",
+      "priority": "Ưu tiên"
+    },
     "assistantNotice": "Bản xem trước — kết nối nhà cung cấp AI (API key) để có câu trả lời thật.",
     "assistantEmpty": "Hỏi về doanh số, tồn kho, hay nên nhập gì.",
     "askPlaceholder": "Hỏi trợ lý…",
     "placeholderReply": "Chưa cấu hình nhà cung cấp AI — sẽ trả lời khi bật API key.",
-    "q": { "todaySales": "Hôm nay bán được bao nhiêu?", "topSellers": "Mặt hàng bán chạy nhất?", "lowStock": "Sản phẩm nào sắp hết?", "restockToday": "Hôm nay nên nhập gì?" }
+    "q": {
+      "todaySales": "Hôm nay bán được bao nhiêu?",
+      "topSellers": "Mặt hàng bán chạy nhất?",
+      "lowStock": "Sản phẩm nào sắp hết?",
+      "restockToday": "Hôm nay nên nhập gì?"
+    }
   },
   "tables": {
     "title": "Quản lý bàn",
@@ -535,7 +589,10 @@
     "lineNotePlaceholder": "vd: không hành, ít đá…",
     "addToOrder": "Thêm",
     "kitchenTicket": "PHIẾU BẾP",
-    "errors": { "occupied": "Bàn đang phục vụ — không xóa được.", "nothingToSend": "Không có món mới để gửi." }
+    "errors": {
+      "occupied": "Bàn đang phục vụ — không xóa được.",
+      "nothingToSend": "Không có món mới để gửi."
+    }
   },
   "modifiers": {
     "sub": "Nhóm tùy chọn (đường, đá, size, topping…) hiện khi gọi món.",
@@ -563,8 +620,17 @@
     "sub": "tự làm mới",
     "empty": "Không có phiếu nào.",
     "serveAll": "Phục vụ cả phiếu",
-    "status": { "pending": "Mới", "preparing": "Đang làm", "ready": "Sẵn sàng", "served": "Đã phục vụ" },
-    "action": { "pending": "Bắt đầu", "preparing": "Báo sẵn sàng", "ready": "Phục vụ" }
+    "status": {
+      "pending": "Mới",
+      "preparing": "Đang làm",
+      "ready": "Sẵn sàng",
+      "served": "Đã phục vụ"
+    },
+    "action": {
+      "pending": "Bắt đầu",
+      "preparing": "Báo sẵn sàng",
+      "ready": "Phục vụ"
+    }
   },
   "import": {
     "title": "Nhập dữ liệu",
@@ -578,7 +644,16 @@
     "preview": "Xem trước (5 dòng đầu)",
     "dryRun": "Chạy thử",
     "commit": "Nhập dữ liệu",
-    "fields": { "name": "Tên hàng", "sku": "Mã hàng (SKU)", "barcode": "Mã vạch", "category": "Nhóm hàng", "unit": "Đơn vị", "retailPrice": "Giá bán", "costPrice": "Giá vốn", "stock": "Tồn kho" },
+    "fields": {
+      "name": "Tên hàng",
+      "sku": "Mã hàng (SKU)",
+      "barcode": "Mã vạch",
+      "category": "Nhóm hàng",
+      "unit": "Đơn vị",
+      "retailPrice": "Giá bán",
+      "costPrice": "Giá vốn",
+      "stock": "Tồn kho"
+    },
     "previewTitle": "Kết quả chạy thử (chưa lưu)",
     "doneTitle": "Nhập xong",
     "total": "Số dòng",
@@ -590,7 +665,12 @@
     "newCats": "Sẽ tạo {count} nhóm hàng mới",
     "rowN": "Dòng {n}",
     "viewProducts": "Xem sản phẩm →",
-    "errors": { "empty": "File không có dòng dữ liệu.", "parse": "Không đọc được file. Dùng CSV hoặc .xlsx.", "needName": "Hãy ghép cột Tên hàng trước.", "noName": "thiếu tên hàng" }
+    "errors": {
+      "empty": "File không có dòng dữ liệu.",
+      "parse": "Không đọc được file. Dùng CSV hoặc .xlsx.",
+      "needName": "Hãy ghép cột Tên hàng trước.",
+      "noName": "thiếu tên hàng"
+    }
   },
   "shifts": {
     "openTitle": "Mở ca",
@@ -608,9 +688,17 @@
     "closeBtn": "Đóng ca",
     "historyTitle": "Lịch sử ca",
     "empty": "Chưa có ca nào.",
-    "cols": { "code": "Ca", "cashier": "Thu ngân", "opened": "Mở", "closed": "Đóng" },
+    "cols": {
+      "code": "Ca",
+      "cashier": "Thu ngân",
+      "opened": "Mở",
+      "closed": "Đóng"
+    },
     "status": { "open": "Đang mở", "closed": "Đã đóng" },
-    "errors": { "alreadyOpen": "Bạn đang có ca mở.", "noOpen": "Không có ca mở để đóng." }
+    "errors": {
+      "alreadyOpen": "Bạn đang có ca mở.",
+      "noOpen": "Không có ca mở để đóng."
+    }
   },
   "internalUse": {
     "formTitle": "Phiếu xuất dùng nội bộ",
@@ -635,7 +723,12 @@
     "historyTitle": "Lịch sử xuất nội bộ",
     "historyCount": "{n} phiếu",
     "empty": "Chưa có phiếu xuất nội bộ.",
-    "cols": { "code": "Số phiếu", "items": "SP", "cost": "Giá vốn", "by": "Nhân viên" },
+    "cols": {
+      "code": "Số phiếu",
+      "items": "SP",
+      "cost": "Giá vốn",
+      "by": "Nhân viên"
+    },
     "status": { "pending": "Chờ duyệt", "approved": "Đã duyệt" }
   },
   "orders": {

@@ -420,7 +420,50 @@
         "description": "Description, notes",
         "stockCard": "Stock card",
         "stock": "Stock",
+        "related": "Same type products",
         "channels": "Sales channels"
+      },
+      "descriptionTitle": "Description",
+      "orderNoteTitle": "Order note",
+      "emptyDescription": "No description",
+      "emptyOrderNote": "No order note",
+      "stockCardEmpty": "No stock transactions",
+      "stockEmpty": "No stock data",
+      "relatedEmpty": "No same type products",
+      "channelsEmpty": "No sales channel links",
+      "defaultWarehouse": "Default warehouse",
+      "lowStock": "Low stock",
+      "selling": "Selling",
+      "stopped": "Stopped",
+      "notTaxed": "N/A",
+      "cols": {
+        "document": "Document",
+        "time": "Time",
+        "transactionType": "Transaction type",
+        "partner": "Partner",
+        "transactionPrice": "Transaction price",
+        "costPrice": "Cost",
+        "quantity": "Quantity",
+        "stockAfter": "Stock after",
+        "warehouse": "Branch",
+        "stock": "Stock",
+        "reserved": "Reserved",
+        "daysToOut": "Expected out",
+        "status": "Status",
+        "sku": "SKU",
+        "name": "Name",
+        "salePrice": "Sale price",
+        "vat": "Sale VAT (%)"
+      },
+      "movementTypes": {
+        "purchase": "Purchase",
+        "sale": "Sale",
+        "returnIn": "Return in",
+        "returnOut": "Return out",
+        "transfer": "Transfer",
+        "adjust": "Adjustment",
+        "init": "Initial stock",
+        "internalUse": "Internal use"
       }
     },
     "actions": {
@@ -501,12 +544,23 @@
     "perDay": "day",
     "createPo": "Create PO",
     "priority": { "high": "High", "medium": "Medium", "low": "Low" },
-    "cols": { "onHand": "On hand", "velocity": "Avg/day", "daysLeft": "Days left", "suggested": "Suggested", "priority": "Priority" },
+    "cols": {
+      "onHand": "On hand",
+      "velocity": "Avg/day",
+      "daysLeft": "Days left",
+      "suggested": "Suggested",
+      "priority": "Priority"
+    },
     "assistantNotice": "Assistant preview — connect an AI provider (API key) to get real answers.",
     "assistantEmpty": "Ask about sales, stock, or what to restock.",
     "askPlaceholder": "Ask the assistant…",
     "placeholderReply": "AI provider not configured yet — answers will appear once an API key is enabled.",
-    "q": { "todaySales": "How much did we sell today?", "topSellers": "Top best-sellers?", "lowStock": "What's running low?", "restockToday": "What should I restock today?" }
+    "q": {
+      "todaySales": "How much did we sell today?",
+      "topSellers": "Top best-sellers?",
+      "lowStock": "What's running low?",
+      "restockToday": "What should I restock today?"
+    }
   },
   "tables": {
     "title": "Tables",
@@ -535,7 +589,10 @@
     "lineNotePlaceholder": "e.g. no onion, less ice…",
     "addToOrder": "Add",
     "kitchenTicket": "KITCHEN TICKET",
-    "errors": { "occupied": "Table is occupied — can't delete.", "nothingToSend": "Nothing new to send." }
+    "errors": {
+      "occupied": "Table is occupied — can't delete.",
+      "nothingToSend": "Nothing new to send."
+    }
   },
   "modifiers": {
     "sub": "Option groups (sugar, ice, size, toppings…) shown when ordering.",
@@ -563,8 +620,17 @@
     "sub": "auto-refreshes",
     "empty": "No active tickets.",
     "serveAll": "Serve all",
-    "status": { "pending": "New", "preparing": "Cooking", "ready": "Ready", "served": "Served" },
-    "action": { "pending": "Start", "preparing": "Mark ready", "ready": "Serve" }
+    "status": {
+      "pending": "New",
+      "preparing": "Cooking",
+      "ready": "Ready",
+      "served": "Served"
+    },
+    "action": {
+      "pending": "Start",
+      "preparing": "Mark ready",
+      "ready": "Serve"
+    }
   },
   "import": {
     "title": "Import data",
@@ -578,7 +644,16 @@
     "preview": "Preview (first 5 rows)",
     "dryRun": "Dry run",
     "commit": "Import",
-    "fields": { "name": "Product name", "sku": "Code (SKU)", "barcode": "Barcode", "category": "Category", "unit": "Unit", "retailPrice": "Retail price", "costPrice": "Cost price", "stock": "Stock" },
+    "fields": {
+      "name": "Product name",
+      "sku": "Code (SKU)",
+      "barcode": "Barcode",
+      "category": "Category",
+      "unit": "Unit",
+      "retailPrice": "Retail price",
+      "costPrice": "Cost price",
+      "stock": "Stock"
+    },
     "previewTitle": "Dry-run result (nothing saved yet)",
     "doneTitle": "Import complete",
     "total": "Rows",
@@ -590,7 +665,12 @@
     "newCats": "{count} new categories will be created",
     "rowN": "Row {n}",
     "viewProducts": "View products →",
-    "errors": { "empty": "File has no data rows.", "parse": "Couldn't read the file. Use CSV or .xlsx.", "needName": "Map the Product name column first.", "noName": "missing product name" }
+    "errors": {
+      "empty": "File has no data rows.",
+      "parse": "Couldn't read the file. Use CSV or .xlsx.",
+      "needName": "Map the Product name column first.",
+      "noName": "missing product name"
+    }
   },
   "shifts": {
     "openTitle": "Open shift",
@@ -608,9 +688,17 @@
     "closeBtn": "Close shift",
     "historyTitle": "Shift history",
     "empty": "No shifts yet.",
-    "cols": { "code": "Shift", "cashier": "Cashier", "opened": "Opened", "closed": "Closed" },
+    "cols": {
+      "code": "Shift",
+      "cashier": "Cashier",
+      "opened": "Opened",
+      "closed": "Closed"
+    },
     "status": { "open": "Open", "closed": "Closed" },
-    "errors": { "alreadyOpen": "You already have an open shift.", "noOpen": "No open shift to close." }
+    "errors": {
+      "alreadyOpen": "You already have an open shift.",
+      "noOpen": "No open shift to close."
+    }
   },
   "internalUse": {
     "formTitle": "Internal-Use Issue",

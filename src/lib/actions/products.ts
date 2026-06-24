@@ -5,76 +5,159 @@ import { z } from "zod";
 import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  products, productUnits, productSuppliers, categories, brands, stockLevels, stockMovements, warehouses, profiles, priceBooks, productPrices,
+  products,
+  productUnits,
+  productSuppliers,
+  categories,
+  brands,
+  stockLevels,
+  stockMovements,
+  warehouses,
+  profiles,
+  priceBooks,
+  productPrices,
 } from "@/db/schema";
-import { createProductSchema, siblingApplySchema, type CreateProductOutput } from "@/app/(app)/products/new/schema";
+import {
+  createProductSchema,
+  siblingApplySchema,
+  type CreateProductOutput,
+} from "@/app/(app)/products/new/schema";
 import { Routes } from "@/lib/routes";
-import { pgErrorCode, requireStockAccess, requireManager, toMoney } from "./common";
+import {
+  pgErrorCode,
+  requireStockAccess,
+  requireManager,
+  toMoney,
+} from "./common";
 
 /** Tạo nhóm hàng mới từ form (combobox "+ thêm"). Trả id. */
-export async function createCategory(name: string): Promise<ActionResult<{ id: string; name: string }>> {
-  { const gate = await requireStockAccess(); if (!gate.ok) return gate; }
+export async function createCategory(
+  name: string,
+): Promise<ActionResult<{ id: string; name: string }>> {
+  {
+    const gate = await requireStockAccess();
+    if (!gate.ok) return gate;
+  }
   const n = name.trim();
   if (!n) return { ok: false, error: "errors.invalidData" };
   try {
-    const [row] = await db.insert(categories).values({ name: n }).returning({ id: categories.id, name: categories.name });
+    const [row] = await db
+      .insert(categories)
+      .values({ name: n })
+      .returning({ id: categories.id, name: categories.name });
     revalidatePath(Routes.Products);
     return { ok: true, data: row };
-  } catch (e) { console.error("createCategory failed:", e); return { ok: false, error: "errors.serverError" }; }
+  } catch (e) {
+    console.error("createCategory failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
 }
 
 /** Tạo nhóm hàng có nhóm cha (trang quản lý danh mục). */
-export async function createCategoryNode(input: { name: string; parentId?: string | null }): Promise<ActionResult<{ id: string }>> {
-  { const gate = await requireStockAccess(); if (!gate.ok) return gate; }
+export async function createCategoryNode(input: {
+  name: string;
+  parentId?: string | null;
+}): Promise<ActionResult<{ id: string }>> {
+  {
+    const gate = await requireStockAccess();
+    if (!gate.ok) return gate;
+  }
   const n = input.name.trim();
   if (!n) return { ok: false, error: "errors.invalidData" };
   try {
-    const [row] = await db.insert(categories).values({ name: n, parentId: input.parentId || null }).returning({ id: categories.id });
+    const [row] = await db
+      .insert(categories)
+      .values({ name: n, parentId: input.parentId || null })
+      .returning({ id: categories.id });
     revalidatePath(Routes.Categories);
     revalidatePath(Routes.Products);
     return { ok: true, data: row };
-  } catch (e) { console.error("createCategoryNode failed:", e); return { ok: false, error: "errors.serverError" }; }
+  } catch (e) {
+    console.error("createCategoryNode failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
 }
 
 /** Đổi tên / đổi nhóm cha của danh mục. */
-export async function updateCategory(id: string, input: { name?: string; parentId?: string | null }): Promise<ActionResult> {
-  { const gate = await requireStockAccess(); if (!gate.ok) return gate; }
+export async function updateCategory(
+  id: string,
+  input: { name?: string; parentId?: string | null },
+): Promise<ActionResult> {
+  {
+    const gate = await requireStockAccess();
+    if (!gate.ok) return gate;
+  }
   const patch: { name?: string; parentId?: string | null } = {};
-  if (input.name !== undefined) { const n = input.name.trim(); if (!n) return { ok: false, error: "errors.invalidData" }; patch.name = n; }
-  if (input.parentId !== undefined) patch.parentId = input.parentId === id ? null : (input.parentId || null);
+  if (input.name !== undefined) {
+    const n = input.name.trim();
+    if (!n) return { ok: false, error: "errors.invalidData" };
+    patch.name = n;
+  }
+  if (input.parentId !== undefined)
+    patch.parentId = input.parentId === id ? null : input.parentId || null;
   try {
     await db.update(categories).set(patch).where(eq(categories.id, id));
     revalidatePath(Routes.Categories);
     revalidatePath(Routes.Products);
     return { ok: true, data: undefined };
-  } catch (e) { console.error("updateCategory failed:", e); return { ok: false, error: "errors.serverError" }; }
+  } catch (e) {
+    console.error("updateCategory failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
 }
 
 /** Xóa danh mục: SP về "chưa phân loại", nhóm con lên cấp gốc. */
 export async function deleteCategory(id: string): Promise<ActionResult> {
-  { const gate = await requireStockAccess(); if (!gate.ok) return gate; }
+  {
+    const gate = await requireStockAccess();
+    if (!gate.ok) return gate;
+  }
   try {
-    await db.update(products).set({ categoryId: null }).where(eq(products.categoryId, id));
-    await db.update(categories).set({ parentId: null }).where(eq(categories.parentId, id));
+    await db
+      .update(products)
+      .set({ categoryId: null })
+      .where(eq(products.categoryId, id));
+    await db
+      .update(categories)
+      .set({ parentId: null })
+      .where(eq(categories.parentId, id));
     await db.delete(categories).where(eq(categories.id, id));
     revalidatePath(Routes.Categories);
     revalidatePath(Routes.Products);
     return { ok: true, data: undefined };
-  } catch (e) { console.error("deleteCategory failed:", e); return { ok: false, error: "errors.serverError" }; }
+  } catch (e) {
+    console.error("deleteCategory failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
 }
 
 /** Tạo thương hiệu mới từ form. Trả id. */
-export async function createBrand(name: string): Promise<ActionResult<{ id: string; name: string }>> {
-  { const gate = await requireStockAccess(); if (!gate.ok) return gate; }
+export async function createBrand(
+  name: string,
+): Promise<ActionResult<{ id: string; name: string }>> {
+  {
+    const gate = await requireStockAccess();
+    if (!gate.ok) return gate;
+  }
   const n = name.trim();
   if (!n) return { ok: false, error: "errors.invalidData" };
   try {
-    const [existing] = await db.select({ id: brands.id, name: brands.name }).from(brands).where(eq(brands.name, n)).limit(1);
+    const [existing] = await db
+      .select({ id: brands.id, name: brands.name })
+      .from(brands)
+      .where(eq(brands.name, n))
+      .limit(1);
     if (existing) return { ok: true, data: existing };
-    const [row] = await db.insert(brands).values({ name: n }).returning({ id: brands.id, name: brands.name });
+    const [row] = await db
+      .insert(brands)
+      .values({ name: n })
+      .returning({ id: brands.id, name: brands.name });
     revalidatePath(Routes.Products);
     return { ok: true, data: row };
-  } catch (e) { console.error("createBrand failed:", e); return { ok: false, error: "errors.serverError" }; }
+  } catch (e) {
+    console.error("createBrand failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
 }
 
 export type ActionResult<T = undefined> =
@@ -97,36 +180,57 @@ function childProductName(parentName: string, variantName: string) {
 function baseNameFromChildName(name: string, variantName: string | null) {
   if (!variantName) return name.trim();
   const suffix = ` - ${variantName}`;
-  return name.endsWith(suffix) ? name.slice(0, -suffix.length).trim() : name.trim();
+  return name.endsWith(suffix)
+    ? name.slice(0, -suffix.length).trim()
+    : name.trim();
 }
 
 function specsFromAttributes(
   attributes: CreateProductOutput["attributes"],
-  options: { includeVariantAttributes?: boolean } = {}
+  options: { includeVariantAttributes?: boolean } = {},
 ) {
   const entries = attributes
-    .filter((a) => a.name.trim() && (options.includeVariantAttributes || !a.createsVariants))
+    .filter(
+      (a) =>
+        a.name.trim() &&
+        (options.includeVariantAttributes || !a.createsVariants),
+    )
     .map((a) => [a.name.trim(), a.values] as const);
   return entries.length > 0 ? Object.fromEntries(entries) : null;
 }
 
+const PRODUCT_ORDER_NOTE_SPEC_KEY = "__orderNote";
+
+function specsWithOrderNote(
+  specs: Record<string, string[]> | null,
+  invoiceNote: string | null | undefined,
+) {
+  const note = invoiceNote?.trim();
+  const next = { ...(specs ?? {}) };
+  if (note) next[PRODUCT_ORDER_NOTE_SPEC_KEY] = [note];
+  else delete next[PRODUCT_ORDER_NOTE_SPEC_KEY];
+  return Object.keys(next).length > 0 ? next : null;
+}
+
 function mergeSpecs(
   base: Record<string, string[]> | null,
-  extra: Record<string, string[]> | null | undefined
+  extra: Record<string, string[]> | null | undefined,
 ) {
   const merged = { ...(base ?? {}), ...(extra ?? {}) };
   return Object.keys(merged).length > 0 ? merged : null;
 }
 
 function buildDimensions(v: CreateProductOutput): string | null {
-  const parts = [v.width, v.length, v.thickness].filter((n): n is number => n != null && n > 0);
+  const parts = [v.width, v.length, v.thickness].filter(
+    (n): n is number => n != null && n > 0,
+  );
   if (parts.length === 0) return null;
   return `${parts.join("×")}${v.dimUnit}`;
 }
 
 async function syncProductPriceBookPrices(
   productId: string,
-  input: Record<string, number | null | undefined> | undefined
+  input: Record<string, number | null | undefined> | undefined,
 ) {
   const entries = Object.entries(input ?? {});
   if (entries.length === 0) return;
@@ -138,16 +242,22 @@ async function syncProductPriceBookPrices(
     .select({ id: priceBooks.id, isDefault: priceBooks.isDefault })
     .from(priceBooks)
     .where(inArray(priceBooks.id, bookIds));
-  const nonDefaultIds = new Set(validBooks.filter((book) => !book.isDefault).map((book) => book.id));
+  const nonDefaultIds = new Set(
+    validBooks.filter((book) => !book.isDefault).map((book) => book.id),
+  );
 
   const toDelete = entries
     .filter(([bookId, price]) => nonDefaultIds.has(bookId) && price == null)
     .map(([bookId]) => bookId);
   if (toDelete.length > 0) {
-    await db.delete(productPrices).where(and(
-      eq(productPrices.productId, productId),
-      inArray(productPrices.priceBookId, toDelete)
-    ));
+    await db
+      .delete(productPrices)
+      .where(
+        and(
+          eq(productPrices.productId, productId),
+          inArray(productPrices.priceBookId, toDelete),
+        ),
+      );
   }
 
   const toUpsert = entries
@@ -158,7 +268,8 @@ async function syncProductPriceBookPrices(
       price: toMoney(Math.max(0, Number(price))),
     }));
   if (toUpsert.length > 0) {
-    await db.insert(productPrices)
+    await db
+      .insert(productPrices)
       .values(toUpsert)
       .onConflictDoUpdate({
         target: [productPrices.priceBookId, productPrices.productId],
@@ -169,7 +280,8 @@ async function syncProductPriceBookPrices(
 
 /** m²/base-unit từ kích thước (gạch): width × length, đổi về mét. */
 function computeM2PerUnit(v: CreateProductOutput): string | null {
-  if (v.width == null || v.length == null || v.width <= 0 || v.length <= 0) return null;
+  if (v.width == null || v.length == null || v.width <= 0 || v.length <= 0)
+    return null;
   const factor = v.dimUnit === "mm" ? 0.001 : v.dimUnit === "cm" ? 0.01 : 1;
   const m2 = v.width * factor * (v.length * factor);
   return m2 > 0 ? m2.toFixed(4) : null;
@@ -185,8 +297,13 @@ const updatePricesSchema = z.object({
 export type UpdatePricesInput = z.input<typeof updatePricesSchema>;
 
 /** Thiết lập giá: cập nhật 4 bảng giá của 1 SP (trang /pricing). */
-export async function updateProductPrices(input: UpdatePricesInput): Promise<ActionResult> {
-  { const gate = await requireManager(); if (!gate.ok) return gate; }
+export async function updateProductPrices(
+  input: UpdatePricesInput,
+): Promise<ActionResult> {
+  {
+    const gate = await requireManager();
+    if (!gate.ok) return gate;
+  }
   try {
   } catch {
     return { ok: false, error: "errors.unauthorized" };
@@ -196,13 +313,18 @@ export async function updateProductPrices(input: UpdatePricesInput): Promise<Act
   const v = parsed.data;
 
   try {
-    await db.update(products).set({
-      retailPrice: String(v.retailPrice),
-      wholesalePrice: v.wholesalePrice != null ? String(v.wholesalePrice) : null,
-      contractorPrice: v.contractorPrice != null ? String(v.contractorPrice) : null,
-      agentPrice: v.agentPrice != null ? String(v.agentPrice) : null,
-      updatedAt: sql`now()`,
-    }).where(eq(products.id, v.productId));
+    await db
+      .update(products)
+      .set({
+        retailPrice: String(v.retailPrice),
+        wholesalePrice:
+          v.wholesalePrice != null ? String(v.wholesalePrice) : null,
+        contractorPrice:
+          v.contractorPrice != null ? String(v.contractorPrice) : null,
+        agentPrice: v.agentPrice != null ? String(v.agentPrice) : null,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(products.id, v.productId));
 
     revalidatePath("/pricing");
     revalidatePath(Routes.Products);
@@ -228,19 +350,23 @@ const updateProductSchema = z.object({
   wholesalePrice: z.number().min(0).nullable(),
   contractorPrice: z.number().min(0).nullable(),
   agentPrice: z.number().min(0).nullable(),
-  priceBookPrices: z.record(z.string(), z.number().min(0).nullable()).default({}),
+  priceBookPrices: z
+    .record(z.string(), z.number().min(0).nullable())
+    .default({}),
   location: z.string().trim().optional(),
   description: z.string().trim().optional(),
   imageUrls: z.array(z.string()).optional(),
   isActive: z.boolean(),
   specs: z.record(z.string(), z.array(z.string())).nullable(),
   applyToSiblings: siblingApplySchema.optional(),
-  units: z.array(z.object({
-    unitName: z.string().trim().min(1),
-    multiplier: z.number().positive(),
-    barcode: z.string().trim().optional(),
-    priceOverride: z.number().min(0).nullable(),
-  })),
+  units: z.array(
+    z.object({
+      unitName: z.string().trim().min(1),
+      multiplier: z.number().positive(),
+      barcode: z.string().trim().optional(),
+      priceOverride: z.number().min(0).nullable(),
+    }),
+  ),
 });
 export type UpdateProductInput = z.input<typeof updateProductSchema>;
 
@@ -248,7 +374,10 @@ const productIdSchema = z.uuid();
 
 /** Xóa hàng hóa nếu chưa phát sinh chứng từ/thẻ kho liên quan. */
 export async function deleteProduct(id: string): Promise<ActionResult> {
-  { const gate = await requireStockAccess(); if (!gate.ok) return gate; }
+  {
+    const gate = await requireStockAccess();
+    if (!gate.ok) return gate;
+  }
   const parsed = productIdSchema.safeParse(id);
   if (!parsed.success) return { ok: false, error: "errors.invalidData" };
 
@@ -262,7 +391,9 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
       if (!target) return;
 
       if (target.isVariantParent) {
-        await tx.delete(products).where(eq(products.parentProductId, target.id));
+        await tx
+          .delete(products)
+          .where(eq(products.parentProductId, target.id));
       }
       await tx.delete(products).where(eq(products.id, target.id));
     });
@@ -271,7 +402,8 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
     revalidatePath(Routes.POS);
     return { ok: true, data: undefined };
   } catch (e) {
-    if (pgErrorCode(e) === "23503") return { ok: false, error: "products.errors.cannotDeleteReferenced" };
+    if (pgErrorCode(e) === "23503")
+      return { ok: false, error: "products.errors.cannotDeleteReferenced" };
     console.error("deleteProduct failed:", e);
     return { ok: false, error: "errors.serverError" };
   }
@@ -283,8 +415,13 @@ const setProductActiveSchema = z.object({
 });
 
 /** Bật/tắt kinh doanh. Với nhóm biến thể, áp dụng cho cả nhóm con. */
-export async function setProductActive(input: z.input<typeof setProductActiveSchema>): Promise<ActionResult> {
-  { const gate = await requireStockAccess(); if (!gate.ok) return gate; }
+export async function setProductActive(
+  input: z.input<typeof setProductActiveSchema>,
+): Promise<ActionResult> {
+  {
+    const gate = await requireStockAccess();
+    if (!gate.ok) return gate;
+  }
   const parsed = setProductActiveSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "errors.invalidData" };
   const v = parsed.data;
@@ -297,14 +434,20 @@ export async function setProductActive(input: z.input<typeof setProductActiveSch
       .limit(1);
     if (!target) return { ok: false, error: "errors.invalidData" };
 
-    await db.update(products).set({
-      isActive: v.isActive,
-      updatedAt: sql`now()`,
-    }).where(
-      target.isVariantParent
-        ? or(eq(products.id, target.id), eq(products.parentProductId, target.id))
-        : eq(products.id, target.id)
-    );
+    await db
+      .update(products)
+      .set({
+        isActive: v.isActive,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        target.isVariantParent
+          ? or(
+              eq(products.id, target.id),
+              eq(products.parentProductId, target.id),
+            )
+          : eq(products.id, target.id),
+      );
 
     revalidatePath(Routes.Products);
     revalidatePath(Routes.Inventory);
@@ -318,8 +461,13 @@ export async function setProductActive(input: z.input<typeof setProductActiveSch
 }
 
 /** Cập nhật thông tin SP (không đụng tồn kho — tồn quản lý ở Kho/Kiểm kho). */
-export async function updateProduct(input: UpdateProductInput): Promise<ActionResult> {
-  { const gate = await requireStockAccess(); if (!gate.ok) return gate; }
+export async function updateProduct(
+  input: UpdateProductInput,
+): Promise<ActionResult> {
+  {
+    const gate = await requireStockAccess();
+    if (!gate.ok) return gate;
+  }
   try {
   } catch {
     return { ok: false, error: "errors.unauthorized" };
@@ -339,105 +487,162 @@ export async function updateProduct(input: UpdateProductInput): Promise<ActionRe
         .where(eq(products.id, v.id))
         .limit(1);
 
-      await tx.update(products).set({
-        sku: v.sku,
-        barcode: v.barcode || null,
-        name: v.name,
-        categoryId: v.categoryId || null,
-        brandId: v.brandId || null,
-        ...(v.supplierIds ? { supplierId: v.supplierIds[0] || null } : {}),
-        baseUnit: v.baseUnit,
-        costPrice: String(v.costPrice),
-        retailPrice: String(v.retailPrice),
-        wholesalePrice: v.wholesalePrice != null ? String(v.wholesalePrice) : null,
-        contractorPrice: v.contractorPrice != null ? String(v.contractorPrice) : null,
-        agentPrice: v.agentPrice != null ? String(v.agentPrice) : null,
-        location: v.location || null,
-        description: v.description || null,
-        ...(v.imageUrls ? { imageUrls: v.imageUrls } : {}),
-        specs: v.specs && Object.keys(v.specs).length > 0 ? v.specs : null,
-        isActive: v.isActive,
-        updatedAt: sql`now()`,
-      }).where(eq(products.id, v.id));
+      await tx
+        .update(products)
+        .set({
+          sku: v.sku,
+          barcode: v.barcode || null,
+          name: v.name,
+          categoryId: v.categoryId || null,
+          brandId: v.brandId || null,
+          ...(v.supplierIds ? { supplierId: v.supplierIds[0] || null } : {}),
+          baseUnit: v.baseUnit,
+          costPrice: String(v.costPrice),
+          retailPrice: String(v.retailPrice),
+          wholesalePrice:
+            v.wholesalePrice != null ? String(v.wholesalePrice) : null,
+          contractorPrice:
+            v.contractorPrice != null ? String(v.contractorPrice) : null,
+          agentPrice: v.agentPrice != null ? String(v.agentPrice) : null,
+          location: v.location || null,
+          description: v.description || null,
+          ...(v.imageUrls ? { imageUrls: v.imageUrls } : {}),
+          specs: v.specs && Object.keys(v.specs).length > 0 ? v.specs : null,
+          isActive: v.isActive,
+          updatedAt: sql`now()`,
+        })
+        .where(eq(products.id, v.id));
 
       // thay toàn bộ đơn vị quy đổi
       await tx.delete(productUnits).where(eq(productUnits.productId, v.id));
       const valid = v.units.filter((u) => u.unitName && u.multiplier > 0);
       if (valid.length > 0) {
-        await tx.insert(productUnits).values(valid.map((u, i) => ({
-          productId: v.id,
-          unitName: u.unitName,
-          multiplier: String(u.multiplier),
-          barcode: u.barcode || null,
-          priceOverride: u.priceOverride != null ? String(u.priceOverride) : null,
-          sortOrder: i,
-        })));
+        await tx.insert(productUnits).values(
+          valid.map((u, i) => ({
+            productId: v.id,
+            unitName: u.unitName,
+            multiplier: String(u.multiplier),
+            barcode: u.barcode || null,
+            priceOverride:
+              u.priceOverride != null ? String(u.priceOverride) : null,
+            sortOrder: i,
+          })),
+        );
       }
 
       // NCC do nhập hàng tự gắn — chỉ đồng bộ khi form gửi supplierIds
       if (v.supplierIds) {
-        await tx.delete(productSuppliers).where(eq(productSuppliers.productId, v.id));
+        await tx
+          .delete(productSuppliers)
+          .where(eq(productSuppliers.productId, v.id));
         const sids = [...new Set(v.supplierIds.filter(Boolean))];
         if (sids.length > 0) {
-          await tx.insert(productSuppliers).values(
-            sids.map((sid, i) => ({ productId: v.id, supplierId: sid, isPrimary: i === 0 }))
-          );
+          await tx
+            .insert(productSuppliers)
+            .values(
+              sids.map((sid, i) => ({
+                productId: v.id,
+                supplierId: sid,
+                isPrimary: i === 0,
+              })),
+            );
         }
       }
 
       const apply = v.applyToSiblings;
-      if (apply?.enabled && apply.fields.length > 0 && current?.parentProductId) {
+      if (
+        apply?.enabled &&
+        apply.fields.length > 0 &&
+        current?.parentProductId
+      ) {
         const fields = new Set(apply.fields);
         const siblingRows = await tx
           .select({ id: products.id, variantName: products.variantName })
           .from(products)
-          .where(and(eq(products.parentProductId, current.parentProductId), ne(products.id, v.id)));
+          .where(
+            and(
+              eq(products.parentProductId, current.parentProductId),
+              ne(products.id, v.id),
+            ),
+          );
 
-        const patch: Partial<typeof products.$inferInsert> = { updatedAt: sql`now()` as unknown as Date };
-        if (fields.has("description")) patch.description = v.description || null;
-        if (fields.has("imageUrls") && v.imageUrls) patch.imageUrls = v.imageUrls;
+        const patch: Partial<typeof products.$inferInsert> = {
+          updatedAt: sql`now()` as unknown as Date,
+        };
+        if (fields.has("description"))
+          patch.description = v.description || null;
+        if (fields.has("imageUrls") && v.imageUrls)
+          patch.imageUrls = v.imageUrls;
         if (fields.has("category")) patch.categoryId = v.categoryId || null;
         if (fields.has("brand")) patch.brandId = v.brandId || null;
         if (fields.has("directSale")) patch.isActive = v.isActive;
-        if (fields.has("attributes")) patch.specs = v.specs && Object.keys(v.specs).length > 0 ? v.specs : null;
+        if (fields.has("attributes"))
+          patch.specs =
+            v.specs && Object.keys(v.specs).length > 0 ? v.specs : null;
         if (fields.has("pricing")) {
           patch.costPrice = String(v.costPrice);
           patch.retailPrice = String(v.retailPrice);
-          patch.wholesalePrice = v.wholesalePrice != null ? String(v.wholesalePrice) : null;
-          patch.contractorPrice = v.contractorPrice != null ? String(v.contractorPrice) : null;
+          patch.wholesalePrice =
+            v.wholesalePrice != null ? String(v.wholesalePrice) : null;
+          patch.contractorPrice =
+            v.contractorPrice != null ? String(v.contractorPrice) : null;
           patch.agentPrice = v.agentPrice != null ? String(v.agentPrice) : null;
         }
         if (fields.has("units")) patch.baseUnit = v.baseUnit;
 
-        const baseName = fields.has("name") ? baseNameFromChildName(v.name, current.variantName) : null;
+        const baseName = fields.has("name")
+          ? baseNameFromChildName(v.name, current.variantName)
+          : null;
         if (baseName) {
-          await tx.update(products).set({ name: baseName, updatedAt: sql`now()` }).where(eq(products.id, current.parentProductId));
-          await tx.update(products).set({
-            name: current.variantName ? childProductName(baseName, current.variantName) : baseName,
-            updatedAt: sql`now()`,
-          }).where(eq(products.id, v.id));
+          await tx
+            .update(products)
+            .set({ name: baseName, updatedAt: sql`now()` })
+            .where(eq(products.id, current.parentProductId));
+          await tx
+            .update(products)
+            .set({
+              name: current.variantName
+                ? childProductName(baseName, current.variantName)
+                : baseName,
+              updatedAt: sql`now()`,
+            })
+            .where(eq(products.id, v.id));
         }
 
         const hasPatch = Object.keys(patch).length > 1;
         for (const sibling of siblingRows) {
           const nextPatch = {
             ...(hasPatch ? patch : {}),
-            ...(baseName ? { name: sibling.variantName ? childProductName(baseName, sibling.variantName) : baseName } : {}),
+            ...(baseName
+              ? {
+                  name: sibling.variantName
+                    ? childProductName(baseName, sibling.variantName)
+                    : baseName,
+                }
+              : {}),
             updatedAt: sql`now()`,
           };
-          await tx.update(products).set(nextPatch).where(eq(products.id, sibling.id));
+          await tx
+            .update(products)
+            .set(nextPatch)
+            .where(eq(products.id, sibling.id));
 
           if (fields.has("units")) {
-            await tx.delete(productUnits).where(eq(productUnits.productId, sibling.id));
+            await tx
+              .delete(productUnits)
+              .where(eq(productUnits.productId, sibling.id));
             if (valid.length > 0) {
-              await tx.insert(productUnits).values(valid.map((u, i) => ({
-                productId: sibling.id,
-                unitName: u.unitName,
-                multiplier: String(u.multiplier),
-                barcode: u.barcode || null,
-                priceOverride: u.priceOverride != null ? String(u.priceOverride) : null,
-                sortOrder: i,
-              })));
+              await tx.insert(productUnits).values(
+                valid.map((u, i) => ({
+                  productId: sibling.id,
+                  unitName: u.unitName,
+                  multiplier: String(u.multiplier),
+                  barcode: u.barcode || null,
+                  priceOverride:
+                    u.priceOverride != null ? String(u.priceOverride) : null,
+                  sortOrder: i,
+                })),
+              );
             }
           }
         }
@@ -453,14 +658,15 @@ export async function updateProduct(input: UpdateProductInput): Promise<ActionRe
     return { ok: true, data: undefined };
   } catch (e) {
     const cause = (e as { cause?: { code?: string } }).cause;
-    if (cause?.code === "23505") return { ok: false, error: "products.errors.skuExists" };
+    if (cause?.code === "23505")
+      return { ok: false, error: "products.errors.skuExists" };
     console.error("updateProduct failed:", e);
     return { ok: false, error: "errors.serverError" };
   }
 }
 
 export async function createProduct(
-  input: CreateProductOutput
+  input: CreateProductOutput,
 ): Promise<ActionResult<{ id: string }>> {
   const gate = await requireStockAccess();
   if (!gate.ok) return gate;
@@ -473,11 +679,26 @@ export async function createProduct(
   const v = parsed.data;
 
   const sku = v.sku?.trim() || generateSku();
-  const weightKg = v.weight != null ? (v.weightUnit === "g" ? v.weight / 1000 : v.weight) : null;
-  const descriptiveSpecs = specsFromAttributes(v.attributes, { includeVariantAttributes: false });
-  const singleProductSpecs = specsFromAttributes(v.attributes, { includeVariantAttributes: true });
-  const variantChildren = v.variantChildren.filter((child) => child.variantName.trim());
-  const validUnits = v.units.filter((u) => u.unitName.trim() && u.multiplier > 0);
+  const weightKg =
+    v.weight != null
+      ? v.weightUnit === "g"
+        ? v.weight / 1000
+        : v.weight
+      : null;
+  const descriptiveSpecs = specsWithOrderNote(
+    specsFromAttributes(v.attributes, { includeVariantAttributes: false }),
+    v.invoiceNote,
+  );
+  const singleProductSpecs = specsWithOrderNote(
+    specsFromAttributes(v.attributes, { includeVariantAttributes: true }),
+    v.invoiceNote,
+  );
+  const variantChildren = v.variantChildren.filter((child) =>
+    child.variantName.trim(),
+  );
+  const validUnits = v.units.filter(
+    (u) => u.unitName.trim() && u.multiplier > 0,
+  );
   const supplierIds = [...new Set(v.supplierIds.filter(Boolean))];
 
   try {
@@ -490,17 +711,24 @@ export async function createProduct(
             unitName: u.unitName.trim(),
             multiplier: String(u.multiplier),
             barcode: u.barcode?.trim() || null,
-            priceOverride: u.priceOverride != null ? String(u.priceOverride) : null,
+            priceOverride:
+              u.priceOverride != null ? String(u.priceOverride) : null,
             sortOrder: i,
-          }))
+          })),
         );
       }
 
       async function insertSuppliers(productId: string) {
         if (supplierIds.length === 0) return;
-        await tx.insert(productSuppliers).values(
-          supplierIds.map((sid, i) => ({ productId, supplierId: sid, isPrimary: i === 0 }))
-        );
+        await tx
+          .insert(productSuppliers)
+          .values(
+            supplierIds.map((sid, i) => ({
+              productId,
+              supplierId: sid,
+              isPrimary: i === 0,
+            })),
+          );
       }
 
       const [defaultWh] = await tx
@@ -516,7 +744,12 @@ export async function createProduct(
             .limit(1)
         : [null];
 
-      async function insertInitialStock(productId: string, quantity: number, minLevel: number, unitCost: number) {
+      async function insertInitialStock(
+        productId: string,
+        quantity: number,
+        minLevel: number,
+        unitCost: number,
+      ) {
         if (!defaultWh) return;
         await tx.insert(stockLevels).values({
           productId,
@@ -554,8 +787,10 @@ export async function createProduct(
             baseUnit: v.baseUnit || "cái",
             costPrice: String(v.costPrice),
             retailPrice: String(v.retailPrice),
-            wholesalePrice: v.wholesalePrice != null ? String(v.wholesalePrice) : null,
-            contractorPrice: v.contractorPrice != null ? String(v.contractorPrice) : null,
+            wholesalePrice:
+              v.wholesalePrice != null ? String(v.wholesalePrice) : null,
+            contractorPrice:
+              v.contractorPrice != null ? String(v.contractorPrice) : null,
             agentPrice: v.agentPrice != null ? String(v.agentPrice) : null,
             m2PerUnit: computeM2PerUnit(v),
             location: v.location?.trim() || null,
@@ -569,7 +804,12 @@ export async function createProduct(
 
         await insertUnits(product.id);
         await insertSuppliers(product.id);
-        await insertInitialStock(product.id, v.initialStock, v.minLevel, v.costPrice);
+        await insertInitialStock(
+          product.id,
+          v.initialStock,
+          v.minLevel,
+          v.costPrice,
+        );
         return product;
       }
 
@@ -586,8 +826,10 @@ export async function createProduct(
           baseUnit: v.baseUnit || "cái",
           costPrice: String(v.costPrice),
           retailPrice: String(v.retailPrice),
-          wholesalePrice: v.wholesalePrice != null ? String(v.wholesalePrice) : null,
-          contractorPrice: v.contractorPrice != null ? String(v.contractorPrice) : null,
+          wholesalePrice:
+            v.wholesalePrice != null ? String(v.wholesalePrice) : null,
+          contractorPrice:
+            v.contractorPrice != null ? String(v.contractorPrice) : null,
           agentPrice: v.agentPrice != null ? String(v.agentPrice) : null,
           m2PerUnit: computeM2PerUnit(v),
           location: v.location?.trim() || null,
@@ -604,9 +846,16 @@ export async function createProduct(
       await insertSuppliers(parent.id);
 
       for (const [index, child] of variantChildren.entries()) {
-        const childWholesale = child.wholesalePrice != null ? child.wholesalePrice : v.wholesalePrice;
-        const childContractor = child.contractorPrice != null ? child.contractorPrice : v.contractorPrice;
-        const childAgent = child.agentPrice != null ? child.agentPrice : v.agentPrice;
+        const childWholesale =
+          child.wholesalePrice != null
+            ? child.wholesalePrice
+            : v.wholesalePrice;
+        const childContractor =
+          child.contractorPrice != null
+            ? child.contractorPrice
+            : v.contractorPrice;
+        const childAgent =
+          child.agentPrice != null ? child.agentPrice : v.agentPrice;
         const [childProduct] = await tx
           .insert(products)
           .values({
@@ -622,22 +871,30 @@ export async function createProduct(
             baseUnit: child.baseUnit || v.baseUnit || "cái",
             costPrice: String(child.costPrice),
             retailPrice: String(child.retailPrice),
-            wholesalePrice: childWholesale != null ? String(childWholesale) : null,
-            contractorPrice: childContractor != null ? String(childContractor) : null,
+            wholesalePrice:
+              childWholesale != null ? String(childWholesale) : null,
+            contractorPrice:
+              childContractor != null ? String(childContractor) : null,
             agentPrice: childAgent != null ? String(childAgent) : null,
             m2PerUnit: computeM2PerUnit(v),
             location: v.location?.trim() || null,
             weight: weightKg != null ? String(weightKg) : null,
             dimensions: buildDimensions(v),
             specs: mergeSpecs(descriptiveSpecs, child.specs),
-            imageUrls: child.imageUrls.length > 0 ? child.imageUrls : v.imageUrls,
+            imageUrls:
+              child.imageUrls.length > 0 ? child.imageUrls : v.imageUrls,
             isActive: child.directSale,
           })
           .returning({ id: products.id });
 
         await insertUnits(childProduct.id);
         await insertSuppliers(childProduct.id);
-        await insertInitialStock(childProduct.id, child.initialStock, child.minLevel, child.costPrice);
+        await insertInitialStock(
+          childProduct.id,
+          child.initialStock,
+          child.minLevel,
+          child.costPrice,
+        );
       }
 
       return parent;
@@ -652,7 +909,8 @@ export async function createProduct(
     return { ok: true, data: { id: result.id } };
   } catch (e) {
     // Drizzle bọc lỗi PG vào DrizzleQueryError — lỗi gốc nằm ở e.cause
-    const cause = (e as { cause?: { code?: string; constraint_name?: string } }).cause;
+    const cause = (e as { cause?: { code?: string; constraint_name?: string } })
+      .cause;
     const msg = e instanceof Error ? e.message : "";
     if (
       cause?.code === "23505" || // unique_violation

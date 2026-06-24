@@ -2,13 +2,18 @@ import type { ProductDetail } from "@/lib/data/products";
 import type { CreateProductInput } from "./new/schema";
 
 type ProductSeedMode = "edit" | "copy" | "sameType";
+const PRODUCT_ORDER_NOTE_SPEC_KEY = "__orderNote";
 
 export function productToFormInitialValues(
   product: ProductDetail,
   mode: ProductSeedMode = "edit",
-  priceBookPrices: Record<string, string | number | null | undefined> = {}
+  priceBookPrices: Record<string, string | number | null | undefined> = {},
 ): Partial<CreateProductInput> {
   const specs = (product.specs as Record<string, string[]> | null) ?? {};
+  const orderNote = specs[PRODUCT_ORDER_NOTE_SPEC_KEY]?.[0] ?? "";
+  const attributeSpecs = Object.entries(specs).filter(
+    ([name]) => name !== PRODUCT_ORDER_NOTE_SPEC_KEY,
+  );
   const shared: Partial<CreateProductInput> = {
     categoryId: product.categoryId ?? "",
     brandId: product.brandId ?? "",
@@ -16,14 +21,16 @@ export function productToFormInitialValues(
     baseUnit: product.baseUnit,
     costPrice: Number(product.costPrice),
     retailPrice: Number(product.retailPrice),
-    wholesalePrice: product.wholesalePrice != null ? Number(product.wholesalePrice) : null,
-    contractorPrice: product.contractorPrice != null ? Number(product.contractorPrice) : null,
+    wholesalePrice:
+      product.wholesalePrice != null ? Number(product.wholesalePrice) : null,
+    contractorPrice:
+      product.contractorPrice != null ? Number(product.contractorPrice) : null,
     agentPrice: product.agentPrice != null ? Number(product.agentPrice) : null,
     priceBookPrices: Object.fromEntries(
       Object.entries(priceBookPrices).map(([bookId, price]) => [
         bookId,
         price != null ? Number(price) : null,
-      ])
+      ]),
     ),
     units: product.units.map((u) => ({
       unitName: u.unitName,
@@ -31,7 +38,7 @@ export function productToFormInitialValues(
       barcode: mode === "copy" ? "" : (u.barcode ?? ""),
       priceOverride: u.priceOverride != null ? Number(u.priceOverride) : null,
     })),
-    attributes: Object.entries(specs).map(([name, values]) => ({
+    attributes: attributeSpecs.map(([name, values]) => ({
       name,
       values: Array.isArray(values) ? values : [String(values)],
       createsVariants: false,
@@ -47,6 +54,7 @@ export function productToFormInitialValues(
       imageUrls: [],
       location: product.location ?? "",
       description: "",
+      invoiceNote: "",
       directSale: true,
       initialStock: 0,
     };
@@ -60,6 +68,7 @@ export function productToFormInitialValues(
     imageUrls: product.imageUrls ?? [],
     location: product.location ?? "",
     description: product.description ?? "",
+    invoiceNote: orderNote,
     directSale: product.isActive,
     initialStock: 0,
   };
