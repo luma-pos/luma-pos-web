@@ -271,17 +271,27 @@ function ProductActionBar({ product }: { product: ProductRow }) {
     });
   }
 
+  function productModalHref(patch: Record<string, string>) {
+    const sp = new URLSearchParams(params.toString());
+    sp.set("tab", "products");
+    sp.delete("productId");
+    sp.delete("copyFrom");
+    sp.delete("sameTypeAs");
+    for (const [key, value] of Object.entries(patch)) sp.set(key, value);
+    return `${pathname}?${sp.toString()}`;
+  }
+
   return (
     <div className="border-t border-border-soft pt-4">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-wrap gap-2">
           <ActionButton icon={Trash2} label={t("products.actions.delete")} onClick={removeProduct} disabled={pending} tone="danger" />
-          <ActionLink icon={Copy} label={t("products.actions.copy")} href={Routes.productCopy(product.id)} />
+          <ActionLink icon={Copy} label={t("products.actions.copy")} href={productModalHref({ productModal: "copy", copyFrom: product.id })} />
         </div>
         <div className="flex flex-wrap gap-2 xl:justify-end">
-          <ActionLink icon={Pencil} label={t("products.actions.edit")} href={Routes.productEdit(product.id)} tone="primary" />
+          <ActionLink icon={Pencil} label={t("products.actions.edit")} href={productModalHref({ productModal: "edit", productId: product.id })} tone="primary" />
           <ActionLink icon={Barcode} label={t("products.actions.printLabels")} href={Routes.productLabels(product.id)} />
-          <ActionLink icon={Plus} label={t("products.actions.addSameType")} href={Routes.productSameType(sameTypeSourceId)} />
+          <ActionLink icon={Plus} label={t("products.actions.addSameType")} href={productModalHref({ productModal: "sameType", sameTypeAs: sameTypeSourceId })} />
           <ActionLink icon={PackagePlus} label={t("products.actions.purchase")} href={Routes.purchaseNewForProduct(product.id)} />
           <ActionButton
             icon={Ban}

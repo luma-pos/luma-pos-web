@@ -1,19 +1,25 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Plus, Search, PackageOpen } from "lucide-react";
 import { Routes } from "@/lib/routes";
-import { getProducts, getProductFormOptions } from "@/lib/data/products";
+import { getProduct, getProducts, getProductFormOptions } from "@/lib/data/products";
+import { getPriceBooks, getPriceOverridesForProducts } from "@/lib/data/price-books";
 import { Pagination } from "@/components/pagination";
 import { parsePageSize } from "@/lib/pagination";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ProductsTable } from "./products-table";
+import { NewProductForm } from "../../products/new/product-form";
+import { productToFormInitialValues } from "../../products/product-form-values";
 
 type SP = Record<string, string | undefined>;
 const STATUSES = ["active", "inactive", "all"] as const;
 type Status = (typeof STATUSES)[number];
 const VIEWS = ["grouped", "flat"] as const;
 type View = (typeof VIEWS)[number];
+const PRODUCT_MODAL_KEYS = ["productModal", "productId", "copyFrom", "sameTypeAs"] as const;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function ProductsTab({ searchParams }: { searchParams: SP }) {
   const t = await getTranslations();
@@ -27,7 +33,7 @@ export async function ProductsTab({ searchParams }: { searchParams: SP }) {
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
         <div className="flex items-center gap-2">
           <Link href={Routes.Categories} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border text-sm font-medium hover:bg-surface-2">{t("categories.title")}</Link>
-          <Link href={Routes.ProductNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 hover:brightness-110 text-white text-sm font-medium transition active:scale-[0.98]"><Plus className="w-4 h-4" />{t("products.createNew")}</Link>
+          <Link href={productModalHref(params, { productModal: "create" })} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 hover:brightness-110 text-white text-sm font-medium transition active:scale-[0.98]"><Plus className="w-4 h-4" />{t("products.createNew")}</Link>
         </div>
       </div>
 
@@ -56,8 +62,70 @@ export async function ProductsTab({ searchParams }: { searchParams: SP }) {
       <Suspense fallback={<TableSkeleton cols={8} rows={10} />}>
         <ProductsContent searchParams={searchParams} />
       </Suspense>
+
+      <ProductEditorModal searchParams={params} />
     </>
   );
+}
+
+async function ProductEditorModal({ searchParams }: { searchParams: SP }) {
+  const modal = searchParams.productModal;
+  if (!modal) return null;
+  if (!["create", "edit", "copy", "sameType"].includes(modal)) return null;
+
+  const editId = modal === "edit" ? searchParams.productId : undefined;
+  const copyFrom = modal === "copy" ? searchParams.copyFrom : undefined;
+  const sameTypeAs = modal === "sameType" ? searchParams.sameTypeAs : undefined;
+  const seedId = editId ?? copyFrom ?? sameTypeAs;
+  if (seedId && !UUID_RE.test(seedId)) notFound();
+
+  const [options, priceBooks, seedProduct] = await Promise.all([
+    getProductFormOptions(),
+    getPriceBooks(),
+    seedId ? getProduct(seedId) : Promise.resolve(null),
+  ]);
+  if (seedId && !seedProduct) notFound();
+
+  const priceOverridesByBook = seedProduct ? await getPriceOverridesForProducts([seedProduct.id]) : {};
+  const priceBookPrices = seedProduct
+    ? Object.fromEntries(Object.entries(priceOverridesByBook).map(([bookId, prices]) => [bookId, prices[seedProduct.id]]))
+    : {};
+  const closeHref = productModalHref(searchParams, {});
+  const mode = modal === "edit" ? "edit" : "create";
+  const initialValues = seedProduct
+    ? productToFormInitialValues(seedProduct, modal === "copy" ? "copy" : modal === "sameType" ? "sameType" : "edit", priceBookPrices)
+    : undefined;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-2 sm:p-5">
+      <div className="h-[min(92dvh,920px)] w-full max-w-7xl overflow-hidden rounded-2xl bg-surface shadow-2xl">
+        <NewProductForm
+          mode={mode}
+          productId={editId}
+          isVariantChild={Boolean(seedProduct?.parentProductId)}
+          siblingCount={seedProduct?.siblings.length ?? 0}
+          initialValues={initialValues}
+          categories={options.categories}
+          brands={options.brands}
+          suppliers={options.suppliers}
+          priceBooks={priceBooks}
+          layout="modal"
+          closeHref={closeHref}
+        />
+      </div>
+    </div>
+  );
+}
+
+function productModalHref(params: SP, patch: Record<string, string>) {
+  const sp = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (!value || PRODUCT_MODAL_KEYS.includes(key as (typeof PRODUCT_MODAL_KEYS)[number])) continue;
+    sp.set(key, value);
+  }
+  sp.set("tab", "products");
+  for (const [key, value] of Object.entries(patch)) sp.set(key, value);
+  return `${Routes.Inventory}?${sp.toString()}`;
 }
 
 async function ProductsContent({ searchParams }: { searchParams: SP }) {

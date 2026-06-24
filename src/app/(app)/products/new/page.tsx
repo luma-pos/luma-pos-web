@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProduct, getProductFormOptions } from "@/lib/data/products";
+import { getPriceBooks, getPriceOverridesForProducts } from "@/lib/data/price-books";
 import { NewProductForm } from "./product-form";
 import { productToFormInitialValues } from "../product-form-values";
 
@@ -16,18 +17,24 @@ export default async function NewProductPage({ searchParams }: Props) {
   const seedId = copyFrom ?? sameTypeAs;
   if (seedId && !UUID_RE.test(seedId)) notFound();
 
-  const [options, seedProduct] = await Promise.all([
+  const [options, priceBooks, seedProduct] = await Promise.all([
     getProductFormOptions(),
+    getPriceBooks(),
     seedId ? getProduct(seedId) : Promise.resolve(null),
   ]);
   if (seedId && !seedProduct) notFound();
+  const priceOverridesByBook = seedProduct ? await getPriceOverridesForProducts([seedProduct.id]) : {};
+  const priceBookPrices = Object.fromEntries(
+    Object.entries(priceOverridesByBook).map(([bookId, prices]) => [bookId, prices[seedProduct!.id]])
+  );
 
   return (
     <NewProductForm
       categories={options.categories}
       brands={options.brands}
       suppliers={options.suppliers}
-      initialValues={seedProduct ? productToFormInitialValues(seedProduct, copyFrom ? "copy" : "sameType") : undefined}
+      priceBooks={priceBooks}
+      initialValues={seedProduct ? productToFormInitialValues(seedProduct, copyFrom ? "copy" : "sameType", priceBookPrices) : undefined}
     />
   );
 }

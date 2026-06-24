@@ -289,6 +289,7 @@
     "edit": "Edit Product",
     "createNew": "New",
     "saveAndCreate": "Save & New",
+    "saveAndCreateSameType": "Save & Add Same Type",
     "directSale": "Direct sale",
     "tabs": {
       "info": "Info",
@@ -343,6 +344,9 @@
       "contractorPrice": "Contractor price",
       "agentPrice": "Agent price",
       "setupPriceTiers": "Setup price tiers",
+      "setupPriceBooks": "Set prices",
+      "choosePriceBooks": "Choose price books",
+      "activeBookCount": "{count} active price books",
       "priceBookHint": "Wholesale/contractor/agent prices are managed in Pricing (price books)"
     },
     "stock": {
@@ -1175,6 +1179,7 @@
   "pricing": {
     "title": "Price setup",
     "cols": {
+      "name": "Price book",
       "costPrice": "Cost",
       "retailPrice": "Retail",
       "wholesalePrice": "Wholesale",

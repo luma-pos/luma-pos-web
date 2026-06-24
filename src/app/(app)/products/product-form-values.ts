@@ -5,7 +5,8 @@ type ProductSeedMode = "edit" | "copy" | "sameType";
 
 export function productToFormInitialValues(
   product: ProductDetail,
-  mode: ProductSeedMode = "edit"
+  mode: ProductSeedMode = "edit",
+  priceBookPrices: Record<string, string | number | null | undefined> = {}
 ): Partial<CreateProductInput> {
   const specs = (product.specs as Record<string, string[]> | null) ?? {};
   const shared: Partial<CreateProductInput> = {
@@ -18,6 +19,12 @@ export function productToFormInitialValues(
     wholesalePrice: product.wholesalePrice != null ? Number(product.wholesalePrice) : null,
     contractorPrice: product.contractorPrice != null ? Number(product.contractorPrice) : null,
     agentPrice: product.agentPrice != null ? Number(product.agentPrice) : null,
+    priceBookPrices: Object.fromEntries(
+      Object.entries(priceBookPrices).map(([bookId, price]) => [
+        bookId,
+        price != null ? Number(price) : null,
+      ])
+    ),
     units: product.units.map((u) => ({
       unitName: u.unitName,
       multiplier: Number(u.multiplier),

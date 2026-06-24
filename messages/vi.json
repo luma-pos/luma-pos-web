@@ -289,6 +289,7 @@
     "edit": "Sửa hàng hóa",
     "createNew": "Thêm mới",
     "saveAndCreate": "Lưu & Tạo thêm",
+    "saveAndCreateSameType": "Lưu & Thêm hàng hóa cùng loại",
     "directSale": "Bán trực tiếp",
     "tabs": {
       "info": "Thông tin",
@@ -343,6 +344,9 @@
       "contractorPrice": "Giá thợ",
       "agentPrice": "Giá đại lý",
       "setupPriceTiers": "Thiết lập bảng giá",
+      "setupPriceBooks": "Thiết lập giá",
+      "choosePriceBooks": "Chọn bảng giá",
+      "activeBookCount": "Có {count} bảng giá đang hoạt động",
       "priceBookHint": "Giá sỉ/thầu/đại lý quản lý ở mục Thiết lập giá (bảng giá)"
     },
     "stock": {
@@ -1175,6 +1179,7 @@
   "pricing": {
     "title": "Thiết lập giá",
     "cols": {
+      "name": "Tên bảng giá",
       "costPrice": "Giá vốn",
       "retailPrice": "Giá lẻ",
       "wholesalePrice": "Giá sỉ",

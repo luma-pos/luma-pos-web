@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { and, eq, ne, or, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  products, productUnits, productSuppliers, categories, brands, stockLevels, stockMovements, warehouses, profiles,
+  products, productUnits, productSuppliers, categories, brands, stockLevels, stockMovements, warehouses, profiles, priceBooks, productPrices,
 } from "@/db/schema";
 import { createProductSchema, siblingApplySchema, type CreateProductOutput } from "@/app/(app)/products/new/schema";
 import { Routes } from "@/lib/routes";
-import { pgErrorCode, requireStockAccess, requireManager } from "./common";
+import { pgErrorCode, requireStockAccess, requireManager, toMoney } from "./common";
 
 /** Tạo nhóm hàng mới từ form (combobox "+ thêm"). Trả id. */
 export async function createCategory(name: string): Promise<ActionResult<{ id: string; name: string }>> {
@@ -124,6 +124,49 @@ function buildDimensions(v: CreateProductOutput): string | null {
   return `${parts.join("×")}${v.dimUnit}`;
 }
 
+async function syncProductPriceBookPrices(
+  productId: string,
+  input: Record<string, number | null | undefined> | undefined
+) {
+  const entries = Object.entries(input ?? {});
+  if (entries.length === 0) return;
+
+  const bookIds = [...new Set(entries.map(([id]) => id).filter(Boolean))];
+  if (bookIds.length === 0) return;
+
+  const validBooks = await db
+    .select({ id: priceBooks.id, isDefault: priceBooks.isDefault })
+    .from(priceBooks)
+    .where(inArray(priceBooks.id, bookIds));
+  const nonDefaultIds = new Set(validBooks.filter((book) => !book.isDefault).map((book) => book.id));
+
+  const toDelete = entries
+    .filter(([bookId, price]) => nonDefaultIds.has(bookId) && price == null)
+    .map(([bookId]) => bookId);
+  if (toDelete.length > 0) {
+    await db.delete(productPrices).where(and(
+      eq(productPrices.productId, productId),
+      inArray(productPrices.priceBookId, toDelete)
+    ));
+  }
+
+  const toUpsert = entries
+    .filter(([bookId, price]) => nonDefaultIds.has(bookId) && price != null)
+    .map(([bookId, price]) => ({
+      priceBookId: bookId,
+      productId,
+      price: toMoney(Math.max(0, Number(price))),
+    }));
+  if (toUpsert.length > 0) {
+    await db.insert(productPrices)
+      .values(toUpsert)
+      .onConflictDoUpdate({
+        target: [productPrices.priceBookId, productPrices.productId],
+        set: { price: sql`excluded.price` },
+      });
+  }
+}
+
 /** m²/base-unit từ kích thước (gạch): width × length, đổi về mét. */
 function computeM2PerUnit(v: CreateProductOutput): string | null {
   if (v.width == null || v.length == null || v.width <= 0 || v.length <= 0) return null;
@@ -185,6 +228,7 @@ const updateProductSchema = z.object({
   wholesalePrice: z.number().min(0).nullable(),
   contractorPrice: z.number().min(0).nullable(),
   agentPrice: z.number().min(0).nullable(),
+  priceBookPrices: z.record(z.string(), z.number().min(0).nullable()).default({}),
   location: z.string().trim().optional(),
   description: z.string().trim().optional(),
   imageUrls: z.array(z.string()).optional(),
@@ -222,7 +266,6 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
       }
       await tx.delete(products).where(eq(products.id, target.id));
     });
-
     revalidatePath(Routes.Products);
     revalidatePath(Routes.Inventory);
     revalidatePath(Routes.POS);
@@ -400,10 +443,12 @@ export async function updateProduct(input: UpdateProductInput): Promise<ActionRe
         }
       }
     });
+    await syncProductPriceBookPrices(v.id, v.priceBookPrices);
 
     revalidatePath(Routes.Products);
     revalidatePath(Routes.Inventory);
     revalidatePath(`/products/${v.id}`);
+    revalidatePath(Routes.Pricing);
     revalidatePath(Routes.POS);
     return { ok: true, data: undefined };
   } catch (e) {
@@ -598,8 +643,12 @@ export async function createProduct(
       return parent;
     });
 
+    await syncProductPriceBookPrices(result.id, v.priceBookPrices);
+
     revalidatePath(Routes.Products);
     revalidatePath(Routes.Inventory);
+    revalidatePath(Routes.Pricing);
+    revalidatePath(Routes.POS);
     return { ok: true, data: { id: result.id } };
   } catch (e) {
     // Drizzle bọc lỗi PG vào DrizzleQueryError — lỗi gốc nằm ở e.cause

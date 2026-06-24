@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useFormContext } from "react-hook-form";
+import { useForm, useFormContext, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, ImagePlus, Info, Loader2, X } from "lucide-react";
+import { ArrowLeft, ImagePlus, Info, Loader2, Tag, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -20,6 +20,7 @@ import { AttributesField } from "./attributes-field";
 import { createProduct, updateProduct, createCategory, createBrand } from "@/lib/actions/products";
 import { Combobox } from "@/components/combobox";
 import type { ProductFormOptions } from "@/lib/data/products";
+import type { PriceBookRow } from "@/lib/data/price-books";
 
 type Tab = "info" | "description" | "variants";
 
@@ -32,26 +33,35 @@ export interface NewProductFormProps {
   categories: ProductFormOptions["categories"];
   brands: ProductFormOptions["brands"];
   suppliers?: ProductFormOptions["suppliers"]; // NCC tự gắn khi nhập hàng, không sửa ở form
+  priceBooks?: PriceBookRow[];
   mode?: "create" | "edit";
   productId?: string;
   isVariantChild?: boolean;
   siblingCount?: number;
   initialValues?: Partial<CreateProductInput>;
+  layout?: "page" | "modal";
+  closeHref?: string;
 }
 
 export function NewProductForm({
   categories,
   brands,
+  priceBooks = [],
   mode = "create",
   productId,
   isVariantChild = false,
   siblingCount = 0,
   initialValues,
+  layout = "page",
+  closeHref,
 }: NewProductFormProps) {
   const t = useTranslations();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("info");
+  const [submitIntent, setSubmitIntent] = useState<"save" | "sameType">("save");
   const isEdit = mode === "edit";
+  const isModal = layout === "modal";
+  const doneHref = closeHref ?? Routes.Products;
 
   const form = useForm<CreateProductInput, unknown, CreateProductOutput>({
     resolver: zodResolver(createProductSchema),
@@ -64,6 +74,7 @@ export function NewProductForm({
       imageUrls: [],
       costPrice: 0,
       retailPrice: 0,
+      priceBookPrices: {},
       initialStock: 0,
       minLevel: 0,
       maxLevel: 999_999_999,
@@ -94,10 +105,11 @@ export function NewProductForm({
         baseUnit: values.baseUnit,
         costPrice: values.costPrice,
         retailPrice: values.retailPrice,
-        wholesalePrice: values.wholesalePrice ?? null,
-        contractorPrice: values.contractorPrice ?? null,
-        agentPrice: values.agentPrice ?? null,
-        location: values.location,
+      wholesalePrice: values.wholesalePrice ?? null,
+      contractorPrice: values.contractorPrice ?? null,
+      agentPrice: values.agentPrice ?? null,
+      priceBookPrices: values.priceBookPrices,
+      location: values.location,
         description: values.description,
         imageUrls: values.imageUrls,
         isActive: values.directSale,
@@ -107,40 +119,68 @@ export function NewProductForm({
           unitName: u.unitName, multiplier: u.multiplier, barcode: u.barcode, priceOverride: u.priceOverride ?? null,
         })),
       });
-      if (res.ok) { router.push(Routes.product(productId)); router.refresh(); return; }
+      if (res.ok) {
+        router.push(submitIntent === "sameType" ? sameTypeHref(productId) : (isModal ? doneHref : Routes.product(productId)));
+        router.refresh();
+        return;
+      }
       form.setError("root", { message: res.error });
       return;
     }
     const res = await createProduct(values);
     if (res.ok) {
-      router.push(Routes.Products);
+      router.push(submitIntent === "sameType" ? sameTypeHref(res.data.id) : doneHref);
+      router.refresh();
       return;
     }
     form.setError("root", { message: res.error });
   }
 
+  function sameTypeHref(id: string) {
+    if (!isModal) return Routes.productSameType(id);
+    const [path, query = ""] = doneHref.split("?");
+    const sp = new URLSearchParams(query);
+    sp.set("tab", "products");
+    sp.set("productModal", "sameType");
+    sp.set("sameTypeAs", id);
+    return `${path || Routes.Inventory}?${sp.toString()}`;
+  }
+
+  const close = () => router.push(doneHref);
+
   return (
-    <Form form={form} onSubmit={onSubmit} className="min-h-dvh flex flex-col bg-slate-50 dark:bg-slate-950 space-y-0">
-      <header className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+    <Form
+      form={form}
+      onSubmit={onSubmit}
+      className={cn(
+        "flex flex-col space-y-0",
+        isModal ? "h-full bg-surface" : "min-h-dvh bg-slate-50 dark:bg-slate-950"
+      )}
+    >
+      <header className={cn(
+        "z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between gap-3",
+        !isModal && "sticky top-0"
+      )}>
         <div className="flex items-center gap-3">
-          <Button type="button" variant="ghost" size="iconSm" onClick={() => router.push(Routes.Products)}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
+          {!isModal && (
+            <Button type="button" variant="ghost" size="iconSm" onClick={close} aria-label={t("common.back")}>
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          )}
           <Heading as="h1" size="lg" tx={isEdit ? "products.editTitle" : "products.create"} />
         </div>
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              {...form.register("directSale")}
-              className="rounded text-primary-600 focus:ring-primary-500"
-            />
-            <span>{t("products.directSale")}</span>
-          </label>
-          <Button type="button" variant="outline" onClick={() => router.push(isEdit && productId ? Routes.product(productId) : Routes.Products)} tx="common.cancel" />
-          {!isEdit && <Button type="submit" variant="secondary" tx="products.saveAndCreate" />}
-          <Button type="submit" loading={form.formState.isSubmitting} tx="common.save" />
-        </div>
+        {isModal ? (
+          <Button type="button" variant="ghost" size="iconSm" onClick={close} aria-label={t("common.close")}>
+            <X className="w-4 h-4" />
+          </Button>
+        ) : (
+          <FormActions
+            loading={form.formState.isSubmitting}
+            registerDirectSale={form.register("directSale")}
+            onCancel={close}
+            onIntent={setSubmitIntent}
+          />
+        )}
       </header>
 
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6">
@@ -169,21 +209,66 @@ export function NewProductForm({
         </div>
       )}
 
-      <div className="flex-1 overflow-auto p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-4">
-        {tab === "info" && <InfoTab categories={categories} brands={brands} />}
+      <div className={cn("flex-1 overflow-auto p-4 sm:p-6 w-full space-y-4", isModal ? "mx-auto max-w-7xl" : "mx-auto max-w-5xl")}>
+        {tab === "info" && <InfoTab categories={categories} brands={brands} priceBooks={priceBooks} />}
         {tab === "variants" && <VariantsTab isEdit={isEdit} isVariantChild={isVariantChild} siblingCount={siblingCount} />}
         {tab === "description" && <DescriptionTab />}
       </div>
+
+      {isModal && (
+        <footer className="shrink-0 border-t border-border bg-surface px-4 py-3 sm:px-6">
+          <FormActions
+            loading={form.formState.isSubmitting}
+            registerDirectSale={form.register("directSale")}
+            onCancel={close}
+            onIntent={setSubmitIntent}
+            align="footer"
+          />
+        </footer>
+      )}
     </Form>
   );
 }
 
-function InfoTab({ categories, brands, suppliers }: NewProductFormProps) {
+function FormActions({
+  loading,
+  registerDirectSale,
+  onCancel,
+  onIntent,
+  align = "header",
+}: {
+  loading: boolean;
+  registerDirectSale: UseFormRegisterReturn<"directSale">;
+  onCancel: () => void;
+  onIntent: (intent: "save" | "sameType") => void;
+  align?: "header" | "footer";
+}) {
+  const t = useTranslations();
+  return (
+    <div className={cn("flex flex-wrap items-center gap-2", align === "footer" && "justify-between")}>
+      <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <input
+          type="checkbox"
+          {...registerDirectSale}
+          className="rounded text-primary-600 focus:ring-primary-500"
+        />
+        <span>{t("products.directSale")}</span>
+      </label>
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        <Button type="button" variant="outline" onClick={onCancel} tx="common.cancel" />
+        <Button type="submit" variant="secondary" onClick={() => onIntent("sameType")} tx="products.saveAndCreateSameType" />
+        <Button type="submit" loading={loading} onClick={() => onIntent("save")} tx="common.save" />
+      </div>
+    </div>
+  );
+}
+
+function InfoTab({ categories, brands, suppliers, priceBooks }: NewProductFormProps) {
   return (
     <>
       <BasicInfoSection categories={categories} brands={brands} suppliers={suppliers} />
       <Section titleTx="products.sections.pricing" descriptionTx="products.sections.pricingDesc">
-        <PricingFields />
+        <PricingFields priceBooks={priceBooks ?? []} />
       </Section>
       <Section titleTx="products.sections.stock" descriptionTx="products.sections.stockDesc">
         <StockFields />
@@ -574,19 +659,115 @@ function ImageUploadGrid() {
   );
 }
 
-function PricingFields() {
+function PricingFields({ priceBooks }: { priceBooks: PriceBookRow[] }) {
   const t = useTranslations();
   const { setValue, watch } = useFormCtx();
+  const retailPrice = Number(watch("retailPrice") ?? 0);
+  const priceBookPrices = watch("priceBookPrices") ?? {};
+  const [open, setOpen] = useState(false);
+  const [draftRetail, setDraftRetail] = useState(retailPrice);
+  const [draftOverrides, setDraftOverrides] = useState<Record<string, number | null>>(priceBookPrices);
+
+  function openPriceBooks() {
+    setDraftRetail(Number(watch("retailPrice") ?? 0));
+    setDraftOverrides({ ...(watch("priceBookPrices") ?? {}) });
+    setOpen(true);
+  }
+
+  function applyPriceBooks() {
+    setValue("retailPrice", draftRetail, { shouldDirty: true, shouldValidate: true });
+    setValue("priceBookPrices", draftOverrides, { shouldDirty: true, shouldValidate: true });
+    setOpen(false);
+  }
+
+  const activeBooks = priceBooks.length > 0
+    ? priceBooks
+    : [{ id: "retail", name: t("products.pricing.retailPrice"), isDefault: true, sortOrder: 0 }];
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <Field labelTx="products.pricing.costPrice">
-        <NumberInput value={watch("costPrice")} onChange={(v) => setValue("costPrice", v ?? 0)} suffix="đ" min={0} />
-      </Field>
-      <Field labelTx="products.pricing.retailPrice">
-        <NumberInput value={watch("retailPrice")} onChange={(v) => setValue("retailPrice", v ?? 0)} suffix="đ" min={0} />
-      </Field>
-      <p className="md:col-span-2 lg:col-span-3 text-xs text-slate-500">{t("products.pricing.priceBookHint")}</p>
-    </div>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] lg:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+        <Field labelTx="products.pricing.costPrice">
+          <NumberInput value={watch("costPrice")} onChange={(v) => setValue("costPrice", v ?? 0)} suffix="đ" min={0} />
+        </Field>
+        <Field labelTx="products.pricing.retailPrice">
+          <NumberInput value={watch("retailPrice")} onChange={(v) => setValue("retailPrice", v ?? 0)} suffix="đ" min={0} />
+        </Field>
+        <button
+          type="button"
+          onClick={openPriceBooks}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/30"
+        >
+          <Tag className="h-4 w-4" />
+          {t("products.pricing.setupPriceBooks")}
+        </button>
+      </div>
+
+      {open && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-3 sm:p-6">
+          <div className="flex max-h-[88dvh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl">
+            <header className="flex items-start justify-between gap-3 px-5 py-4 sm:px-6">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t("products.pricing.choosePriceBooks")}</h3>
+                <p className="mt-1 text-sm text-slate-500">{t("products.pricing.activeBookCount", { count: activeBooks.length })}</p>
+              </div>
+              <button type="button" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-surface-2" aria-label={t("common.close")}>
+                <X className="h-5 w-5" />
+              </button>
+            </header>
+            <div className="min-h-0 flex-1 overflow-auto px-5 pb-4 sm:px-6">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead>
+                  <tr className="bg-canvas text-left text-xs uppercase text-slate-500">
+                    <th className="px-4 py-3 font-semibold">{t("pricing.cols.name")}</th>
+                    <th className="px-4 py-3 text-right font-semibold">{t("products.pricing.retailPrice")}</th>
+                    <th className="w-12 px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-soft">
+                  {activeBooks.map((book) => {
+                    const value = book.isDefault ? draftRetail : (draftOverrides[book.id] ?? null);
+                    return (
+                      <tr key={book.id}>
+                        <td className="px-4 py-3 font-medium">{book.name}</td>
+                        <td className="px-4 py-3">
+                          <NumberInput
+                            value={value}
+                            onChange={(next) => {
+                              if (book.isDefault) setDraftRetail(next ?? 0);
+                              else setDraftOverrides((current) => ({ ...current, [book.id]: next }));
+                            }}
+                            suffix="đ"
+                            min={0}
+                            className="ml-auto max-w-[260px]"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {!book.isDefault && (
+                            <button
+                              type="button"
+                              onClick={() => setDraftOverrides((current) => ({ ...current, [book.id]: null }))}
+                              className="grid h-9 w-9 place-items-center rounded-lg text-slate-400 hover:bg-surface-2 hover:text-er"
+                              aria-label={t("common.clear")}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <footer className="flex justify-end gap-2 border-t border-border px-5 py-4 sm:px-6">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} tx="common.cancel" />
+              <Button type="button" onClick={applyPriceBooks} tx="common.done" />
+            </footer>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
