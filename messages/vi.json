@@ -419,6 +419,28 @@
         "channels": "Liên kết kênh bán"
       }
     },
+    "actions": {
+      "delete": "Xóa",
+      "copy": "Sao chép",
+      "edit": "Chỉnh sửa",
+      "printLabels": "In tem mã",
+      "addSameType": "Thêm hàng hóa cùng loại",
+      "purchase": "Nhập hàng",
+      "stopSelling": "Ngừng kinh doanh",
+      "resumeSelling": "Kinh doanh lại"
+    },
+    "confirm": {
+      "delete": "Xóa hàng hóa này? Nếu hàng hóa đã phát sinh chứng từ, hệ thống sẽ không cho xóa.",
+      "stopSelling": "Ngừng kinh doanh hàng hóa này?",
+      "resumeSelling": "Kinh doanh lại hàng hóa này?"
+    },
+    "labels": {
+      "title": "In tem mã",
+      "print": "In tem",
+      "barcodeValue": "Mã in",
+      "price": "Giá bán",
+      "preview": "Xem trước tem mã"
+    },
     "variants": {
       "applyTitle": "Áp dụng cho hàng hóa con cùng loại",
       "applyToSiblings": "Áp dụng thay đổi cho {count} hàng hóa con còn lại",
@@ -444,7 +466,8 @@
       }
     },
     "errors": {
-      "skuExists": "SKU đã tồn tại — chọn mã khác."
+      "skuExists": "SKU đã tồn tại — chọn mã khác.",
+      "cannotDeleteReferenced": "Không thể xóa hàng hóa đã phát sinh chứng từ hoặc thẻ kho. Hãy ngừng kinh doanh thay thế."
     },
     "editTitle": "Sửa sản phẩm",
     "unitLabel": "hàng hóa"

@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   products, productUnits, productSuppliers, categories, brands, stockLevels, stockMovements, warehouses, profiles,
 } from "@/db/schema";
 import { createProductSchema, siblingApplySchema, type CreateProductOutput } from "@/app/(app)/products/new/schema";
 import { Routes } from "@/lib/routes";
-import { requireStockAccess, requireManager } from "./common";
+import { pgErrorCode, requireStockAccess, requireManager } from "./common";
 
 /** Tạo nhóm hàng mới từ form (combobox "+ thêm"). Trả id. */
 export async function createCategory(name: string): Promise<ActionResult<{ id: string; name: string }>> {
@@ -199,6 +199,80 @@ const updateProductSchema = z.object({
   })),
 });
 export type UpdateProductInput = z.input<typeof updateProductSchema>;
+
+const productIdSchema = z.uuid();
+
+/** Xóa hàng hóa nếu chưa phát sinh chứng từ/thẻ kho liên quan. */
+export async function deleteProduct(id: string): Promise<ActionResult> {
+  { const gate = await requireStockAccess(); if (!gate.ok) return gate; }
+  const parsed = productIdSchema.safeParse(id);
+  if (!parsed.success) return { ok: false, error: "errors.invalidData" };
+
+  try {
+    await db.transaction(async (tx) => {
+      const [target] = await tx
+        .select({ id: products.id, isVariantParent: products.isVariantParent })
+        .from(products)
+        .where(eq(products.id, parsed.data))
+        .limit(1);
+      if (!target) return;
+
+      if (target.isVariantParent) {
+        await tx.delete(products).where(eq(products.parentProductId, target.id));
+      }
+      await tx.delete(products).where(eq(products.id, target.id));
+    });
+
+    revalidatePath(Routes.Products);
+    revalidatePath(Routes.Inventory);
+    revalidatePath(Routes.POS);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    if (pgErrorCode(e) === "23503") return { ok: false, error: "products.errors.cannotDeleteReferenced" };
+    console.error("deleteProduct failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
+}
+
+const setProductActiveSchema = z.object({
+  productId: z.uuid(),
+  isActive: z.boolean(),
+});
+
+/** Bật/tắt kinh doanh. Với nhóm biến thể, áp dụng cho cả nhóm con. */
+export async function setProductActive(input: z.input<typeof setProductActiveSchema>): Promise<ActionResult> {
+  { const gate = await requireStockAccess(); if (!gate.ok) return gate; }
+  const parsed = setProductActiveSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "errors.invalidData" };
+  const v = parsed.data;
+
+  try {
+    const [target] = await db
+      .select({ id: products.id, isVariantParent: products.isVariantParent })
+      .from(products)
+      .where(eq(products.id, v.productId))
+      .limit(1);
+    if (!target) return { ok: false, error: "errors.invalidData" };
+
+    await db.update(products).set({
+      isActive: v.isActive,
+      updatedAt: sql`now()`,
+    }).where(
+      target.isVariantParent
+        ? or(eq(products.id, target.id), eq(products.parentProductId, target.id))
+        : eq(products.id, target.id)
+    );
+
+    revalidatePath(Routes.Products);
+    revalidatePath(Routes.Inventory);
+    revalidatePath(Routes.POS);
+    revalidatePath(`/products/${target.id}`);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    console.error("setProductActive failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
+}
 
 /** Cập nhật thông tin SP (không đụng tồn kho — tồn quản lý ở Kho/Kiểm kho). */
 export async function updateProduct(input: UpdateProductInput): Promise<ActionResult> {

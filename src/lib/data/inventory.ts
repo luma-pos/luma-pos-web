@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
   products, profiles, purchaseOrderItems, purchaseOrders, stockMovements, suppliers, warehouses,
@@ -196,17 +196,33 @@ export async function getPurchaseFormOptions() {
 export type PurchaseFormOptions = Awaited<ReturnType<typeof getPurchaseFormOptions>>;
 
 /** Tìm SP cho phiếu nhập — query thẳng DB, bỏ dấu, quét toàn bộ (giống POS). */
+const purchaseProductSelection = {
+  id: products.id,
+  name: products.name,
+  sku: products.sku,
+  baseUnit: products.baseUnit,
+  costPrice: products.costPrice,
+  units: sql<{ unitName: string; multiplier: string }[]>`coalesce((
+    select json_agg(json_build_object('unitName', pu.unit_name, 'multiplier', pu.multiplier) order by pu.sort_order)
+    from product_units pu where pu.product_id = ${products.id}
+  ), '[]')`,
+};
+
+export async function getPurchaseProductRowsByIds(ids: string[]) {
+  const uniqueIds = [...new Set(ids)].filter(Boolean);
+  if (uniqueIds.length === 0) return [];
+  return db
+    .select(purchaseProductSelection)
+    .from(products)
+    .where(and(eq(products.isActive, true), inArray(products.id, uniqueIds)))
+    .orderBy(asc(products.name));
+}
+
 export async function searchPurchaseProductRows(q: string) {
   if (!q.trim()) return [];
   const term = q.trim();
   return db
-    .select({
-      id: products.id, name: products.name, sku: products.sku, baseUnit: products.baseUnit, costPrice: products.costPrice,
-      units: sql<{ unitName: string; multiplier: string }[]>`coalesce((
-        select json_agg(json_build_object('unitName', pu.unit_name, 'multiplier', pu.multiplier) order by pu.sort_order)
-        from product_units pu where pu.product_id = ${products.id}
-      ), '[]')`,
-    })
+    .select(purchaseProductSelection)
     .from(products)
     .where(and(
       eq(products.isActive, true),

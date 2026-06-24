@@ -41,6 +41,10 @@ export const Routes = {
   order: (id: string) => `/orders/${id}` as const,
   product: (id: string) => `/inventory?tab=products&expanded=${id}` as const,
   productEdit: (id: string) => `/products/${id}/edit` as const,
+  productCopy: (id: string) => `/products/new?copyFrom=${id}` as const,
+  productSameType: (id: string) => `/products/new?sameTypeAs=${id}` as const,
+  productLabels: (id: string) => `/products/${id}/labels` as const,
+  purchaseNewForProduct: (id: string) => `/purchases/new?productId=${id}` as const,
   customer: (id: string) => `/customers/${id}` as const,
   supplier: (id: string) => `/suppliers/${id}` as const,
 } as const;

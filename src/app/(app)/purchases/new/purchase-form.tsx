@@ -25,13 +25,38 @@ type Line = {
   discInput: number; discMode: "vnd" | "pct"; // giảm giá dòng
 };
 
-export function PurchaseForm({ options }: { options: PurchaseFormOptions }) {
+function productToLine(p: PurchaseProductRow): Line {
+  const baseCost = Number(p.costPrice) || 0;
+  const units: PUnit[] = (p.units ?? []).map((u) => ({ unitName: u.unitName, multiplier: Number(u.multiplier) || 1 }));
+  return {
+    productId: p.id,
+    name: p.name,
+    sku: p.sku,
+    baseUnit: p.baseUnit,
+    baseCost,
+    units,
+    unitName: p.baseUnit,
+    multiplier: 1,
+    quantity: 1,
+    unitCost: baseCost,
+    discInput: 0,
+    discMode: "vnd",
+  };
+}
+
+export function PurchaseForm({
+  options,
+  initialProducts = [],
+}: {
+  options: PurchaseFormOptions;
+  initialProducts?: PurchaseProductRow[];
+}) {
   const t = useTranslations();
   const router = useRouter();
 
   const [supplierId, setSupplierId] = useState(options.suppliers[0]?.id ?? "");
   const [warehouseId, setWarehouseId] = useState(options.warehouses[0]?.id ?? "");
-  const [lines, setLines] = useState<Line[]>([]);
+  const [lines, setLines] = useState<Line[]>(() => initialProducts.map(productToLine));
   const [search, setSearch] = useState("");
   const [discount, setDiscount] = useState(0);
   const [vatRate, setVatRate] = useState(0);
@@ -68,12 +93,7 @@ export function PurchaseForm({ options }: { options: PurchaseFormOptions }) {
   const owed = total - paid;
 
   function addProduct(p: PurchaseProductRow) {
-    const baseCost = Number(p.costPrice) || 0;
-    const units: PUnit[] = (p.units ?? []).map((u) => ({ unitName: u.unitName, multiplier: Number(u.multiplier) || 1 }));
-    setLines((ls) => [...ls, {
-      productId: p.id, name: p.name, sku: p.sku, baseUnit: p.baseUnit, baseCost, units,
-      unitName: p.baseUnit, multiplier: 1, quantity: 1, unitCost: baseCost, discInput: 0, discMode: "vnd",
-    }]);
+    setLines((ls) => [...ls, productToLine(p)]);
     setSearch("");
   }
   function patch(id: string, p: Partial<Line>) {

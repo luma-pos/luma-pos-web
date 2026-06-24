@@ -1,11 +1,13 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ImageIcon, Pencil } from "lucide-react";
+import { Ban, Barcode, ChevronDown, Copy, ImageIcon, PackagePlus, Pencil, Plus, Trash2, type LucideIcon } from "lucide-react";
 import { Routes } from "@/lib/routes";
+import { deleteProduct, setProductActive } from "@/lib/actions/products";
 import { cn, formatCurrency, formatNumber } from "@/lib/utils";
 import type { ProductListResult } from "@/lib/data/products";
 
@@ -150,6 +152,7 @@ function ExpandedProduct({ product }: { product: ProductRow }) {
   const t = useTranslations();
   const specs = specEntries(product.specs);
   const image = Array.isArray(product.imageUrls) ? product.imageUrls[0] : undefined;
+  const effectiveActive = product.isVariantParent ? product.children.some((child) => child.isActive) : product.isActive;
 
   return (
     <div className="border-t border-border-soft bg-surface px-4 py-4">
@@ -179,13 +182,9 @@ function ExpandedProduct({ product }: { product: ProductRow }) {
               <div className="mt-1 text-sm text-slate-500">{t("products.fields.category")}: {product.categoryName ?? "—"}</div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <Badge text={product.isVariantParent ? t("products.list.group") : t("products.expand.normalProduct")} />
-                <Badge text={product.isActive ? t("products.directSale") : t("products.list.inactive")} tone={product.isActive ? "ok" : "muted"} />
+                <Badge text={effectiveActive ? t("products.directSale") : t("products.list.inactive")} tone={effectiveActive ? "ok" : "muted"} />
               </div>
             </div>
-            <Link href={Routes.productEdit(product.id)} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">
-              <Pencil className="h-4 w-4" />
-              {t("common.edit")}
-            </Link>
           </div>
 
           <div className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -224,11 +223,138 @@ function ExpandedProduct({ product }: { product: ProductRow }) {
               </div>
             </div>
           )}
+
+          <ProductActionBar product={product} />
         </div>
       </div>
     </div>
   );
 }
+
+function ProductActionBar({ product }: { product: ProductRow }) {
+  const t = useTranslations();
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState("");
+  const effectiveActive = product.isVariantParent ? product.children.some((child) => child.isActive) : product.isActive;
+  const nextActive = !effectiveActive;
+  const sameTypeSourceId = product.parentProductId ?? product.id;
+
+  function clearExpandedAndRefresh() {
+    const sp = new URLSearchParams(params.toString());
+    sp.delete("expanded");
+    const query = sp.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    router.refresh();
+  }
+
+  function removeProduct() {
+    if (pending || !window.confirm(t("products.confirm.delete"))) return;
+    setError("");
+    startTransition(async () => {
+      const res = await deleteProduct(product.id);
+      if (res.ok) clearExpandedAndRefresh();
+      else setError(t(res.error as never));
+    });
+  }
+
+  function toggleActive() {
+    const confirmKey = nextActive ? "products.confirm.resumeSelling" : "products.confirm.stopSelling";
+    if (pending || !window.confirm(t(confirmKey as never))) return;
+    setError("");
+    startTransition(async () => {
+      const res = await setProductActive({ productId: product.id, isActive: nextActive });
+      if (res.ok) router.refresh();
+      else setError(t(res.error as never));
+    });
+  }
+
+  return (
+    <div className="border-t border-border-soft pt-4">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-wrap gap-2">
+          <ActionButton icon={Trash2} label={t("products.actions.delete")} onClick={removeProduct} disabled={pending} tone="danger" />
+          <ActionLink icon={Copy} label={t("products.actions.copy")} href={Routes.productCopy(product.id)} />
+        </div>
+        <div className="flex flex-wrap gap-2 xl:justify-end">
+          <ActionLink icon={Pencil} label={t("products.actions.edit")} href={Routes.productEdit(product.id)} tone="primary" />
+          <ActionLink icon={Barcode} label={t("products.actions.printLabels")} href={Routes.productLabels(product.id)} />
+          <ActionLink icon={Plus} label={t("products.actions.addSameType")} href={Routes.productSameType(sameTypeSourceId)} />
+          <ActionLink icon={PackagePlus} label={t("products.actions.purchase")} href={Routes.purchaseNewForProduct(product.id)} />
+          <ActionButton
+            icon={Ban}
+            label={t((nextActive ? "products.actions.resumeSelling" : "products.actions.stopSelling") as never)}
+            onClick={toggleActive}
+            disabled={pending}
+          />
+        </div>
+      </div>
+      {error && <p className="mt-2 text-sm font-medium text-er">{error}</p>}
+    </div>
+  );
+}
+
+function ActionLink({
+  href,
+  icon: Icon,
+  label,
+  tone = "neutral",
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  tone?: "neutral" | "primary";
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        actionClassName,
+        tone === "primary"
+          ? "border-primary-600 bg-primary-600 text-white hover:border-primary-700 hover:bg-primary-700"
+          : "border-border bg-surface text-slate-700 hover:bg-surface-2 dark:text-slate-200"
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </Link>
+  );
+}
+
+function ActionButton({
+  icon: Icon,
+  label,
+  onClick,
+  disabled,
+  tone = "neutral",
+}: {
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  tone?: "neutral" | "danger";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        actionClassName,
+        tone === "danger"
+          ? "border-transparent bg-transparent text-slate-600 hover:bg-red-50 hover:text-er dark:text-slate-300 dark:hover:bg-red-950/30"
+          : "border-border bg-surface text-slate-700 hover:bg-surface-2 dark:text-slate-200"
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </button>
+  );
+}
+
+const actionClassName = "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50";
 
 function StatusBadge({ product }: { product: ProductRow }) {
   const t = useTranslations();

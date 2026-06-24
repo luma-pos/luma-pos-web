@@ -419,6 +419,28 @@
         "channels": "Sales channels"
       }
     },
+    "actions": {
+      "delete": "Delete",
+      "copy": "Copy",
+      "edit": "Edit",
+      "printLabels": "Print labels",
+      "addSameType": "Add same type",
+      "purchase": "Purchase",
+      "stopSelling": "Stop selling",
+      "resumeSelling": "Resume selling"
+    },
+    "confirm": {
+      "delete": "Delete this product? If it already has documents or stock movements, the system will block deletion.",
+      "stopSelling": "Stop selling this product?",
+      "resumeSelling": "Resume selling this product?"
+    },
+    "labels": {
+      "title": "Print labels",
+      "print": "Print labels",
+      "barcodeValue": "Code",
+      "price": "Price",
+      "preview": "Label preview"
+    },
     "variants": {
       "applyTitle": "Apply to sibling child products",
       "applyToSiblings": "Apply changes to {count} remaining child products",
@@ -444,7 +466,8 @@
       }
     },
     "errors": {
-      "skuExists": "SKU already exists — choose another."
+      "skuExists": "SKU already exists — choose another.",
+      "cannotDeleteReferenced": "Cannot delete a product with documents or stock movements. Stop selling it instead."
     },
     "editTitle": "Edit product",
     "unitLabel": "products"
