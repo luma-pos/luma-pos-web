@@ -12,8 +12,8 @@ import { InternalUseTab } from "./tabs/internal-use";
 export const dynamic = "force-dynamic";
 
 const TABS = [
-  { tab: "stock", labelKey: "inventory.title" },
   { tab: "products", labelKey: "nav.products" },
+  { tab: "stock", labelKey: "inventory.title" },
   { tab: "pricing", labelKey: "nav.pricing" },
   { tab: "purchases", labelKey: "nav.purchases" },
   { tab: "internal", labelKey: "nav.internalUse" },
