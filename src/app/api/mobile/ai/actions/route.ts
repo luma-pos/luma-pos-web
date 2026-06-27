@@ -1,5 +1,6 @@
 import { createDraftPurchaseForUser } from "@/lib/purchases/draft";
 import { createPurchase } from "@/lib/actions/purchases";
+import { setProductPrice } from "@/lib/actions/price-books";
 import { writeAuditLog } from "@/lib/audit";
 import { getRestockSuggestions } from "@/lib/data/ai-restock";
 import { requireMobileUser } from "@/lib/mobile/auth";
@@ -52,6 +53,26 @@ function inboundPayload(preview: Record<string, unknown>) {
         discount: numberValue(firstItem?.discount),
       },
     ],
+  };
+}
+
+function pricePayload(preview: Record<string, unknown>) {
+  const action = objectValue(preview.action);
+  const payload = objectValue(action?.payload);
+  const productId = typeof payload?.productId === "string" ? payload.productId : null;
+  const priceBookId = typeof payload?.priceBookId === "string" ? payload.priceBookId : null;
+  const price = numberValue(payload?.price, Number.NaN);
+  if (!productId || !priceBookId || !Number.isFinite(price) || price < 0) {
+    return null;
+  }
+  return {
+    priceBookId,
+    productId,
+    price,
+    oldPrice: numberValue(payload?.oldPrice, Number.NaN),
+    productName: typeof payload?.productName === "string" ? payload.productName : null,
+    sku: typeof payload?.sku === "string" ? payload.sku : null,
+    priceBookName: typeof payload?.priceBookName === "string" ? payload.priceBookName : null,
   };
 }
 
@@ -250,6 +271,105 @@ export async function POST(request: Request) {
           id: result.data.id,
           code: result.data.code,
           href: `/inventory?tab=purchases&q=${encodeURIComponent(result.data.code)}`,
+        },
+      },
+    });
+  }
+
+  if (event === "confirmed" && intent === "set_product_price") {
+    if (!["owner", "manager"].includes(gate.role)) {
+      await writeAuditLog({
+        actorUserId: gate.userId,
+        source: "ai",
+        action: intent,
+        entityType,
+        entityId,
+        status: "unauthorized",
+        prompt,
+        parsedIntent: preview,
+        metadata: { surface: body.surface ?? "assistant" },
+      });
+      return mobileAction({ ok: false, error: "errors.forbidden" });
+    }
+
+    const payload = preview ? pricePayload(preview) : null;
+    if (!payload) {
+      await writeAuditLog({
+        actorUserId: gate.userId,
+        source: "ai",
+        action: intent,
+        entityType,
+        entityId,
+        status: "failed",
+        prompt,
+        parsedIntent: preview,
+        metadata: {
+          surface: body.surface ?? "assistant",
+          reason: "missing_required_price_fields",
+        },
+      });
+      return mobileAction({ ok: false, error: "errors.invalidData" });
+    }
+
+    const result = await setProductPrice({
+      priceBookId: payload.priceBookId,
+      productId: payload.productId,
+      price: payload.price,
+    });
+    await writeAuditLog({
+      actorUserId: gate.userId,
+      source: "ai",
+      action: intent,
+      entityType: "product_price",
+      entityId: payload.productId,
+      status: result.ok ? "succeeded" : "failed",
+      prompt,
+      parsedIntent: preview,
+      before: {
+        productId: payload.productId,
+        priceBookId: payload.priceBookId,
+        price: Number.isFinite(payload.oldPrice) ? payload.oldPrice : null,
+      },
+      after: result.ok
+        ? {
+            productId: payload.productId,
+            priceBookId: payload.priceBookId,
+            price: payload.price,
+            href: `/inventory?tab=pricing&q=${encodeURIComponent(payload.sku ?? payload.productName ?? "")}`,
+          }
+        : null,
+      affectedRecords: result.ok
+        ? [
+            {
+              type: "product_price",
+              productId: payload.productId,
+              priceBookId: payload.priceBookId,
+              sku: payload.sku,
+            },
+          ]
+        : null,
+      metadata: {
+        surface: body.surface ?? "assistant",
+        event,
+        executedTool: "setProductPrice",
+      },
+    });
+
+    if (!result.ok) {
+      return mobileAction(result);
+    }
+
+    return mobileAction({
+      ok: true,
+      data: {
+        status: "succeeded",
+        executed: true,
+        message: `Đã cập nhật ${payload.priceBookName ?? "bảng giá"} của ${payload.productName ?? payload.sku ?? "sản phẩm"} thành ${new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(payload.price)}.`,
+        record: {
+          type: "product_price",
+          id: payload.productId,
+          code: payload.sku ?? payload.productName ?? "Sản phẩm",
+          href: `/inventory?tab=pricing&q=${encodeURIComponent(payload.sku ?? payload.productName ?? "")}`,
         },
       },
     });

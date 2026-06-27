@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { products, suppliers, warehouses } from "@/db/schema";
+import { priceBooks, productPrices, products, suppliers, warehouses } from "@/db/schema";
 import type { RestockRow } from "@/lib/data/ai-restock";
 
 export type AiAssistantState =
@@ -82,6 +82,16 @@ type InboundProductOption = {
   lastPurchasePrice: unknown;
 };
 
+type PriceProductOption = InboundProductOption & {
+  retailPrice: unknown;
+};
+
+type PriceBookOption = {
+  id: string;
+  name: string;
+  isDefault: boolean;
+};
+
 type NamedOption = {
   id: string;
   name: string;
@@ -135,6 +145,18 @@ function parseQuantity(prompt: string) {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
+function parseMoneyAmount(prompt: string) {
+  const matches = [...prompt.matchAll(/(\d[\d.,]*)(?:\s*(k|nghin|ngàn|ngan|₫|d|đ|vnd))?/gi)];
+  const last = matches.at(-1);
+  if (!last) return null;
+  const raw = last[1];
+  const suffix = normalize(last[2] ?? "");
+  const compact = raw.replace(/[.,]/g, "");
+  const value = Number(compact);
+  if (!Number.isFinite(value)) return null;
+  return suffix === "k" || suffix === "nghin" || suffix === "ngan" ? value * 1000 : value;
+}
+
 function matchNamed<T extends { name: string; sku?: string; code?: string | null }>(
   prompt: string,
   options: T[],
@@ -145,9 +167,12 @@ function matchNamed<T extends { name: string; sku?: string; code?: string | null
       const name = normalize(option.name);
       const sku = option.sku ? normalize(option.sku) : "";
       const code = option.code ? normalize(option.code) : "";
+      const tokens = q.split(/[^a-z0-9]+/).filter(Boolean);
+      const skuHit = sku ? (sku.length <= 2 ? tokens.includes(sku) : q.includes(sku)) : false;
+      const codeHit = code ? (code.length <= 2 ? tokens.includes(code) : q.includes(code)) : false;
       const score =
-        sku && q.includes(sku) ? 100 :
-        code && q.includes(code) ? 95 :
+        skuHit ? 100 :
+        codeHit ? 95 :
         q.includes(name) ? 90 :
         name.split(/\s+/).filter((part) => part.length > 1 && q.includes(part)).length;
       return { option, score };
@@ -166,6 +191,70 @@ function matchNamed<T extends { name: string; sku?: string; code?: string | null
 
 function defaultCost(product: InboundProductOption | null) {
   return Number(product?.lastPurchasePrice ?? product?.costPrice ?? 0);
+}
+
+async function getPriceContext() {
+  const [productRows, bookRows] = await Promise.all([
+    db
+      .select({
+        id: products.id,
+        sku: products.sku,
+        name: products.name,
+        baseUnit: products.baseUnit,
+        costPrice: products.costPrice,
+        lastPurchasePrice: products.lastPurchasePrice,
+        retailPrice: products.retailPrice,
+      })
+      .from(products)
+      .where(eq(products.isActive, true))
+      .orderBy(asc(products.name))
+      .limit(300),
+    db
+      .select({ id: priceBooks.id, name: priceBooks.name, isDefault: priceBooks.isDefault })
+      .from(priceBooks)
+      .orderBy(desc(priceBooks.isDefault), asc(priceBooks.sortOrder), asc(priceBooks.name)),
+  ]);
+  const productIds = productRows.map((product) => product.id);
+  const overrideRows = productIds.length
+    ? await db
+        .select({
+          priceBookId: productPrices.priceBookId,
+          productId: productPrices.productId,
+          price: productPrices.price,
+        })
+        .from(productPrices)
+        .where(inArray(productPrices.productId, productIds))
+    : [];
+  const overrides = new Map(
+    overrideRows.map((row) => [`${row.priceBookId}:${row.productId}`, Number(row.price)]),
+  );
+  return {
+    products: productRows,
+    priceBooks: bookRows,
+    overrides,
+  };
+}
+
+function currentBookPrice(
+  product: PriceProductOption,
+  book: PriceBookOption,
+  overrides: Map<string, number>,
+) {
+  if (book.isDefault) return Number(product.retailPrice);
+  return overrides.get(`${book.id}:${product.id}`) ?? Number(product.retailPrice);
+}
+
+function matchPriceBook(prompt: string, books: PriceBookOption[]) {
+  const q = normalize(prompt);
+  const defaultBook = books.find((book) => book.isDefault) ?? books[0] ?? null;
+  const wholesale = books.find((book) => normalize(book.name).includes("si") || normalize(book.name).includes("wholesale"));
+  if (q.includes("ban le") || q.includes("gia le") || q.includes("retail")) {
+    return defaultBook;
+  }
+  if (q.includes("ban si") || q.includes("gia si") || q.includes("wholesale")) {
+    return wholesale ?? defaultBook;
+  }
+  return matchNamed(prompt, books).match ?? defaultBook;
 }
 
 function restockPreview(prompt: string, restock: RestockRow[]): AiActionPreview {
@@ -293,33 +382,66 @@ async function inboundPreview(prompt: string): Promise<AiActionPreview> {
   };
 }
 
-function pricePreview(prompt: string): AiActionPreview {
-  const price = prompt.match(/(\d[\d.,]*)\s*(k|nghin|ngàn|₫|d|đ)?/i)?.[1] ?? "";
+async function pricePreview(prompt: string): Promise<AiActionPreview> {
+  const context = await getPriceContext();
+  const productMatch = matchNamed(prompt, context.products);
+  const product = productMatch.match;
+  const book = matchPriceBook(prompt, context.priceBooks);
+  const price = parseMoneyAmount(prompt);
+  const oldPrice = product && book ? currentBookPrice(product, book, context.overrides) : null;
+  const missingFields = [
+    ...(product ? [] : ["product"]),
+    ...(book ? [] : ["price_book"]),
+    ...(price != null ? [] : ["price"]),
+  ];
+  const hasAmbiguity = productMatch.ambiguous.length > 0;
+  const canPreview = missingFields.length === 0 && !hasAmbiguity;
   return {
     id: randomUUID(),
     intent: "set_product_price",
     title: "Xem trước cập nhật giá",
-    description: "Tôi nhận ra yêu cầu thiết lập giá. Cần match sản phẩm và bảng giá trước khi áp dụng.",
-    confidence: 0.74,
-    state: "needs_selection",
+    description: canPreview
+      ? "Tôi đã match được sản phẩm, bảng giá và giá mới. Hãy kiểm tra trước khi xác nhận."
+      : "Tôi nhận ra yêu cầu thiết lập giá. Cần match sản phẩm, bảng giá và giá mới trước khi áp dụng.",
+    confidence: Math.min(0.93, 0.45 + productMatch.confidence * 0.35 + (book ? 0.08 : 0) + (price != null ? 0.1 : 0)),
+    state: canPreview ? "preview" : hasAmbiguity ? "needs_selection" : "needs_input",
     confirmationRequired: true,
     entityType: "product_price",
     requiredFields: ["product", "price_book", "price"],
-    missingFields: ["product", "price_book", ...(price ? [] : ["price"])],
+    missingFields,
     fields: [
-      { label: "Giá đọc được", value: price || "Chưa rõ", tone: price ? "default" : "warning" },
-      { label: "Sản phẩm", value: "Cần chọn", tone: "warning" },
-      { label: "Bảng giá", value: "Cần chọn", tone: "warning" },
+      { label: "Sản phẩm", value: product ? `${product.name} (${product.sku})` : "Cần chọn", tone: product ? "success" : "warning" },
+      { label: "Bảng giá", value: book?.name ?? "Cần chọn", tone: book ? "success" : "warning" },
+      { label: "Giá hiện tại", value: oldPrice == null ? "Chưa rõ" : moneyText(oldPrice), tone: "default" },
+      { label: "Giá mới", value: price == null ? "Chưa rõ" : moneyText(price), tone: price == null ? "warning" : "success" },
     ],
-    lines: [],
+    lines: product && price != null
+      ? [
+          {
+            label: product.name,
+            value: `${oldPrice == null ? "—" : moneyText(oldPrice)} → ${moneyText(price)}`,
+            meta: `${product.sku} · ${book?.name ?? "Bảng giá"}`,
+            tone: oldPrice != null && price < oldPrice ? "warning" : "success",
+          },
+        ]
+      : [],
     warnings: [
       "Giá mới sẽ được dùng tại POS sau khi xác nhận.",
-      "Bulk price formula sẽ cần xác nhận mạnh hơn ở task riêng.",
+      ...productMatch.ambiguous.map((item) => `Sản phẩm có thể là: ${item.name} (${item.sku}). Hãy ghi rõ SKU/tên hơn.`),
     ],
     action: {
       type: "set_product_price",
       target: "pricing",
-      payload: { prompt, price: price || null },
+      payload: {
+        prompt,
+        productId: product?.id ?? null,
+        productName: product?.name ?? null,
+        sku: product?.sku ?? null,
+        priceBookId: book?.id ?? null,
+        priceBookName: book?.name ?? null,
+        oldPrice,
+        price,
+      },
     },
   };
 }
@@ -352,8 +474,8 @@ export async function buildAiAssistantResponse(input: {
     ? restockPreview(prompt, input.restock)
     : asksInbound
       ? await inboundPreview(prompt)
-      : asksPrice
-        ? pricePreview(prompt)
+    : asksPrice
+        ? await pricePreview(prompt)
         : undefined;
 
   if (actionPreview) {
