@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { cashTransactions } from "@/db/schema";
 import { type ActionResult, requireManager, getProfileId, generateCode } from "./common";
 import { Routes } from "@/lib/routes";
+import { writeAuditLog } from "@/lib/audit";
 
 const schema = z.object({
   type: z.enum(["in", "out"]),
@@ -37,10 +38,40 @@ export async function createCashTx(input: CreateCashTxInput): Promise<ActionResu
       note: v.note,
       createdBy: profileId,
     });
+    await writeAuditLog({
+      actorId: profileId,
+      source: "manual",
+      action: "create_cash_transaction",
+      entityType: "cash_transaction",
+      status: "succeeded",
+      after: {
+        type: v.type,
+        fund: v.fund,
+        amount: v.amount,
+        category: v.category,
+        note: v.note,
+      },
+      metadata: { route: Routes.Cashbook },
+    });
     revalidatePath(Routes.Cashbook);
+    revalidatePath(Routes.Notifications);
     return { ok: true, data: undefined };
   } catch (e) {
     console.error("createCashTx failed:", e);
+    await writeAuditLog({
+      actorUserId: userId,
+      source: "manual",
+      action: "create_cash_transaction",
+      entityType: "cash_transaction",
+      status: "failed",
+      after: {
+        type: v.type,
+        fund: v.fund,
+        amount: v.amount,
+        category: v.category,
+      },
+      metadata: { error: e instanceof Error ? e.message : String(e) },
+    });
     return { ok: false, error: "errors.serverError" };
   }
 }

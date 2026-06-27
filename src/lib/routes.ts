@@ -35,6 +35,7 @@ export const Routes = {
   CustomerNew: "/customers/new",
   Suppliers: "/suppliers",
   Reports: "/reports",
+  Notifications: "/notifications",
   Settings: "/settings",
 
   // Param routes

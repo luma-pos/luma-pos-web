@@ -28,6 +28,13 @@ export const customerConsentStatusEnum = pgEnum("customer_consent_status", [
   "pending", "granted", "withdrawn",
 ]);
 
+export const auditLogSourceEnum = pgEnum("audit_log_source", [
+  "manual", "ai", "mobile", "pos", "system",
+]);
+export const auditLogStatusEnum = pgEnum("audit_log_status", [
+  "previewed", "confirmed", "succeeded", "failed", "cancelled", "unauthorized",
+]);
+
 // ============= Users (linked to Supabase auth.users) =============
 
 export const profiles = pgTable("profiles", {
@@ -38,6 +45,31 @@ export const profiles = pgTable("profiles", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// ============= General Audit Log =============
+
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorId: uuid("actor_id").references(() => profiles.id),
+  actorNameSnapshot: text("actor_name_snapshot"),
+  source: auditLogSourceEnum("source").notNull().default("manual"),
+  action: text("action").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: uuid("entity_id"),
+  status: auditLogStatusEnum("status").notNull().default("succeeded"),
+  prompt: text("prompt"),
+  parsedIntent: jsonb("parsed_intent").$type<Record<string, unknown> | unknown[] | null>(),
+  before: jsonb("before").$type<Record<string, unknown> | unknown[] | null>(),
+  after: jsonb("after").$type<Record<string, unknown> | unknown[] | null>(),
+  affectedRecords: jsonb("affected_records").$type<Record<string, unknown>[] | null>(),
+  metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index("audit_logs_actor_idx").on(t.actorId, t.createdAt),
+  index("audit_logs_entity_idx").on(t.entityType, t.entityId),
+  index("audit_logs_created_idx").on(t.createdAt),
+  index("audit_logs_source_status_idx").on(t.source, t.status),
+]);
 
 // ============= Categories =============
 

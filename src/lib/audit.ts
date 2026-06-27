@@ -1,0 +1,116 @@
+import { and, desc, eq, gte, lte, type SQL } from "drizzle-orm";
+import { db } from "@/db";
+import { auditLogs, profiles } from "@/db/schema";
+import { getProfileId } from "@/lib/actions/common";
+
+export type AuditSource = "manual" | "ai" | "mobile" | "pos" | "system";
+export type AuditStatus =
+  | "previewed"
+  | "confirmed"
+  | "succeeded"
+  | "failed"
+  | "cancelled"
+  | "unauthorized";
+
+type Jsonish = Record<string, unknown> | unknown[] | null;
+
+export type AuditLogInput = {
+  actorUserId?: string | null;
+  actorId?: string | null;
+  source: AuditSource;
+  action: string;
+  entityType: string;
+  entityId?: string | null;
+  status?: AuditStatus;
+  prompt?: string | null;
+  parsedIntent?: Jsonish;
+  before?: Jsonish;
+  after?: Jsonish;
+  affectedRecords?: Record<string, unknown>[] | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+async function actorSnapshot(actorId: string | null) {
+  if (!actorId) return { actorId: null, actorNameSnapshot: null };
+  const [profile] = await db
+    .select({ id: profiles.id, fullName: profiles.fullName })
+    .from(profiles)
+    .where(eq(profiles.id, actorId))
+    .limit(1);
+  return {
+    actorId: profile?.id ?? null,
+    actorNameSnapshot: profile?.fullName ?? null,
+  };
+}
+
+export async function writeAuditLog(input: AuditLogInput) {
+  try {
+    const actorId =
+      input.actorId ??
+      (input.actorUserId ? await getProfileId(input.actorUserId) : null);
+    const actor = await actorSnapshot(actorId);
+    await db.insert(auditLogs).values({
+      actorId: actor.actorId,
+      actorNameSnapshot: actor.actorNameSnapshot,
+      source: input.source,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId ?? null,
+      status: input.status ?? "succeeded",
+      prompt: input.prompt ?? null,
+      parsedIntent: input.parsedIntent ?? null,
+      before: input.before ?? null,
+      after: input.after ?? null,
+      affectedRecords: input.affectedRecords ?? null,
+      metadata: input.metadata ?? null,
+    });
+  } catch (e) {
+    console.error("writeAuditLog failed:", e);
+  }
+}
+
+export type AuditLogFilters = {
+  source?: AuditSource;
+  status?: AuditStatus;
+  action?: string;
+  entityType?: string;
+  actorId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  limit?: number;
+};
+
+export async function getAuditLogs(filters: AuditLogFilters = {}) {
+  const where: SQL[] = [];
+  if (filters.source) where.push(eq(auditLogs.source, filters.source));
+  if (filters.status) where.push(eq(auditLogs.status, filters.status));
+  if (filters.action) where.push(eq(auditLogs.action, filters.action));
+  if (filters.entityType) where.push(eq(auditLogs.entityType, filters.entityType));
+  if (filters.actorId) where.push(eq(auditLogs.actorId, filters.actorId));
+  if (filters.dateFrom) where.push(gte(auditLogs.createdAt, filters.dateFrom));
+  if (filters.dateTo) where.push(lte(auditLogs.createdAt, filters.dateTo));
+
+  const limit = Math.min(Math.max(filters.limit ?? 100, 1), 250);
+  return db
+    .select({
+      id: auditLogs.id,
+      actorId: auditLogs.actorId,
+      actorNameSnapshot: auditLogs.actorNameSnapshot,
+      source: auditLogs.source,
+      action: auditLogs.action,
+      entityType: auditLogs.entityType,
+      entityId: auditLogs.entityId,
+      status: auditLogs.status,
+      prompt: auditLogs.prompt,
+      parsedIntent: auditLogs.parsedIntent,
+      before: auditLogs.before,
+      after: auditLogs.after,
+      affectedRecords: auditLogs.affectedRecords,
+      metadata: auditLogs.metadata,
+      createdAt: auditLogs.createdAt,
+    })
+    .from(auditLogs)
+    .where(where.length ? and(...where) : undefined)
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(limit);
+}

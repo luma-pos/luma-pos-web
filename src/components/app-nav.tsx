@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   LayoutDashboard, ShoppingCart, Warehouse, Users, Wallet,
-  BarChart3, Settings, FileText, Utensils, Sparkles, ChefHat,
+  BarChart3, Settings, FileText, Utensils, Sparkles, ChefHat, Bell,
 } from "lucide-react";
 import { Routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,7 @@ const GROUPS: Group[] = [
     items: [
       { href: "/ai", icon: Sparkles, key: "nav.ai" },
       { href: Routes.Reports, icon: BarChart3, key: "nav.reports" },
+      { href: Routes.Notifications, icon: Bell, key: "nav.activity" },
       { href: Routes.Settings, icon: Settings, key: "nav.settings" },
     ],
   },
