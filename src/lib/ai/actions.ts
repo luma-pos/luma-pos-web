@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { brands, categories, customers, priceBooks, productPrices, products, suppliers, warehouses } from "@/db/schema";
+import { brands, categories, customers, orders, priceBooks, productPrices, products, suppliers, warehouses } from "@/db/schema";
 import type { RestockRow } from "@/lib/data/ai-restock";
 
 export type AiAssistantState =
@@ -108,6 +108,17 @@ type CustomerOption = {
   note: string | null;
 };
 
+type OrderOption = {
+  id: string;
+  code: string;
+  name: string;
+  status: string;
+  paymentStatus: string;
+  total: unknown;
+  amountPaid: unknown;
+  customerName: string | null;
+};
+
 type NamedOption = {
   id: string;
   name: string;
@@ -178,6 +189,10 @@ function cleanName(value: string) {
     .replace(/[,.]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function textAfter(prompt: string, patterns: RegExp[]) {
@@ -337,6 +352,86 @@ async function getCustomerContext() {
     .orderBy(desc(customers.createdAt))
     .limit(300);
   return rows;
+}
+
+async function getSalesContext() {
+  const [productRows, customerRows, warehouseRows, orderRows] = await Promise.all([
+    db
+      .select({
+        id: products.id,
+        sku: products.sku,
+        name: products.name,
+        baseUnit: products.baseUnit,
+        costPrice: products.costPrice,
+        lastPurchasePrice: products.lastPurchasePrice,
+        retailPrice: products.retailPrice,
+      })
+      .from(products)
+      .where(eq(products.isActive, true))
+      .orderBy(asc(products.name))
+      .limit(400),
+    getCustomerContext(),
+    db
+      .select({ id: warehouses.id, name: warehouses.name, isDefault: warehouses.isDefault })
+      .from(warehouses)
+      .orderBy(desc(warehouses.isDefault), asc(warehouses.name))
+      .limit(50),
+    db
+      .select({
+        id: orders.id,
+        code: orders.code,
+        status: orders.status,
+        paymentStatus: orders.paymentStatus,
+        total: orders.total,
+        amountPaid: orders.amountPaid,
+        customerName: customers.name,
+      })
+      .from(orders)
+      .leftJoin(customers, eq(orders.customerId, customers.id))
+      .orderBy(desc(orders.createdAt))
+      .limit(200),
+  ]);
+  return {
+    products: productRows,
+    customers: customerRows,
+    warehouses: warehouseRows,
+    orders: orderRows.map((order) => ({ ...order, name: order.code })),
+  };
+}
+
+function parseProductLines(prompt: string, productOptions: PriceProductOption[]) {
+  const q = normalize(prompt);
+  const matched: Array<{
+    product: PriceProductOption;
+    quantity: number;
+    confidence: number;
+  }> = [];
+  const seen = new Set<string>();
+  const productsBySpecificName = [...productOptions].sort((a, b) => b.name.length - a.name.length);
+
+  for (const product of productsBySpecificName) {
+    const name = normalize(product.name);
+    const sku = normalize(product.sku);
+    const tokens = q.split(/[^a-z0-9]+/).filter(Boolean);
+    const skuHit = sku ? (sku.length <= 2 ? tokens.includes(sku) : q.includes(sku)) : false;
+    const nameHit = name.length > 1 && q.includes(name);
+    if (!skuHit && !nameHit) continue;
+    if (seen.has(product.id)) continue;
+
+    const source = nameHit ? name : sku;
+    const qtyBefore = q.match(new RegExp(`(?:^|\\s)(\\d+(?:[.,]\\d+)?)\\s*(?:x\\s*)?${escapeRegExp(source)}(?:\\s|$)`));
+    const qtyAfter = q.match(new RegExp(`${escapeRegExp(source)}\\s*(?:x\\s*)?(\\d+(?:[.,]\\d+)?)(?:\\s|$)`));
+    const rawQty = qtyBefore?.[1] ?? qtyAfter?.[1];
+    const quantity = rawQty ? Number(rawQty.replace(",", ".")) : 1;
+    matched.push({
+      product,
+      quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+      confidence: skuHit ? 0.94 : 0.82,
+    });
+    seen.add(product.id);
+  }
+
+  return matched.slice(0, 20);
 }
 
 function formulaPreview(prompt: string, books: PriceBookOption[]): AiActionPreview {
@@ -825,6 +920,227 @@ function cashbookPreview(prompt: string): AiActionPreview {
   };
 }
 
+async function orderActionPreview(prompt: string): Promise<AiActionPreview> {
+  const q = normalize(prompt);
+  const context = await getSalesContext();
+  const isPayment = q.includes("thanh toan") || q.includes("da tra") || q.includes("tra tien");
+  const isConvert = q.includes("chuyen") && (q.includes("bao gia") || q.includes("quote"));
+  const orderCode = prompt.match(/\b(?:HD|DH|BG)[A-Z0-9-]+\b/i)?.[0] ?? "";
+
+  if (isPayment) {
+    const amount = parseMoneyAmount(prompt);
+    const order = orderCode
+      ? context.orders.find((item) => normalize(item.code) === normalize(orderCode)) ?? null
+      : matchNamed(prompt, context.orders as OrderOption[]).match;
+    const method = q.includes("chuyen khoan") || q.includes("bank")
+      ? "bank_transfer"
+      : q.includes("the") || q.includes("card")
+        ? "card"
+        : "cash";
+    const remaining = order ? Math.max(0, Number(order.total) - Number(order.amountPaid)) : 0;
+    const missingFields = [
+      ...(order ? [] : ["order"]),
+      ...(amount != null ? [] : ["amount"]),
+    ];
+    const canPreview = missingFields.length === 0;
+    return {
+      id: randomUUID(),
+      intent: "record_invoice_payment",
+      title: "Ghi nhận thanh toán hóa đơn",
+      description: canPreview
+        ? "Tôi đã match được hóa đơn và số tiền thanh toán. Hãy kiểm tra trước khi ghi nhận."
+        : "Cần xác định hóa đơn và số tiền trước khi ghi nhận thanh toán.",
+      confidence: canPreview ? 0.84 : 0.54,
+      state: canPreview ? "preview" : "needs_input",
+      confirmationRequired: true,
+      strongConfirmation: true,
+      entityType: "order_payment",
+      entityId: order?.id ?? null,
+      requiredFields: ["order", "amount", "method"],
+      missingFields,
+      fields: [
+        { label: "Hóa đơn", value: order ? order.code : "Cần mã hóa đơn", tone: order ? "success" : "warning" },
+        { label: "Khách", value: order?.customerName ?? "Khách lẻ" },
+        { label: "Còn phải thu", value: order ? moneyText(remaining) : "—" },
+        { label: "Số tiền thu", value: amount == null ? "Chưa rõ" : moneyText(amount), tone: amount == null ? "warning" : "success" },
+        { label: "Phương thức", value: method === "bank_transfer" ? "Chuyển khoản" : method === "card" ? "Thẻ" : "Tiền mặt" },
+      ],
+      lines: order && amount != null
+        ? [{ label: order.code, value: moneyText(amount), meta: `Còn ${moneyText(remaining)}`, tone: amount > remaining ? "warning" : "success" }]
+        : [],
+      warnings: [
+        "Ghi nhận thanh toán sẽ ghi sổ quỹ và cập nhật trạng thái công nợ.",
+        ...(amount != null && order && amount > remaining ? ["Số tiền lớn hơn phần còn phải thu; hệ thống sẽ chỉ ghi tối đa phần còn lại."] : []),
+      ],
+      action: {
+        type: "record_invoice_payment",
+        target: "orders",
+        payload: {
+          prompt,
+          orderId: order?.id ?? null,
+          orderCode: order?.code ?? (orderCode || null),
+          amount,
+          method,
+          note: `AI payment: ${prompt}`,
+        },
+      },
+    };
+  }
+
+  if (isConvert) {
+    const order = orderCode
+      ? context.orders.find((item) => normalize(item.code) === normalize(orderCode)) ?? null
+      : matchNamed(prompt, context.orders as OrderOption[]).match;
+    const missingFields = order ? [] : ["quote"];
+    const isQuote = order?.status === "quote";
+    return {
+      id: randomUUID(),
+      intent: "convert_quote_to_order",
+      title: "Chuyển báo giá thành đơn",
+      description: order && isQuote
+        ? "Tôi đã tìm thấy báo giá. Xác nhận sẽ chốt thành đơn bán và trừ kho."
+        : "Cần chọn đúng báo giá trước khi chuyển thành đơn.",
+      confidence: order && isQuote ? 0.82 : 0.5,
+      state: order && isQuote ? "preview" : "needs_input",
+      confirmationRequired: true,
+      strongConfirmation: true,
+      entityType: "order",
+      entityId: order?.id ?? null,
+      requiredFields: ["quote"],
+      missingFields: isQuote ? missingFields : ["quote"],
+      fields: [
+        { label: "Báo giá", value: order?.code ?? "Cần mã báo giá", tone: order && isQuote ? "success" : "warning" },
+        { label: "Trạng thái", value: order?.status ?? "—", tone: isQuote ? "success" : "warning" },
+        { label: "Tổng", value: order ? moneyText(order.total) : "—" },
+      ],
+      lines: order ? [{ label: order.code, value: moneyText(order.total), meta: order.customerName ?? "Khách lẻ", tone: isQuote ? "success" : "warning" }] : [],
+      warnings: ["Chuyển báo giá thành đơn sẽ trừ kho và ghi công nợ nếu chưa thanh toán."],
+      action: {
+        type: "convert_quote_to_order",
+        target: "orders",
+        payload: { prompt, orderId: order?.id ?? null, orderCode: order?.code ?? (orderCode || null) },
+      },
+    };
+  }
+
+  const lines = parseProductLines(prompt, context.products);
+  const customer = matchNamed(prompt, context.customers).match;
+  const warehouse = matchNamed(prompt, context.warehouses).match ?? context.warehouses.find((item) => item.isDefault) ?? context.warehouses[0] ?? null;
+  const isQuote = q.includes("bao gia") || q.includes("quote");
+  const missingFields = [
+    ...(lines.length ? [] : ["items"]),
+    ...(warehouse ? [] : ["warehouse"]),
+  ];
+  const canPreview = missingFields.length === 0;
+  return {
+    id: randomUUID(),
+    intent: "create_order",
+    title: isQuote ? "Tạo báo giá từ câu lệnh" : "Tạo đơn hàng từ câu lệnh",
+    description: canPreview
+      ? "Tôi đã đọc được các dòng hàng. Hãy kiểm tra trước khi tạo chứng từ."
+      : "Cần xác định ít nhất một sản phẩm và kho trước khi tạo chứng từ.",
+    confidence: canPreview ? Math.min(0.88, 0.56 + lines.reduce((sum, line) => sum + line.confidence, 0) / Math.max(lines.length, 1) * 0.24) : 0.48,
+    state: canPreview ? "preview" : "needs_input",
+    confirmationRequired: true,
+    strongConfirmation: !isQuote,
+    entityType: isQuote ? "quote" : "order",
+    requiredFields: ["items", "warehouse"],
+    missingFields,
+    fields: [
+      { label: "Loại", value: isQuote ? "Báo giá" : "Đơn bán", tone: isQuote ? "default" : "warning" },
+      { label: "Khách", value: customer ? customer.name : "Khách lẻ" },
+      { label: "Kho", value: warehouse?.name ?? "Cần chọn", tone: warehouse ? "success" : "warning" },
+      { label: "Số dòng", value: String(lines.length), tone: lines.length ? "success" : "warning" },
+    ],
+    lines: lines.map((line) => ({
+      label: line.product.name,
+      value: `${line.quantity} ${line.product.baseUnit}`,
+      meta: `${line.product.sku} · ${moneyText(Number(line.product.retailPrice) * line.quantity)}`,
+      tone: "success",
+    })),
+    warnings: [
+      isQuote
+        ? "Tạo báo giá không trừ kho; chỉ chuyển thành đơn sau khi xác nhận riêng."
+        : "Tạo đơn bán sẽ trừ kho và có thể ghi công nợ nếu chưa thanh toán.",
+      "AI không tự thanh toán hóa đơn; nếu cần thu tiền hãy dùng lệnh ghi nhận thanh toán riêng.",
+    ],
+    action: {
+      type: "create_order",
+      target: "orders",
+      payload: {
+        prompt,
+        mode: isQuote ? "quote" : "sale",
+        customerId: customer?.id ?? null,
+        customerName: customer?.name ?? null,
+        warehouseId: warehouse?.id ?? null,
+        warehouseName: warehouse?.name ?? null,
+        items: lines.map((line) => ({
+          productId: line.product.id,
+          productName: line.product.name,
+          unitName: line.product.baseUnit,
+          unitMultiplier: 1,
+          quantity: line.quantity,
+        })),
+        payment: { method: "credit", amount: 0 },
+        discount: 0,
+        taxRate: 0,
+        shippingFee: 0,
+        note: `AI order: ${prompt}`,
+      },
+    },
+  };
+}
+
+async function posCartPreview(prompt: string, source: "voice" | "image"): Promise<AiActionPreview> {
+  const context = await getSalesContext();
+  const lines = parseProductLines(prompt, context.products);
+  const missingFields = lines.length ? [] : ["items"];
+  return {
+    id: randomUUID(),
+    intent: source === "voice" ? "pos_voice_cart_draft" : "pos_image_cart_draft",
+    title: source === "voice" ? "POS giọng nói: nháp giỏ hàng" : "POS hình ảnh: nháp giỏ hàng",
+    description: lines.length
+      ? "Tôi đã match được sản phẩm để đưa vào giỏ POS nháp. POS vẫn cần user xác nhận trước khi tạo hóa đơn."
+      : "Chưa match được sản phẩm từ nội dung này. Hãy đọc/nhập rõ tên hoặc SKU hơn.",
+    confidence: lines.length ? 0.78 : 0.42,
+    state: lines.length ? "preview" : "needs_input",
+    confirmationRequired: true,
+    entityType: "pos_cart_draft",
+    requiredFields: ["items"],
+    missingFields,
+    fields: [
+      { label: "Nguồn", value: source === "voice" ? "Giọng nói/transcript" : "Ảnh/OCR text" },
+      { label: "Số dòng match", value: String(lines.length), tone: lines.length ? "success" : "warning" },
+    ],
+    lines: lines.map((line) => ({
+      label: line.product.name,
+      value: `${line.quantity} ${line.product.baseUnit}`,
+      meta: `${line.product.sku} · confidence ${Math.round(line.confidence * 100)}%`,
+      tone: line.confidence >= 0.9 ? "success" : "warning",
+    })),
+    warnings: [
+      "AI chỉ tạo giỏ POS nháp, không tự tạo hóa đơn hoặc thanh toán.",
+      "Nếu sản phẩm mơ hồ, user cần chọn lại trong POS.",
+    ],
+    action: {
+      type: source === "voice" ? "pos_voice_cart_draft" : "pos_image_cart_draft",
+      target: "pos",
+      payload: {
+        prompt,
+        source,
+        items: lines.map((line) => ({
+          productId: line.product.id,
+          productName: line.product.name,
+          sku: line.product.sku,
+          unitName: line.product.baseUnit,
+          quantity: line.quantity,
+          confidence: line.confidence,
+        })),
+      },
+    },
+  };
+}
+
 export async function buildAiAssistantResponse(input: {
   prompt: string;
   revenue: unknown;
@@ -872,6 +1188,27 @@ export async function buildAiAssistantResponse(input: {
   const asksCashbook =
     q.includes("ghi thu") ||
     q.includes("ghi chi");
+  const asksPosVoice =
+    q.includes("pos voice") ||
+    q.includes("gio hang bang giong noi") ||
+    q.includes("doc mon") ||
+    q.includes("doc san pham");
+  const asksPosImage =
+    q.includes("pos image") ||
+    q.includes("anh don") ||
+    q.includes("chup anh") ||
+    q.includes("ocr");
+  const asksOrderAction =
+    !asksPosVoice &&
+    !asksPosImage &&
+    (q.includes("tao don") ||
+      q.includes("tạo đơn") ||
+      q.includes("tao hoa don") ||
+      q.includes("tạo hóa đơn") ||
+      q.includes("bao gia") ||
+      q.includes("báo giá") ||
+      q.includes("thanh toan") ||
+      q.includes("thanh toán"));
 
   const actionPreview = asksRestock
     ? restockPreview(prompt, input.restock)
@@ -885,6 +1222,12 @@ export async function buildAiAssistantResponse(input: {
         ? await customerPreview(prompt)
     : asksCashbook
         ? cashbookPreview(prompt)
+    : asksPosVoice
+        ? await posCartPreview(prompt, "voice")
+    : asksPosImage
+        ? await posCartPreview(prompt, "image")
+    : asksOrderAction
+        ? await orderActionPreview(prompt)
     : asksPrice
         ? await pricePreview(prompt)
         : undefined;

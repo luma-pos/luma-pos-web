@@ -4,6 +4,9 @@ import { applyPriceFormulaAll, setProductPrice } from "@/lib/actions/price-books
 import { createBrand, createCategory, createProduct } from "@/lib/actions/products";
 import { createCustomer, updateCustomer } from "@/lib/actions/partners";
 import { createCashTx } from "@/lib/actions/cashbook";
+import { createOrderForUser } from "@/lib/orders/create";
+import { addPaymentForUser } from "@/lib/orders/payment";
+import { convertQuoteToOrderForUser } from "@/lib/orders/convert";
 import { writeAuditLog } from "@/lib/audit";
 import { getRestockSuggestions } from "@/lib/data/ai-restock";
 import { db } from "@/db";
@@ -79,6 +82,42 @@ function pricePayload(preview: Record<string, unknown>) {
     productName: typeof payload?.productName === "string" ? payload.productName : null,
     sku: typeof payload?.sku === "string" ? payload.sku : null,
     priceBookName: typeof payload?.priceBookName === "string" ? payload.priceBookName : null,
+  };
+}
+
+function orderPayload(preview: Record<string, unknown>) {
+  const payload = previewPayload(preview);
+  const warehouseId = stringValue(payload?.warehouseId);
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  const safeItems = items
+    .map((item) => objectValue(item))
+    .filter((item): item is Record<string, unknown> => Boolean(item))
+    .map((item) => ({
+      productId: stringValue(item.productId),
+      productName: stringValue(item.productName) ?? undefined,
+      unitName: stringValue(item.unitName) ?? "cái",
+      unitMultiplier: numberValue(item.unitMultiplier, 1),
+      quantity: numberValue(item.quantity),
+    }))
+    .filter((item) => item.productId && item.quantity > 0);
+
+  if (!warehouseId || safeItems.length === 0) return null;
+  return {
+    mode: stringValue(payload?.mode) === "quote" ? "quote" as const : "sale" as const,
+    customerId: stringValue(payload?.customerId),
+    warehouseId,
+    note: stringValue(payload?.note) ?? "AI order",
+    discount: numberValue(payload?.discount),
+    taxRate: numberValue(payload?.taxRate),
+    shippingFee: numberValue(payload?.shippingFee),
+    items: safeItems.map((item) => ({
+      ...item,
+      productId: item.productId as string,
+    })),
+    payment: {
+      method: "credit" as const,
+      amount: 0,
+    },
   };
 }
 
@@ -578,6 +617,125 @@ export async function POST(request: Request) {
     });
     if (!result.ok) return mobileAction(result);
     return mobileAction({ ok: true, data: { status: "succeeded", executed: true, message: `Đã thực hiện ${record?.code ?? "thao tác"}.`, record } });
+  }
+
+  if (event === "confirmed" && ["create_order", "record_invoice_payment", "convert_quote_to_order"].includes(intent)) {
+    if (!["owner", "manager", "cashier"].includes(gate.role)) {
+      await logAiExecution({ userId: gate.userId, action: intent, entityType, entityId, status: "unauthorized", prompt, preview, surface: body.surface });
+      return mobileAction({ ok: false, error: "errors.forbidden" });
+    }
+
+    const payload = previewPayload(preview);
+    let result: { ok: true; data: unknown } | { ok: false; error: string };
+    let record: { type: string; id: string; code: string; href: string } | null = null;
+    let executedTool = intent;
+
+    if (intent === "create_order") {
+      const createPayload = preview ? orderPayload(preview) : null;
+      if (!createPayload) {
+        await logAiExecution({ userId: gate.userId, action: intent, entityType, entityId, status: "failed", prompt, preview, surface: body.surface, reason: "missing_required_order_fields" });
+        return mobileAction({ ok: false, error: "errors.invalidData" });
+      }
+      result = await createOrderForUser(gate.userId, createPayload);
+      executedTool = "createOrderForUser";
+      if (result.ok) {
+        const data = result.data as { id: string; code: string };
+        record = {
+          type: createPayload.mode === "quote" ? "quote" : "order",
+          id: data.id,
+          code: data.code,
+          href: `/orders/${data.id}`,
+        };
+      }
+    } else if (intent === "record_invoice_payment") {
+      const orderId = stringValue(payload?.orderId);
+      const amount = numberValue(payload?.amount, Number.NaN);
+      const method = stringValue(payload?.method);
+      if (!orderId || !Number.isFinite(amount) || amount <= 0 || !["cash", "bank_transfer", "card"].includes(method ?? "")) {
+        await logAiExecution({ userId: gate.userId, action: intent, entityType, entityId, status: "failed", prompt, preview, surface: body.surface, reason: "missing_required_payment_fields" });
+        return mobileAction({ ok: false, error: "errors.invalidData" });
+      }
+      result = await addPaymentForUser(gate.userId, {
+        orderId,
+        amount,
+        method: method as "cash" | "bank_transfer" | "card",
+        note: stringValue(payload?.note) ?? "AI payment",
+      });
+      executedTool = "addPaymentForUser";
+      record = {
+        type: "order_payment",
+        id: orderId,
+        code: stringValue(payload?.orderCode) ?? "Hóa đơn",
+        href: `/orders/${orderId}`,
+      };
+    } else {
+      const orderId = stringValue(payload?.orderId);
+      if (!orderId) {
+        await logAiExecution({ userId: gate.userId, action: intent, entityType, entityId, status: "failed", prompt, preview, surface: body.surface, reason: "missing_required_quote_fields" });
+        return mobileAction({ ok: false, error: "errors.invalidData" });
+      }
+      result = await convertQuoteToOrderForUser(gate.userId, orderId);
+      executedTool = "convertQuoteToOrderForUser";
+      record = {
+        type: "order",
+        id: orderId,
+        code: result.ok ? (result.data as { code: string }).code : stringValue(payload?.orderCode) ?? "Đơn hàng",
+        href: `/orders/${orderId}`,
+      };
+    }
+
+    await logAiExecution({
+      userId: gate.userId,
+      action: intent,
+      entityType: record?.type ?? entityType,
+      entityId: record?.id ?? entityId,
+      status: result.ok ? "succeeded" : "failed",
+      prompt,
+      preview,
+      surface: body.surface,
+      executedTool,
+      after: result.ok ? { record } : null,
+      affectedRecords: result.ok && record ? [{ type: record.type, id: record.id, code: record.code }] : null,
+    });
+    if (!result.ok) return mobileAction(result);
+    return mobileAction({
+      ok: true,
+      data: {
+        status: "succeeded",
+        executed: true,
+        message: `Đã thực hiện ${record?.code ?? "thao tác"}.`,
+        record,
+      },
+    });
+  }
+
+  if (event === "confirmed" && ["pos_voice_cart_draft", "pos_image_cart_draft"].includes(intent)) {
+    const payload = previewPayload(preview);
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    await logAiExecution({
+      userId: gate.userId,
+      action: intent,
+      entityType: "pos_cart_draft",
+      entityId: null,
+      status: items.length ? "succeeded" : "failed",
+      prompt,
+      preview,
+      surface: body.surface,
+      executedTool: "createPosCartDraft",
+      after: { itemCount: items.length, href: "/pos" },
+      affectedRecords: items.length ? [{ type: "pos_cart_draft", id: "draft", count: items.length }] : null,
+    });
+    return mobileAction({
+      ok: true,
+      data: {
+        status: "succeeded",
+        executed: false,
+        message: items.length
+          ? "Đã tạo nháp giỏ POS. Mở POS để kiểm tra và xác nhận thanh toán."
+          : "Chưa có dòng hàng hợp lệ để đưa vào POS.",
+        record: { type: "pos_cart_draft", id: "draft", code: `${items.length} dòng`, href: "/pos" },
+      },
+    });
   }
 
   await writeAuditLog({
