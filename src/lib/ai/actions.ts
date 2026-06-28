@@ -277,11 +277,34 @@ export function buildGeneralAssistantResponse(input: {
   suggestedNextQuestion?: string;
   toolTrace?: AiToolTrace[];
 }): AiAssistantResponse {
+  const q = normalize(input.prompt);
   const nextQuestion = input.suggestedNextQuestion?.trim();
+  const asksIdentity =
+    q.includes("ban la ai") ||
+    q.includes("dang la ai") ||
+    q.includes("ai dung ko") ||
+    q.includes("ai dung khong") ||
+    q.includes("who are you");
+  const asksStrength =
+    q.includes("gioi nhat") ||
+    q.includes("lam tot nhat") ||
+    q.includes("best at") ||
+    q.includes("what are you good at");
+  const greets =
+    q === "xin chao" ||
+    q === "chao" ||
+    q === "hello" ||
+    q === "hi" ||
+    q.startsWith("xin chao ");
+  const text = asksIdentity
+    ? "Mình là trợ lý AI trong LumaPOS. Mình đọc ngữ cảnh bán hàng, kho, sản phẩm, khách/NCC và tạo bản nháp thao tác để bạn kiểm tra trước khi lưu dữ liệu."
+    : asksStrength
+      ? "Mình hữu ích nhất khi biến yêu cầu vận hành thành việc làm được ngay: tạo nháp hóa đơn/báo giá/phiếu nhập, kiểm tồn theo SKU, tìm đơn hàng, xem doanh số và mở đúng màn nghiệp vụ để bạn duyệt."
+      : greets
+        ? "Chào bạn. Bạn có thể hỏi nhanh doanh số, tồn kho, tìm hóa đơn, hoặc chọn một action bên dưới để mình tạo nháp nghiệp vụ cho bạn kiểm tra."
+        : "Mình hiểu. Bạn có thể hỏi bằng ngôn ngữ tự nhiên, ví dụ: “hôm nay bán được bao nhiêu”, “kiểm tồn SP004935”, “tạo báo giá cho anh Nam”, hoặc “nhập 5 đèn 8W từ NCC Rạng Đông”.";
   return {
-    text:
-      "Mình có thể giúp xem doanh số, kiểm tồn kho, tìm đơn hàng, tạo nháp hóa đơn/báo giá/phiếu nhập và mở đúng màn nghiệp vụ để bạn kiểm tra trước khi lưu. " +
-      (nextQuestion || "Bạn muốn xử lý việc gì trước?"),
+    text: `${text} ${nextQuestion || "Bạn muốn xử lý việc gì trước?"}`,
     state: "succeeded",
     prompt: input.prompt,
     actions: [],

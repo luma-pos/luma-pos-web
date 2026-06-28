@@ -104,6 +104,7 @@ export function AssistantChatSurface({
   const [sessionDialog, setSessionDialog] = useState<"rename" | "delete" | null>(null);
   const [sessionTitleDraft, setSessionTitleDraft] = useState("");
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const composer = composerRef.current;
@@ -111,6 +112,12 @@ export function AssistantChatSurface({
     composer.style.height = "0px";
     composer.style.height = `${Math.min(composer.scrollHeight, compact ? 128 : 160)}px`;
   }, [compact, input]);
+
+  useEffect(() => {
+    const messagesEl = messagesRef.current;
+    if (!messagesEl) return;
+    messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: "smooth" });
+  }, [busy, msgs.length]);
 
   function submitComposer() {
     if (!hasComposerPayload) {
@@ -345,7 +352,7 @@ export function AssistantChatSurface({
       <div className={cn(
         "min-h-0 flex-1 overflow-y-auto flex flex-col gap-3 bg-gradient-to-b from-canvas/25 via-surface to-surface",
         compact ? "p-3" : "p-4"
-      )}>
+      )} ref={messagesRef}>
         {msgs.length === 0 ? (
           <div className="m-auto w-full max-w-3xl px-4 text-center text-slate-400">
             {compact ? (

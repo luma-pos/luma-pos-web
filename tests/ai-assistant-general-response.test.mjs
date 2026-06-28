@@ -13,8 +13,15 @@ const response = buildGeneralAssistantResponse({
 
 assert.equal(response.state, "succeeded");
 assert.equal(response.actions.length, 0);
-assert.match(response.text, /AI Assistant của LumaPOS/);
+assert.match(response.text, /trợ lý AI trong LumaPOS/);
 assert.doesNotMatch(response.text, /Doanh thu 30 ngày/);
+
+const strength = buildGeneralAssistantResponse({
+  prompt: "giỏi nhất là gì",
+});
+
+assert.match(strength.text, /hữu ích nhất/);
+assert.match(strength.text, /tạo nháp hóa đơn/);
 
 assert.equal(isAiReportSummaryPrompt("Hôm nay bán được bao nhiêu?"), true);
 assert.equal(isAiReportSummaryPrompt("Mặt hàng bán chạy nhất?"), true);
