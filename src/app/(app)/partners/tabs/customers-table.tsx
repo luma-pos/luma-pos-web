@@ -67,13 +67,7 @@ export function CustomersTable({
   const activeFilterCount = FILTER_KEYS.filter((key) => Boolean(filters[key])).length + (filters.owing ? 1 : 0);
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="hidden xl:block">
-        <div className="sticky top-[112px] rounded-card border border-border bg-surface p-4">
-          <CustomerFilterForm filters={filters} pageSize={data.pageSize} />
-        </div>
-      </aside>
-
+    <div className="min-w-0">
       <section className="min-w-0">
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <CustomerSearch filters={filters} pageSize={data.pageSize} onOpenFilters={() => setFilterOpen(true)} activeFilterCount={activeFilterCount} />
@@ -112,9 +106,9 @@ export function CustomersTable({
       </section>
 
       {filterOpen && (
-        <div className="fixed inset-0 z-[80] bg-slate-950/40 xl:hidden" onMouseDown={() => setFilterOpen(false)}>
+        <div className="fixed inset-0 z-[80] bg-slate-950/40" onMouseDown={() => setFilterOpen(false)}>
           <div
-            className="ml-auto flex h-full w-full max-w-sm flex-col overflow-auto bg-surface p-4 shadow-2xl"
+            className="ml-auto flex h-full w-full max-w-md flex-col overflow-auto bg-surface p-4 shadow-2xl"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
@@ -223,29 +217,39 @@ function CustomerRows({ data }: { data: CustomerListResult }) {
       </div>
 
       <div className="hidden overflow-x-auto rounded-card border border-border bg-surface lg:block">
-        <table className="w-full min-w-[1180px] text-sm">
+        <table className="w-full min-w-[980px] table-fixed text-sm">
+          <colgroup>
+            <col className="w-11" />
+            <col className="w-32" />
+            <col />
+            <col className="w-32" />
+            <col className="w-36" />
+            <col className="w-40" />
+            <col className="w-44" />
+            <col className="w-10" />
+          </colgroup>
           <thead>
             <tr className="bg-primary-50/70 text-left text-xs font-semibold text-slate-700 dark:bg-primary-950/20 dark:text-slate-300">
-              <th className="w-11 px-4 py-3"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" aria-label={t("customers.selectAll")} /></th>
-              <th className="px-4 py-3">{t("customers.cols.code")}</th>
-              <th className="px-4 py-3">{t("customers.cols.name")}</th>
-              <th className="px-4 py-3">{t("customers.cols.phone")}</th>
-              <th className="px-4 py-3 text-right">{t("customers.cols.debtCurrent")}</th>
-              <th className="px-4 py-3 text-right">{t("customers.cols.totalGrossSales")}</th>
-              <th className="px-4 py-3 text-right">{t("customers.cols.totalSalesNet")}</th>
-              <th className="w-10 px-4 py-3" />
+              <th className="px-3 py-3"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" aria-label={t("customers.selectAll")} /></th>
+              <th className="px-3 py-3">{t("customers.cols.code")}</th>
+              <th className="px-3 py-3">{t("customers.cols.name")}</th>
+              <th className="px-3 py-3">{t("customers.cols.phone")}</th>
+              <th className="px-3 py-3 text-right">{t("customers.cols.debtCurrent")}</th>
+              <th className="px-3 py-3 text-right">{t("customers.cols.totalGrossSales")}</th>
+              <th className="px-3 py-3 text-right">{t("customers.cols.totalSalesNet")}</th>
+              <th className="px-3 py-3" />
             </tr>
           </thead>
           <tbody>
             <tr className="border-t border-border-soft bg-surface text-right font-bold tabular-nums">
-              <td className="px-4 py-3" />
-              <td className="px-4 py-3" />
-              <td className="px-4 py-3" />
-              <td className="px-4 py-3" />
-              <td className="px-4 py-3">{formatCurrency(data.totalDebt)}</td>
-              <td className="px-4 py-3">{formatCurrency(data.totalGrossSales)}</td>
-              <td className="px-4 py-3">{formatCurrency(data.totalNetSales)}</td>
-              <td className="px-4 py-3" />
+              <td className="px-3 py-3" />
+              <td className="px-3 py-3" />
+              <td className="px-3 py-3" />
+              <td className="px-3 py-3" />
+              <td className="px-3 py-3">{formatCurrency(data.totalDebt)}</td>
+              <td className="px-3 py-3">{formatCurrency(data.totalGrossSales)}</td>
+              <td className="px-3 py-3">{formatCurrency(data.totalNetSales)}</td>
+              <td className="px-3 py-3" />
             </tr>
             {data.rows.map((customer) => {
               const expanded = expandedId === customer.id;
@@ -258,18 +262,18 @@ function CustomerRows({ data }: { data: CustomerListResult }) {
                     )}
                     onClick={() => setExpanded(expanded ? null : customer.id)}
                   >
-                    <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                    <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
                       <input type="checkbox" className="h-4 w-4 rounded border-slate-300" aria-label={customer.name} />
                     </td>
-                    <td className="px-4 py-3 font-medium">{customer.code ?? "—"}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{customer.name}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{customer.phone ?? "—"}</td>
-                    <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", Number(customer.currentDebt) > 0 ? "text-er" : "text-slate-400")}>
+                    <td className="truncate px-3 py-3 font-medium">{customer.code ?? "—"}</td>
+                    <td className="truncate px-3 py-3 font-medium text-slate-900 dark:text-slate-100">{customer.name}</td>
+                    <td className="truncate px-3 py-3 text-slate-600 dark:text-slate-300">{customer.phone ?? "—"}</td>
+                    <td className={cn("px-3 py-3 text-right tabular-nums font-semibold", Number(customer.currentDebt) > 0 ? "text-er" : "text-slate-400")}>
                       {formatCurrency(Number(customer.currentDebt))}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(Number(customer.grossSales))}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(Number(customer.totalSpent))}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(Number(customer.grossSales))}</td>
+                    <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(Number(customer.totalSpent))}</td>
+                    <td className="px-3 py-3 text-right">
                       <ChevronDown className={cn("ml-auto h-4 w-4 text-slate-400 transition-transform", expanded && "rotate-180")} />
                     </td>
                   </tr>
