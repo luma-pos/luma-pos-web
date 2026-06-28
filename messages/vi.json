@@ -73,7 +73,9 @@
     "tables": "Bàn",
     "kds": "Màn hình bếp",
     "ai": "AI",
-    "activity": "Hoạt động",
+    "notifications": "Thông báo",
+    "notificationsBadge": "{count} thông báo cần chú ý",
+    "activity": "Thông báo",
     "collapseSidebar": "Thu gọn menu",
     "expandSidebar": "Mở menu",
     "more": "Thêm"
@@ -569,6 +571,13 @@
       "posFindLowStockCart": "Tìm sản phẩm sắp hết trong giỏ",
       "receiveRobusta": "Nhập 20 thùng cà phê Robusta vào kho chính",
       "setSkuPrice": "Đặt giá SKU A là 120.000"
+    },
+    "suggestionGroups": {
+      "currentAction": "Theo tác vụ",
+      "posActions": "POS",
+      "quickChecks": "Kiểm tra nhanh",
+      "business": "Theo dõi",
+      "drafts": "Tạo nháp"
     },
     "actions": {
       "createInvoice": {

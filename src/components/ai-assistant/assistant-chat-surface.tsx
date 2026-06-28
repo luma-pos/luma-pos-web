@@ -48,7 +48,7 @@ export function AssistantChatSurface({
     usage,
     activePreset,
     actionPresets,
-    suggestions,
+    suggestionGroups,
     send,
     startVoiceInput,
     newSession,
@@ -338,7 +338,7 @@ export function AssistantChatSurface({
           <div key={`${m.role}-${i}`} className={cn("flex flex-col gap-2", m.role === "user" ? "items-end" : "items-start")}>
             <div className={cn(
               "px-3.5 py-2 rounded-2xl text-sm leading-relaxed space-y-2",
-              compact ? "max-w-[88%]" : "max-w-[82%]",
+              compact ? "max-w-[94%]" : "max-w-[82%]",
               m.role === "user" ? "bg-primary-600 text-white rounded-tr-md" : "bg-surface border border-border rounded-tl-md"
             )}>
               <div>{m.text}</div>
@@ -398,23 +398,30 @@ export function AssistantChatSurface({
           </div>
         )}
 
-        <div className={cn("px-3 pt-2 flex gap-1.5 overflow-x-auto", compact ? "shrink-0" : "flex-wrap")}>
-          {suggestions.map((s) => (
-            <Button
-              key={s}
-              type="button"
-              disabled={composerDisabled}
-              onClick={() => send(s)}
-              variant="outline"
-              size="sm"
-              className="h-auto shrink-0 rounded-full px-2.5 py-1 text-xs text-slate-600 dark:text-slate-300 hover:bg-surface-2"
-            >
-              {s}
-            </Button>
+        <div className={cn("px-3 pt-2 grid gap-2", !compact && "px-4 sm:grid-cols-2")}>
+          {suggestionGroups.map((group) => (
+            <div key={group.id} className="min-w-0">
+              <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">{group.title}</div>
+              <div className="flex flex-wrap gap-1.5">
+                {group.items.map((s) => (
+                  <Button
+                    key={s}
+                    type="button"
+                    disabled={composerDisabled}
+                    onClick={() => send(s)}
+                    variant="outline"
+                    size="sm"
+                    className="h-auto max-w-full rounded-full px-2.5 py-1 text-xs text-slate-600 hover:bg-surface-2 dark:text-slate-300"
+                  >
+                    <span className="truncate">{s}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); submitComposer(); }} className="p-3 border-t border-border mt-2">
+        <form onSubmit={(e) => { e.preventDefault(); submitComposer(); }} className={cn("border-t border-border mt-2", compact ? "p-4" : "p-3")}>
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
               {attachments.map((attachment) => (

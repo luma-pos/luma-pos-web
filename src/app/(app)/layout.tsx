@@ -13,6 +13,7 @@ import { Text } from "@/components/ui/text";
 import { Routes } from "@/lib/routes";
 import { getTheme, getMode } from "@/lib/theme/cookie";
 import { getStoreSettings } from "@/lib/data/settings";
+import { getAttentionNotificationCount } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect(Routes.Login);
   }
 
-  const store = await getStoreSettings();
+  const [store, notificationCount] = await Promise.all([
+    getStoreSettings(),
+    getAttentionNotificationCount(),
+  ]);
   if (!store.onboarded) redirect("/onboarding");
 
   const t = await getTranslations();
@@ -45,7 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Text as="p" variant="muted" truncate className="text-[11px]" text={user.email} />
           </div>
         </div>
-        <AppNav industry={store.industry} />
+        <AppNav industry={store.industry} notificationCount={notificationCount} />
         <div className="p-3 border-t border-border space-y-2">
           <ModeSwitcher current={mode} />
           <ThemeSwitcher current={theme} />

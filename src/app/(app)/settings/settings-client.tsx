@@ -57,12 +57,6 @@ const VAT_RATES = [
   { rate: 8, en: "Standard reduced", vi: "Tiêu chuẩn giảm", itemsEn: "Most goods & services", itemsVi: "Hầu hết hàng hóa & dịch vụ" },
   { rate: 10, en: "Standard", vi: "Tiêu chuẩn", itemsEn: "Electronics, fashion, cosmetics", itemsVi: "Điện tử, thời trang, mỹ phẩm" },
 ];
-const MIGRATION = [
-  { ico: "🔵", name: "KiotViet", color: "#2563EB", desc: "Products, customers, history · .xlsx" },
-  { ico: "🟢", name: "Sapo POS", color: "#16A34A", desc: "Full catalog, variants · API or .csv" },
-  { ico: "🟣", name: "POS365", color: "#7C3AED", desc: "Products, stock, invoices · .xlsx" },
-  { ico: "⬛", name: "Excel / CSV", color: "#374151", desc: "Universal import w/ column mapping" },
-];
 const AI_PROVIDER_OPTIONS = AI_PROVIDERS.map((value) => ({
   value,
   label: value === "openai" ? "OpenAI" : value === "deepseek" ? "DeepSeek" : "Gemini",
@@ -158,7 +152,7 @@ function formatAiTestMessage(message: string, L: boolean) {
   return map[message] ? (L ? map[message][1] : map[message][0]) : message;
 }
 
-type SectionId = "store" | "staff" | "hardware" | "payments" | "print" | "tax" | "notifications" | "ai" | "migration";
+type SectionId = "store" | "staff" | "hardware" | "payments" | "print" | "tax" | "notifications" | "ai";
 
 const NAV: { group: [string, string]; items: { id: SectionId; ico: string; en: string; vi: string; badge?: string }[] }[] = [
   { group: ["Store", "Cửa hàng"], items: [
@@ -176,7 +170,6 @@ const NAV: { group: [string, string]; items: { id: SectionId; ico: string; en: s
   { group: ["System", "Hệ thống"], items: [
     { id: "notifications", ico: "🔔", en: "Notifications", vi: "Thông báo" },
     { id: "ai", ico: "✨", en: "AI", vi: "AI" },
-    { id: "migration", ico: "📦", en: "Data Migration", vi: "Di chuyển dữ liệu" },
   ] },
 ];
 const SEC_META: Record<SectionId, { en: string; vi: string; subEn: string; subVi: string }> = {
@@ -188,7 +181,6 @@ const SEC_META: Record<SectionId, { en: string; vi: string; subEn: string; subVi
   tax: { en: "Tax & E-Invoice", vi: "Thuế & Hóa đơn điện tử", subEn: "VAT rates + Decree 70/2025 e-invoice", subVi: "Thuế GTGT + HĐĐT theo Nghị định 70/2025" },
   notifications: { en: "Notifications", vi: "Thông báo", subEn: "Alert types and channels", subVi: "Loại thông báo và kênh gửi" },
   ai: { en: "AI Settings", vi: "Cấu hình AI", subEn: "Provider key, vision model, and attachment bucket", subVi: "API key, model vision và bucket lưu file AI" },
-  migration: { en: "Data Migration", vi: "Di chuyển dữ liệu", subEn: "Import from other POS systems", subVi: "Nhập dữ liệu từ hệ thống POS khác" },
 };
 
 /* ── helpers (luma classes mapping prototype) ── */
@@ -289,7 +281,6 @@ export function SettingsClient({
         {active === "tax" && <TaxSection L={L} prefs={store.prefs.tax} canManage={canManage} />}
         {active === "notifications" && <NotificationsSection L={L} prefs={store.prefs.notifications} canManage={canManage} />}
         {active === "ai" && <AiSection L={L} prefs={store.prefs.ai} canEdit={canEditAi} usage={aiUsage} />}
-        {active === "migration" && <MigrationSection L={L} />}
       </div>
     </div>
   );
@@ -876,41 +867,6 @@ function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs
           </button>
         </div>
       )}
-    </>
-  );
-}
-
-function MigrationSection({ L }: { L: boolean }) {
-  return (
-    <>
-      <div className="px-3.5 py-3 bg-in-soft border border-in/20 rounded-card text-[11px] text-in leading-relaxed mb-3.5">
-        <strong>{L ? "Di chuyển dữ liệu từ hệ thống khác:" : "Migrate from another system:"}</strong>{" "}
-        {L ? "Hỗ trợ KiotViet, Sapo, POS365 và Excel/CSV. Luôn chạy thử (dry-run) trước khi xác nhận — không mất dữ liệu." : "Imports from KiotViet, Sapo, POS365, Excel/CSV. Always dry-run preview first — no data changed until you confirm."}
-      </div>
-      <Card title={L ? "Chọn nguồn dữ liệu" : "Choose Migration Source"} vi={L ? "Nguồn để di chuyển" : "Source to import from"}>
-        <div className="p-4 flex flex-col gap-2">
-          {MIGRATION.map((s, i) => (
-            <div key={i} className={ROW}>
-              <span className="w-9 h-9 rounded-[10px] grid place-items-center text-base shrink-0" style={{ background: s.color + "22", border: `1px solid ${s.color}33` }}>{s.ico}</span>
-              <div className="flex-1 min-w-0"><div className="text-xs font-bold">{s.name}</div><div className="text-[10px] text-slate-500">{s.desc}</div></div>
-              <Link href="/settings/import" className={btnS}>{L ? "Nhập →" : "Import →"}</Link>
-            </div>
-          ))}
-        </div>
-      </Card>
-      <Card title={L ? "Phiên bản schema — Quản lý dữ liệu" : "Schema Version — Data Management"} vi={L ? "Migration chỉ thêm, không xóa trường" : "Additive-only migrations"}>
-        <div className="p-4.5 flex flex-col gap-3">
-          <div className="grid grid-cols-3 gap-2.5">
-            {[[L ? "Schema hiện tại" : "Current schema", "v6", "text-primary-600"], [L ? "Sản phẩm" : "Products", "248", ""], [L ? "Giao dịch" : "Transactions", "12.843", ""]].map(([l, v, c], i) => (
-              <div key={i} className="px-3 py-2.5 bg-canvas border border-border rounded-[10px]">
-                <div className="text-[9px] font-bold uppercase tracking-wide text-slate-400">{l}</div>
-                <div className={cn("font-mono text-base font-extrabold mt-1", c)}>{v}</div>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2"><button className={btnS}>{L ? "Xuất toàn bộ dữ liệu" : "Export all data"}</button><button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-er text-white text-xs font-semibold opacity-70">{L ? "Xóa tất cả dữ liệu" : "Delete all data"}</button></div>
-        </div>
-      </Card>
     </>
   );
 }

@@ -2,7 +2,7 @@ import { getReports } from "@/lib/data/reports";
 import { getRestockSuggestions } from "@/lib/data/ai-restock";
 import { buildAttachmentNextActionResponse, shouldAskAttachmentNextAction } from "@/lib/ai/attachment-intent";
 import { attachmentPromptBlock, parseAiAttachment, type AiAttachmentMetadata, type ParsedAiAttachment } from "@/lib/ai/attachments";
-import { buildAiAssistantResponse, type AiAssistantResponse } from "@/lib/ai/actions";
+import { buildAiAssistantResponse, withAiPreviewReviewAction, type AiAssistantResponse } from "@/lib/ai/actions";
 import { loadAiProviderConfig } from "@/lib/ai/provider-adapter";
 import { runAiToolLoop } from "@/lib/ai/tool-loop";
 import { consumeAiUsage, recordAiTokenUsage, recordAiUsageEvent } from "@/lib/ai/usage";
@@ -263,6 +263,10 @@ export async function POST(request: Request) {
       prompt,
       parsedAttachments.length,
     );
+  }
+  if (response.actionPreview) {
+    response.actionPreview = withAiPreviewReviewAction(response.actionPreview);
+    response.actions = [{ type: "open", target: response.actionPreview.reviewAction?.target ?? response.actionPreview.action.target, label: response.actionPreview.reviewAction?.label ?? "Open related screen" }];
   }
   if (
     response.actionPreview &&

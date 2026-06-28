@@ -73,7 +73,9 @@
     "tables": "Tables",
     "kds": "Kitchen",
     "ai": "AI",
-    "activity": "Activity",
+    "notifications": "Notifications",
+    "notificationsBadge": "{count} notifications need attention",
+    "activity": "Notifications",
     "collapseSidebar": "Collapse menu",
     "expandSidebar": "Open menu",
     "more": "More"
@@ -569,6 +571,13 @@
       "posFindLowStockCart": "Find low-stock items in the cart",
       "receiveRobusta": "Receive 20 cartons of Robusta coffee into the main warehouse",
       "setSkuPrice": "Set SKU A price to 120,000"
+    },
+    "suggestionGroups": {
+      "currentAction": "Current task",
+      "posActions": "POS",
+      "quickChecks": "Quick checks",
+      "business": "Monitor",
+      "drafts": "Drafts"
     },
     "actions": {
       "createInvoice": {

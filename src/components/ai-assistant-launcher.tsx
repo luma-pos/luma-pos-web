@@ -119,7 +119,7 @@ export function AiAssistantLauncher({ surface = "web" }: { surface?: AssistantSu
           className={cn(
             "fixed z-[55] bg-surface border border-border shadow-e2 overflow-hidden flex flex-col",
             "inset-x-2 bottom-2 h-[min(85dvh,680px)] rounded-t-2xl rounded-b-card",
-            "lg:inset-auto lg:top-4 lg:right-4 lg:bottom-4 lg:w-[430px] lg:max-w-[calc(100vw-2rem)] lg:rounded-card",
+            "lg:inset-auto lg:top-4 lg:right-4 lg:bottom-4 lg:w-[min(640px,calc(100vw-2rem))] lg:rounded-card",
             isPos && "lg:top-16 lg:bottom-4"
           )}
         >

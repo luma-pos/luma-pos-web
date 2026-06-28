@@ -76,6 +76,12 @@ export type AssistantActionPreset = {
   tone: "sale" | "purchase" | "inbound";
 };
 
+export type AssistantSuggestionGroup = {
+  id: string;
+  title: string;
+  items: string[];
+};
+
 export type FabPosition = {
   x: number;
   y: number;
@@ -109,6 +115,7 @@ export type AssistantController = {
   activePreset: AssistantActionPreset | null;
   actionPresets: AssistantActionPreset[];
   suggestions: string[];
+  suggestionGroups: AssistantSuggestionGroup[];
   send: (text: string) => Promise<void>;
   startVoiceInput: () => void;
   newSession: (preset?: AssistantActionPreset | null) => Promise<void>;

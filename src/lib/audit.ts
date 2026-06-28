@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLogs, profiles } from "@/db/schema";
 import { getProfileId } from "@/lib/actions/common";
@@ -113,4 +113,26 @@ export async function getAuditLogs(filters: AuditLogFilters = {}) {
     .where(where.length ? and(...where) : undefined)
     .orderBy(desc(auditLogs.createdAt))
     .limit(limit);
+}
+
+export async function getAttentionNotificationCount() {
+  const [row] = await db
+    .select({ value: sql<number>`count(*)::int` })
+    .from(auditLogs)
+    .where(sql`
+      ${auditLogs.status} in ('failed', 'unauthorized')
+      or (
+        ${auditLogs.status} = 'previewed'
+        and coalesce(${auditLogs.parsedIntent}->>'id', '') <> ''
+        and not exists (
+          select 1
+          from audit_logs followup
+          where followup.created_at >= ${auditLogs.createdAt}
+            and followup.status in ('confirmed', 'succeeded', 'cancelled')
+            and followup.parsed_intent->>'id' = ${auditLogs.parsedIntent}->>'id'
+        )
+      )
+    `);
+
+  return row?.value ?? 0;
 }

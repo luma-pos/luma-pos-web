@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, Filter } from "lucide-react";
+import { Bell, Filter } from "lucide-react";
 import { NotificationsTable } from "./notifications-table";
 import { getAuditLogs, type AuditSource, type AuditStatus } from "@/lib/audit";
 import { cn } from "@/lib/utils";
@@ -46,10 +46,10 @@ export default async function NotificationsPage({
     <div className="p-4 sm:p-6">
       <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-5 bg-surface border-b border-border">
         <div className="min-h-13 px-4 sm:px-6 pt-2.5 flex items-center gap-2">
-          <Activity className="w-4 h-4 text-primary-600" />
+          <Bell className="w-4 h-4 text-primary-600" />
           <div>
-            <h1 className="text-[17px] font-bold leading-tight">Lịch sử hoạt động</h1>
-            <p className="text-[11px] text-slate-400">Audit log cho thao tác thủ công, mobile, POS và AI</p>
+            <h1 className="text-[17px] font-bold leading-tight">Thông báo</h1>
+            <p className="text-[11px] text-slate-400">Các preview, cảnh báo và thao tác cần kiểm tra từ mobile, POS và AI</p>
           </div>
         </div>
         <div className="px-4 sm:px-6 pb-2 flex flex-wrap gap-2">

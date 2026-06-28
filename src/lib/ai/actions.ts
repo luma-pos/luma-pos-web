@@ -47,6 +47,12 @@ export type AiActionPreview = {
     query: string;
     candidates: { id?: string; label: string; code?: string; confidence?: number }[];
   }>;
+  reviewAction?: {
+    type: "open";
+    href: string;
+    label: string;
+    target: string;
+  };
   action: {
     type: string;
     target: string;
@@ -66,6 +72,61 @@ export type AiAssistantResponse = {
 
 const PLANNER_CONFIDENCE_THRESHOLD = 0.55;
 const AI_TOOL_LOOP_MAX_DEPTH = 2;
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function previewReviewAction(preview: AiActionPreview): AiActionPreview["reviewAction"] {
+  const payload = preview.action.payload;
+  const orderId = stringValue(payload.orderId) ?? stringValue(preview.entityId);
+  const productId = stringValue(payload.productId) ?? stringValue(preview.entityId);
+
+  if (preview.intent === "create_inventory_inbound") {
+    return { type: "open", href: "/purchases/new?source=ai-preview", label: "Mở trang tạo phiếu nhập", target: "purchase_new" };
+  }
+  if (preview.intent === "create_draft_purchase_order" || preview.intent === "create_draft_purchase_order_from_restocking") {
+    return { type: "open", href: "/purchases/new?mode=draft&source=ai-preview", label: "Mở trang tạo PO nháp", target: "purchase_new" };
+  }
+  if (preview.intent === "create_order" && preview.entityType === "quote") {
+    return { type: "open", href: "/sales?tab=quotes&source=ai-preview", label: "Mở luồng báo giá", target: "quotes" };
+  }
+  if (preview.intent === "create_order") {
+    return { type: "open", href: "/pos?source=ai-preview", label: "Mở POS kiểm tra hóa đơn", target: "pos" };
+  }
+  if (preview.intent === "pos_voice_cart_draft" || preview.intent === "pos_image_cart_draft") {
+    return { type: "open", href: "/pos?aiDraft=1", label: "Mở POS kiểm tra giỏ nháp", target: "pos" };
+  }
+  if (preview.intent === "convert_quote_to_order") {
+    return { type: "open", href: orderId ? `/sales?tab=quotes&orderId=${orderId}&expandedOrder=${orderId}` : "/sales?tab=quotes", label: "Mở báo giá liên quan", target: "quotes" };
+  }
+  if (preview.intent === "record_invoice_payment" || preview.intent === "cancel_invoice" || preview.intent === "create_return_refund" || preview.intent === "send_einvoice") {
+    return { type: "open", href: orderId ? `/sales?tab=orders&orderId=${orderId}&expandedOrder=${orderId}` : "/sales?tab=orders", label: "Mở hóa đơn liên quan", target: "orders" };
+  }
+  if (preview.intent === "set_product_price" || preview.intent === "apply_price_formula") {
+    return { type: "open", href: "/inventory?tab=pricing&source=ai-preview", label: "Mở bảng giá", target: "pricing" };
+  }
+  if (preview.intent === "create_product") {
+    return { type: "open", href: "/products/new?source=ai-preview", label: "Mở form sản phẩm", target: "product_form" };
+  }
+  if (preview.intent === "update_product_min_stock") {
+    return { type: "open", href: productId ? `/products/${productId}/edit?source=ai-preview` : "/inventory?tab=products", label: "Mở form sản phẩm", target: "product_form" };
+  }
+  if (preview.intent === "create_product_category" || preview.intent === "create_product_brand") {
+    return { type: "open", href: "/inventory?tab=products&source=ai-preview", label: "Mở màn sản phẩm", target: "products" };
+  }
+  if (preview.intent === "create_customer" || preview.intent === "update_customer") {
+    return { type: "open", href: "/partners?tab=customers&source=ai-preview", label: "Mở khách hàng", target: "customers" };
+  }
+  if (preview.intent === "create_cashbook_entry") {
+    return { type: "open", href: "/finance?tab=cashbook&source=ai-preview", label: "Mở sổ quỹ", target: "cashbook" };
+  }
+  return { type: "open", href: "/reports?source=ai-preview", label: "Mở báo cáo", target: "reports" };
+}
+
+export function withAiPreviewReviewAction(preview: AiActionPreview): AiActionPreview {
+  return { ...preview, reviewAction: preview.reviewAction ?? previewReviewAction(preview) };
+}
 
 export type AiToolTrace = {
   depth: number;
@@ -2130,6 +2191,7 @@ export async function buildAiAssistantResponse(input: {
   }
   if (actionPreview) {
     actionPreview = mergePlannerGuidance(actionPreview, plannerPlan);
+    actionPreview = withAiPreviewReviewAction(actionPreview);
   }
 
   if (actionPreview) {

@@ -156,23 +156,38 @@ export function useAssistantState(surface: AssistantSurface): AssistantControlle
     return () => { cancelled = true; };
   }, []);
 
-  const suggestions = activePreset
-    ? activePreset.examples
+  const suggestionGroups = activePreset
+    ? [{
+        id: "active-action",
+        title: t("ai.suggestionGroups.currentAction"),
+        items: activePreset.examples.slice(0, 3),
+      }]
     : surface === "pos"
       ? [
-        t("ai.suggestions.posVoiceCart"),
-        t("ai.suggestions.posFindLowStockCart"),
-        t("ai.q.lowStock"),
-        t("ai.q.todaySales"),
-      ]
+          {
+            id: "pos-actions",
+            title: t("ai.suggestionGroups.posActions"),
+            items: [t("ai.suggestions.posVoiceCart"), t("ai.suggestions.posFindLowStockCart")],
+          },
+          {
+            id: "quick-checks",
+            title: t("ai.suggestionGroups.quickChecks"),
+            items: [t("ai.q.lowStock"), t("ai.q.todaySales")],
+          },
+        ]
       : [
-        t("ai.q.todaySales"),
-        t("ai.q.topSellers"),
-        t("ai.q.lowStock"),
-        t("ai.q.restockToday"),
-        t("ai.suggestions.receiveRobusta"),
-        t("ai.suggestions.setSkuPrice"),
-      ];
+          {
+            id: "business",
+            title: t("ai.suggestionGroups.business"),
+            items: [t("ai.q.todaySales"), t("ai.q.topSellers"), t("ai.q.lowStock")],
+          },
+          {
+            id: "drafts",
+            title: t("ai.suggestionGroups.drafts"),
+            items: [t("ai.q.restockToday"), t("ai.suggestions.receiveRobusta"), t("ai.suggestions.setSkuPrice")],
+          },
+        ];
+  const suggestions = suggestionGroups.flatMap((group) => group.items);
 
   function addFiles(files: FileList | File[]) {
     const next: ComposerAttachment[] = [];
@@ -459,6 +474,7 @@ export function useAssistantState(surface: AssistantSurface): AssistantControlle
     activePreset,
     actionPresets,
     suggestions,
+    suggestionGroups,
     send,
     startVoiceInput,
     newSession,

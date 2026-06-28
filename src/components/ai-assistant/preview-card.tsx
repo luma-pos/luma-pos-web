@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, ExternalLink, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AiActionPreview } from "@/lib/ai/actions";
@@ -150,6 +150,17 @@ export function PreviewCard({
         {preview.warnings.map((warning) => (
           <div key={warning} className="rounded-lg bg-surface-2 p-2.5 text-xs text-slate-500">{warning}</div>
         ))}
+        {preview.reviewAction && !done && (
+          <a
+            href={preview.reviewAction.href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-xs font-bold text-primary-700 transition hover:bg-primary-100"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            {preview.reviewAction.label}
+          </a>
+        )}
         {preview.selections && preview.selections.length > 0 && (
           <div className="rounded-lg border border-border bg-canvas p-2.5 space-y-2">
             {preview.selections.map((selection) => (

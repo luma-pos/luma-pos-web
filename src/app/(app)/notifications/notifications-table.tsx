@@ -9,11 +9,11 @@ import type { AuditSource, AuditStatus, getAuditLogs } from "@/lib/audit";
 type AuditRow = Awaited<ReturnType<typeof getAuditLogs>>[number];
 
 function iconFor(source: AuditSource, status: AuditStatus) {
-  if (status === "failed" || status === "unauthorized") return ShieldAlert;
-  if (status === "cancelled") return XCircle;
-  if (status === "previewed" || status === "confirmed") return Clock;
-  if (source === "ai") return Bot;
-  return CheckCircle2;
+  if (status === "failed" || status === "unauthorized") return <ShieldAlert className="h-4 w-4" />;
+  if (status === "cancelled") return <XCircle className="h-4 w-4" />;
+  if (status === "previewed" || status === "confirmed") return <Clock className="h-4 w-4" />;
+  if (source === "ai") return <Bot className="h-4 w-4" />;
+  return <CheckCircle2 className="h-4 w-4" />;
 }
 
 function toneFor(status: AuditStatus) {
@@ -115,7 +115,7 @@ function recordLabel(record: Record<string, unknown>) {
 
 export function NotificationsTable({ rows }: { rows: AuditRow[] }) {
   const columns: DataTableColumn<AuditRow>[] = [
-    { key: "activity", label: "Hoạt động", required: true, render: (row) => <ActivityCell row={row} /> },
+    { key: "notification", label: "Thông báo", required: true, render: (row) => <ActivityCell row={row} /> },
     { key: "source", label: "Nguồn", defaultVisible: true, width: "120px", render: (row) => <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold capitalize", sourceTone(row.source))}>{row.source}</span> },
     { key: "status", label: "Trạng thái", defaultVisible: true, width: "130px", render: (row) => <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold", toneFor(row.status))}>{row.status}</span> },
     { key: "actor", label: "Người thực hiện", defaultVisible: true, render: (row) => <span className="inline-flex items-center gap-1.5 text-slate-600"><UserRound className="h-3.5 w-3.5" />{row.actorNameSnapshot ?? row.actorId ?? "System"}</span> },
@@ -134,11 +134,10 @@ export function NotificationsTable({ rows }: { rows: AuditRow[] }) {
 }
 
 function ActivityCell({ row }: { row: AuditRow }) {
-  const Icon = iconFor(row.source, row.status);
   return (
     <div className="flex min-w-0 items-start gap-3">
       <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl", toneFor(row.status))}>
-        <Icon className="h-4 w-4" />
+        {iconFor(row.source, row.status)}
       </div>
       <div className="min-w-0">
         <div className="truncate font-semibold capitalize">{row.source === "ai" ? statusText(row.status) : titleFor(row)}</div>

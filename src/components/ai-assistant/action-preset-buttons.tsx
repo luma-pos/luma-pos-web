@@ -30,7 +30,7 @@ export function ActionPresetButtons({
 }) {
   return (
     <div className={cn(
-      variant === "grid" ? "mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3" : "flex gap-1.5 overflow-x-auto"
+      variant === "grid" ? "mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3" : "flex flex-wrap gap-1.5"
     )}>
       {presets.map((preset) => {
         const Icon = preset.icon;
@@ -47,7 +47,7 @@ export function ActionPresetButtons({
               actionPresetToneClass(preset.tone, active),
               variant === "grid"
                 ? "justify-start rounded-xl px-3 py-3"
-                : "shrink-0 rounded-full px-2.5 py-1.5"
+                : "max-w-full rounded-full px-2.5 py-1.5"
             )}
             title={preset.description}
           >

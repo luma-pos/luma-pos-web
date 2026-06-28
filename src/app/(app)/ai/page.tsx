@@ -1,20 +1,11 @@
 import { getTranslations } from "next-intl/server";
-import { GroupTabs } from "@/components/group-tabs";
 import { Text } from "@/components/ui/text";
-import { RestockTab } from "./tabs/restock";
 import { Assistant } from "./assistant";
 
 export const dynamic = "force-dynamic";
 
-const TABS = [
-  { tab: "restock", labelKey: "ai.restockTab" },
-  { tab: "assistant", labelKey: "ai.assistantTab" },
-];
-
-export default async function AiPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+export default async function AiPage() {
   const t = await getTranslations();
-  const params = await searchParams;
-  const tab = params.tab ?? "restock";
 
   return (
     <div className="p-4 sm:p-6">
@@ -22,10 +13,9 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<R
         <div className="min-h-13 px-4 sm:px-6 pt-2.5 flex items-center gap-2">
           <Text as="h1" weight="bold" className="text-[17px]" text={t("nav.ai")} />
         </div>
-        <div className="px-4 sm:px-6 pb-1.5"><GroupTabs base="/ai" items={TABS} /></div>
       </div>
 
-      {tab === "assistant" ? <Assistant /> : <RestockTab />}
+      <Assistant />
     </div>
   );
 }

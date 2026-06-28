@@ -11,7 +11,7 @@ import { Routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 
-type Item = { href: string; icon: React.ComponentType<{ className?: string }>; key: string };
+type Item = { href: string; icon: React.ComponentType<{ className?: string }>; key: string; badge?: "notifications" };
 type Group = { labelKey: string; items: Item[] };
 
 const GROUPS: Group[] = [
@@ -36,14 +36,14 @@ const GROUPS: Group[] = [
     items: [
       { href: "/ai", icon: Sparkles, key: "nav.ai" },
       { href: Routes.Reports, icon: BarChart3, key: "nav.reports" },
-      { href: Routes.Notifications, icon: Bell, key: "nav.activity" },
+      { href: Routes.Notifications, icon: Bell, key: "nav.notifications", badge: "notifications" },
       { href: Routes.Settings, icon: Settings, key: "nav.settings" },
     ],
   },
 ];
 
 /** Sidebar điều hướng có chữ — dùng cho cả desktop (cố định) và drawer mobile. */
-export function AppNav({ industry }: { industry?: string }) {
+export function AppNav({ industry, notificationCount = 0 }: { industry?: string; notificationCount?: number }) {
   const t = useTranslations();
   const pathname = usePathname();
   const isFnb = industry === "restaurant" || industry === "cafe";
@@ -80,7 +80,15 @@ export function AppNav({ industry }: { industry?: string }) {
                   )}
                 >
                   <item.icon className="w-4 h-4 shrink-0" />
-                  <Text as="span" size="sm" weight="medium" text={t(item.key)} />
+                  <Text as="span" size="sm" weight="medium" className="min-w-0 flex-1 truncate" text={t(item.key)} />
+                  {item.badge === "notifications" && notificationCount > 0 && (
+                    <span
+                      aria-label={t("nav.notificationsBadge", { count: notificationCount })}
+                      className="ml-auto inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-er px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-white"
+                    >
+                      {notificationCount > 99 ? "99+" : notificationCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
