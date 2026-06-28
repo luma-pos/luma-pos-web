@@ -123,13 +123,13 @@ export function AssistantChatSurface({
 
   return (
     <div className={cn(
-      "bg-surface border border-border rounded-card shadow-e1 flex flex-col min-h-0 overflow-hidden",
+      "bg-surface border border-border-soft rounded-[24px] shadow-[0_18px_55px_rgba(15,23,42,0.06)] flex flex-col min-h-0 overflow-hidden",
       compact ? "border-0 rounded-none shadow-none flex-1" : "flex-1 h-full"
     )}>
       {(sessions.length > 0 || sessionId) && (
         <div className={cn(
-          "shrink-0 flex items-center gap-2 border-b border-border-soft bg-surface",
-          compact ? "px-3 py-2" : "px-4 py-2"
+          "shrink-0 flex items-center gap-2 bg-gradient-to-b from-surface to-canvas/25",
+          compact ? "px-3 py-2" : "px-4 pb-2 pt-3"
         )}>
           <Select
             value={sessionId ?? ""}
@@ -268,8 +268,8 @@ export function AssistantChatSurface({
 
       {msgs.length > 0 && (
         <div className={cn(
-          "shrink-0 flex items-center justify-between gap-3 border-b border-border-soft bg-surface",
-          compact ? "px-3 py-2" : "px-4 py-2"
+          "shrink-0 flex items-center justify-between gap-3 bg-canvas/25",
+          compact ? "px-3 py-1.5" : "px-4 py-1.5"
         )}>
           {usage ? (
             <div className={cn(
@@ -297,8 +297,8 @@ export function AssistantChatSurface({
       )}
       {msgs.length === 0 && usage && (
         <div className={cn(
-          "shrink-0 border-b border-border-soft bg-surface text-[11px] font-semibold",
-          compact ? "px-3 py-2" : "px-4 py-2",
+          "shrink-0 bg-canvas/25 text-[11px] font-semibold",
+          compact ? "px-3 py-1.5" : "px-4 py-1.5",
           usage.exhausted ? "text-er" : "text-slate-400"
         )}>
           {t("ai.session.usageFull", {
@@ -312,7 +312,7 @@ export function AssistantChatSurface({
       )}
 
       <div className={cn(
-        "min-h-0 flex-1 overflow-y-auto flex flex-col gap-3 bg-canvas/50",
+        "min-h-0 flex-1 overflow-y-auto flex flex-col gap-3 bg-gradient-to-b from-canvas/25 via-surface to-surface",
         compact ? "p-3" : "p-4"
       )}>
         {msgs.length === 0 ? (
@@ -362,9 +362,12 @@ export function AssistantChatSurface({
         {busy && <div className="self-start text-xs text-slate-400 px-3 py-2">{t("ai.session.processing")}</div>}
       </div>
 
-      <div className="shrink-0 bg-surface">
+      <div className={cn(
+        "shrink-0 bg-gradient-to-t from-surface via-surface/95 to-surface/60",
+        compact ? "px-3 pb-3 pt-2" : "px-4 pb-4 pt-2"
+      )}>
         {surface === "web" && actionPresets.length > 0 && (
-          <div className={cn("px-3 pt-2", !compact && "px-4")}>
+          <div className="mb-2">
             <ActionPresetButtons
               presets={actionPresets}
               activePreset={activePreset}
@@ -375,17 +378,17 @@ export function AssistantChatSurface({
           </div>
         )}
         {hasUploadingAttachment && (
-          <div className={cn("px-3 pt-2 text-[11px] font-semibold text-slate-400", !compact && "px-4")}>
+          <div className="mb-2 text-[11px] font-semibold text-slate-400">
             {t("ai.session.uploadNotice")}
           </div>
         )}
         {usage?.exhausted && (
-          <div className={cn("px-3 pt-2 text-[11px] font-semibold text-er", !compact && "px-4")}>
+          <div className="mb-2 text-[11px] font-semibold text-er">
             {t("ai.session.exhaustedNotice")}
           </div>
         )}
 
-        <div className={cn("px-3 pt-2 grid gap-2", !compact && "px-4 sm:grid-cols-2")}>
+        <div className={cn("grid gap-2", !compact && "sm:grid-cols-2")}>
           {suggestionGroups.map((group) => (
             <div key={group.id} className="min-w-0">
               <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">{group.title}</div>
@@ -408,7 +411,13 @@ export function AssistantChatSurface({
           ))}
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); submitComposer(); }} className={cn("border-t border-border mt-2", compact ? "p-4" : "p-3")}>
+        <form
+          onSubmit={(e) => { e.preventDefault(); submitComposer(); }}
+          className={cn(
+            "mt-2 rounded-[28px] border border-border-soft bg-canvas/80 shadow-[0_12px_30px_rgba(15,23,42,0.05)]",
+            compact ? "p-2.5" : "p-2"
+          )}
+        >
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
               {attachments.map((attachment) => (

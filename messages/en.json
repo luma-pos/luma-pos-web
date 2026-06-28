@@ -257,34 +257,15 @@
     "digest": "error id: {digest}"
   },
   "portal": {
-    "title": "Order — {customer}",
-    "searchPlaceholder": "Search materials…",
-    "add": "+ Add",
-    "noProducts": "No products found",
-    "projectPlaceholder": "Project (optional)",
-    "notePlaceholder": "Note for the store",
-    "submit": "Submit order",
-    "footnote": "The order takes effect after the store confirms it. Prices are shown for your price group.",
-    "priceTypes": {
-      "retail": "Retail",
-      "wholesale": "Wholesale",
-      "contractor": "Contractor",
-      "agent": "Agent"
-    },
-    "cart": {
-      "title": "Order",
-      "itemCount": "{count} items",
-      "empty": "No products selected",
-      "subtotal": "Subtotal"
-    },
-    "success": {
-      "title": "Order sent",
-      "code": "Order code",
-      "description": "The store will confirm and contact you. The order is not counted toward debt until it is confirmed.",
-      "newOrder": "Place another order"
-    },
+    "linkTitle": "Online ordering link",
+    "desc": "Generate a private link so this customer can order at their price group — orders arrive pending confirmation.",
+    "generate": "Generate link",
+    "regenerate": "New link",
+    "copy": "Copy link",
+    "copied": "Copied ✓",
+    "hint": "Share via Zalo. Generating a new link invalidates the old one.",
     "errors": {
-      "submit": "Something went wrong — try again or call the store."
+      "invalidToken": "Invalid link."
     }
   },
   "products": {
@@ -546,7 +527,11 @@
     "restockEmpty": "Nothing to restock right now.",
     "perDay": "day",
     "createPo": "Create PO",
-    "priority": { "high": "High", "medium": "Medium", "low": "Low" },
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
     "cols": {
       "onHand": "On hand",
       "velocity": "Avg/day",
@@ -589,45 +574,258 @@
       "drafts": "Drafts"
     },
     "actions": {
-      "createInvoice": {
+      "more": "More actions",
+      "moreDescription": "Grouped secondary actions",
+      "userInformation": "User information",
+      "create_invoice": {
         "label": "Create invoice",
         "sessionTitle": "Create invoice",
         "description": "Draft sale/invoice",
-        "emptyText": "Send the customer, item list, and quantities.",
+        "emptyText": "Send the customer, items, and quantities.",
         "placeholder": "Example: Walk-in customer, 2 Robusta coffees, 1 pork sandwich...",
-        "promptPrefix": "[AI_ACTION_PRESET:order_action]\nCreate a sales invoice from the following user information. Read item names and quantities to draft the sales order; do not record payment unless the user says it was paid.\n\nUser information:",
+        "promptInstruction": "Create a sales invoice from the following user information. Read item names and quantities to draft the sales order; do not record payment unless the user says it was paid.",
         "example1": "Walk-in customer: 2 Robusta coffees, 1 pork sandwich",
         "example2": "Nam takes 5 recessed 8W lights, sell on credit"
       },
-      "draftPurchaseOrder": {
+      "draft_purchase_order": {
         "label": "Order stock",
         "sessionTitle": "Purchase order",
         "description": "Draft supplier PO",
         "emptyText": "Send the items to order, supplier, and warehouse if available.",
         "placeholder": "Example: Order 20 cartons of Robusta coffee from Supplier A to the main warehouse...",
-        "promptPrefix": "[AI_ACTION_PRESET:create_draft_purchase_order]\nCreate a draft purchase order from the following user information. Only create a draft PO; do not receive stock or record payment.\n\nUser information:",
+        "promptInstruction": "Create a draft purchase order from the following user information. Only create a draft PO; do not receive stock or record payment.",
         "example1": "Order 20 cartons of Robusta coffee from Supplier A to the main warehouse",
         "example2": "Order 10 double 32A breakers and 5 recessed 8W lights"
       },
-      "createInventoryInbound": {
+      "create_inventory_inbound": {
         "label": "Receive stock",
         "sessionTitle": "Receive stock",
         "description": "Receive goods/add stock",
         "emptyText": "Send received items, quantities, supplier, and warehouse.",
         "placeholder": "Example: Receive 20 cartons of Robusta coffee into the main warehouse from Supplier A...",
-        "promptPrefix": "[AI_ACTION_PRESET:create_inventory_inbound]\nCreate an inventory inbound receipt from the following user information. This is real stock receiving; build a preview and require confirmation before adding stock.\n\nUser information:",
+        "promptInstruction": "Create an inventory inbound receipt from the following user information. This is real stock receiving; build a preview and require confirmation before adding stock.",
         "example1": "Receive 20 cartons of Robusta coffee into the main warehouse from Supplier A",
         "example2": "Receive 5 recessed 8W lights at 90,000 from Rang Dong"
       },
-      "receiveStock": {
-        "label": "Stock in",
-        "sessionTitle": "Stock in",
-        "description": "Quick receive goods",
-        "emptyText": "Enter item names, quantities, purchase costs, warehouse, and supplier if available.",
-        "placeholder": "Example: Receive 20 cartons of Robusta coffee into the main warehouse at 1,200,000/carton...",
-        "promptPrefix": "[AI_ACTION_PRESET:create_inventory_inbound]\nReceive stock from the following user information. These goods were physically received; build an inbound preview and require confirmation before adding stock.\n\nUser information:",
-        "example1": "Receive 20 cartons of Robusta coffee into the main warehouse",
-        "example2": "Receive 12 boxes of biscuits at 45,000/box from Minh Anh Supplier"
+      "create_quote": {
+        "label": "Create quote",
+        "sessionTitle": "Create quote",
+        "description": "Quote draft",
+        "emptyText": "Send customer, items, quantities, and prices if available.",
+        "placeholder": "Example: Quote Nam for 5 recessed 8W lights...",
+        "promptInstruction": "Create a quote from the following user information. Only draft a quote/POS quote; do not reduce stock or create a sales invoice.",
+        "example1": "Quote Nam for 5 recessed 8W lights",
+        "example2": "Quote 10 double 32A breakers for Hoa Binh project"
+      },
+      "find_invoice": {
+        "label": "Find invoice",
+        "sessionTitle": "Find invoice",
+        "description": "Open related order",
+        "emptyText": "Enter invoice code, phone, customer name, or search text.",
+        "placeholder": "Example: Find invoice HD008236 for Nam...",
+        "promptInstruction": "Find the invoice/order from the following user information and open the matching list/detail. Only open a review screen; do not mutate data.",
+        "example1": "Find invoice HD008236",
+        "example2": "Find Nam order today"
+      },
+      "edit_invoice": {
+        "label": "Edit/cancel invoice",
+        "sessionTitle": "Edit/cancel invoice",
+        "description": "Open order to review",
+        "emptyText": "Enter the order code and edit/cancel/delete request.",
+        "placeholder": "Example: Edit invoice HD008236 quantity...",
+        "promptInstruction": "Find the correct invoice/order and build a preview for edit/cancel/delete. This is sensitive; only open a review screen first.",
+        "example1": "Edit invoice HD008236 quantity to 3",
+        "example2": "Cancel invoice HD008236 because customer returned items"
+      },
+      "sales_order": {
+        "label": "Create sales order",
+        "sessionTitle": "Create sales order",
+        "description": "Sales order draft",
+        "emptyText": "Send customer, items, and quantities.",
+        "placeholder": "Example: Nam orders 5 recessed lights for tomorrow...",
+        "promptInstruction": "Create a sales order draft from the following user information. Do not take payment or mutate before confirmation.",
+        "example1": "Nam orders 5 recessed lights for tomorrow",
+        "example2": "Project customer takes 10 double 32A breakers on credit"
+      },
+      "check_stock": {
+        "label": "Check stock",
+        "sessionTitle": "Check stock",
+        "description": "Open filtered stock",
+        "emptyText": "Enter SKU, item name, or product group.",
+        "placeholder": "Example: Check stock for SP004935...",
+        "promptInstruction": "Open the inventory stock screen from the following user information, filtered by SKU/name if an active product matches. Do not mutate data.",
+        "example1": "Check stock for SP004935",
+        "example2": "Check stock for Iron grout powder"
+      },
+      "create_stocktake": {
+        "label": "Create stocktake",
+        "sessionTitle": "Create stocktake",
+        "description": "Open stocktake form",
+        "emptyText": "Enter warehouse/area to count.",
+        "placeholder": "Example: Create stocktake for main warehouse...",
+        "promptInstruction": "Only when the user explicitly asks for stocktake creation: open the stocktake form from the following user information. Do not save yet.",
+        "example1": "Create stocktake for main warehouse",
+        "example2": "Start stocktake for electrical items"
+      },
+      "adjust_stock": {
+        "label": "Adjust stock",
+        "sessionTitle": "Adjust stock",
+        "description": "Adjustment preview",
+        "emptyText": "Enter product, warehouse, quantity, and reason.",
+        "placeholder": "Example: Adjust SP004935 down by 2 because damaged...",
+        "promptInstruction": "Prepare a stock adjustment preview from the following user information. If no dedicated form exists, open inventory for review; do not add/subtract stock automatically.",
+        "example1": "Adjust SP004935 down by 2 because damaged",
+        "example2": "Increase SP004908 by 3 after stocktake"
+      },
+      "transfer_stock": {
+        "label": "Transfer stock",
+        "sessionTitle": "Transfer stock",
+        "description": "Transfer preview",
+        "emptyText": "Enter source warehouse, target warehouse, product, and quantity.",
+        "placeholder": "Example: Transfer 5 SP004935 from main to secondary warehouse...",
+        "promptInstruction": "Prepare a stock transfer preview from the following user information. If no dedicated form exists, open inventory for review; do not transfer stock automatically.",
+        "example1": "Transfer 5 SP004935 from main to secondary warehouse",
+        "example2": "Transfer 10 recessed 8W lights to project warehouse"
+      },
+      "create_product": {
+        "label": "Create product",
+        "sessionTitle": "Create product",
+        "description": "Product form draft",
+        "emptyText": "Enter name, SKU, unit, price, and category if available.",
+        "placeholder": "Example: Add product Tile adhesive 20kg SKU KDG20...",
+        "promptInstruction": "Create a new product preview from the following user information and open the product form for review before saving.",
+        "example1": "Add product Tile adhesive 20kg SKU KDG20 price 120,000",
+        "example2": "Create product Recessed 8W light, unit piece"
+      },
+      "edit_product": {
+        "label": "Edit product",
+        "sessionTitle": "Edit product",
+        "description": "Open product form",
+        "emptyText": "Enter SKU/name and the field to update.",
+        "placeholder": "Example: Edit SP004935 min stock to 10...",
+        "promptInstruction": "Find an active product from the following user information. Open the edit form if productId exists; otherwise open the filtered product list.",
+        "example1": "Edit SP004935 min stock to 10",
+        "example2": "Update Iron grout powder name"
+      },
+      "update_product_price": {
+        "label": "Update price",
+        "sessionTitle": "Update price",
+        "description": "Price preview",
+        "emptyText": "Enter SKU/name and new price.",
+        "placeholder": "Example: Set SP004935 price to 180,000...",
+        "promptInstruction": "Create a price update preview from the following user information. This is sensitive; review pricing before confirmation.",
+        "example1": "Set SP004935 price to 180,000",
+        "example2": "Raise SKU A price to 120,000"
+      },
+      "toggle_product_active": {
+        "label": "Activate/deactivate",
+        "sessionTitle": "Activate/deactivate product",
+        "description": "Active-state preview",
+        "emptyText": "Enter product and target active/inactive status.",
+        "placeholder": "Example: Deactivate SP004935...",
+        "promptInstruction": "Create an activate/deactivate product preview from the following user information. If no dedicated action exists, open the filtered product list for review.",
+        "example1": "Deactivate SP004935",
+        "example2": "Reactivate Tile adhesive product"
+      },
+      "create_customer": {
+        "label": "Create customer",
+        "sessionTitle": "Create customer",
+        "description": "Customer form draft",
+        "emptyText": "Enter customer name, phone, and type if available.",
+        "placeholder": "Example: Add customer Nam phone 0909123456...",
+        "promptInstruction": "Create a customer preview from the following user information and open the customer form for review before saving.",
+        "example1": "Add customer Nam phone 0909123456",
+        "example2": "Create wholesale customer Minh Anh Company"
+      },
+      "create_supplier": {
+        "label": "Create supplier",
+        "sessionTitle": "Create supplier",
+        "description": "Supplier draft",
+        "emptyText": "Enter supplier name, phone, and tax code if available.",
+        "placeholder": "Example: Create supplier Minh Anh phone 0909123456...",
+        "promptInstruction": "Create a supplier preview from the following user information. If no dedicated form route exists, open the supplier tab for entry/review before saving.",
+        "example1": "Create supplier Minh Anh phone 0909123456",
+        "example2": "Add Rang Dong supplier tax code 0100100100"
+      },
+      "check_customer_debt": {
+        "label": "Customer debt",
+        "sessionTitle": "Customer debt",
+        "description": "Customer report",
+        "emptyText": "Enter customer name, phone, or code.",
+        "placeholder": "Example: How much does Nam still owe?...",
+        "promptInstruction": "Open customer debt/report review from the following user information. Do not record collection.",
+        "example1": "How much does Nam still owe?",
+        "example2": "Debt for customer Minh Anh"
+      },
+      "record_supplier_payment": {
+        "label": "Pay supplier",
+        "sessionTitle": "Pay supplier",
+        "description": "Payment preview",
+        "emptyText": "Enter supplier, amount, and method.",
+        "placeholder": "Example: Pay Rang Dong supplier 2,000,000 cash...",
+        "promptInstruction": "Create a supplier payment/cashbook preview from the following user information. This is financial; require strong confirmation before writing cashbook.",
+        "example1": "Pay Rang Dong supplier 2,000,000 cash",
+        "example2": "Bank transfer 5 million to Minh Anh supplier"
+      },
+      "today_sales_report": {
+        "label": "Today sales",
+        "sessionTitle": "Today sales",
+        "description": "Open report",
+        "emptyText": "Ask sales/revenue for a day.",
+        "placeholder": "Example: How much did we sell today?...",
+        "promptInstruction": "Open sales reports from the following user information. Read-only; do not mutate data.",
+        "example1": "How much did we sell today?",
+        "example2": "How is revenue today?"
+      },
+      "best_sellers_report": {
+        "label": "Best sellers",
+        "sessionTitle": "Best sellers",
+        "description": "Top products",
+        "emptyText": "Ask best-selling products by period.",
+        "placeholder": "Example: What sold best this week?...",
+        "promptInstruction": "Open best-seller reports from the following user information. Read-only.",
+        "example1": "What sold best?",
+        "example2": "Top products this week"
+      },
+      "low_stock_report": {
+        "label": "Low stock",
+        "sessionTitle": "Low stock",
+        "description": "Low-stock report",
+        "emptyText": "Ask low-stock or soon-out items.",
+        "placeholder": "Example: Which products are running low?...",
+        "promptInstruction": "Open low-stock/inventory reports from the following user information. Read-only.",
+        "example1": "Which products are running low?",
+        "example2": "Items below min stock"
+      },
+      "customer_purchase_report": {
+        "label": "Customer purchases",
+        "sessionTitle": "Customer purchases",
+        "description": "Purchases by customer",
+        "emptyText": "Enter customer name or code.",
+        "placeholder": "Example: How much did Nam buy this month?...",
+        "promptInstruction": "Open customer purchase reports from the following user information, filtered if a customer matches.",
+        "example1": "How much did Nam buy this month?",
+        "example2": "What did customer Minh Anh buy?"
+      },
+      "customer_profit_report": {
+        "label": "Profit by customer",
+        "sessionTitle": "Profit by customer",
+        "description": "Profit by customer",
+        "emptyText": "Enter customer name or segment.",
+        "placeholder": "Example: Profit by customer Minh Anh...",
+        "promptInstruction": "Open customer profit reports from the following user information, filtered if a customer matches.",
+        "example1": "Profit by customer Minh Anh",
+        "example2": "Which customer is most profitable?"
+      },
+      "slow_moving_stock_report": {
+        "label": "Slow-moving stock",
+        "sessionTitle": "Slow-moving stock",
+        "description": "Aged/slow stock",
+        "emptyText": "Ask about aged or slow-selling inventory.",
+        "placeholder": "Example: Which stock has not sold for a while?...",
+        "promptInstruction": "Open reports/inventory to review slow-moving stock from the following user information. Read-only.",
+        "example1": "Which stock has not sold for a while?",
+        "example2": "Slow-moving products this month"
       }
     },
     "errors": {
@@ -671,7 +869,11 @@
       "enterBeforeSend": "Enter a message before sending",
       "removeAttachment": "Remove {name}",
       "uploading": "Uploading...",
-      "uploadFailed": "Upload failed"
+      "uploadFailed": "Upload failed",
+      "previewAttachment": "View {name}",
+      "openAttachment": "Open file",
+      "openAttachmentHint": "Use Open file to view this in a new tab.",
+      "attachmentUnavailable": "Could not open this attachment. Try reloading the chat."
     },
     "preview": {
       "posDraftLines": "{count} lines captured · review before sending to POS",
@@ -718,6 +920,13 @@
       "topSellers": "Top best-sellers?",
       "lowStock": "What's running low?",
       "restockToday": "What should I restock today?"
+    },
+    "actionGroups": {
+      "sales": "Sales",
+      "inventory": "Inventory",
+      "products": "Products",
+      "partners": "Partners",
+      "reports": "Reports"
     }
   },
   "tables": {
@@ -732,7 +941,10 @@
     "order": "Order",
     "emptyCart": "No items yet — search to add.",
     "close": "Close table",
-    "tabs": { "floor": "Floor", "modifiers": "Item options" },
+    "tabs": {
+      "floor": "Floor",
+      "modifiers": "Item options"
+    },
     "merge": "Merge tables",
     "mergeHint": "Tap occupied tables to merge (first ★ is the target).",
     "mergeInto": "Merge {count} tables into {name}",
@@ -852,7 +1064,10 @@
       "opened": "Opened",
       "closed": "Closed"
     },
-    "status": { "open": "Open", "closed": "Closed" },
+    "status": {
+      "open": "Open",
+      "closed": "Closed"
+    },
     "errors": {
       "alreadyOpen": "You already have an open shift.",
       "noOpen": "No open shift to close."
@@ -881,8 +1096,16 @@
     "historyTitle": "Internal-use history",
     "historyCount": "{n} issues",
     "empty": "No internal-use issues yet.",
-    "cols": { "code": "Ref", "items": "Items", "cost": "Cost", "by": "Staff" },
-    "status": { "pending": "Pending", "approved": "Approved" }
+    "cols": {
+      "code": "Ref",
+      "items": "Items",
+      "cost": "Cost",
+      "by": "Staff"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved"
+    }
   },
   "orders": {
     "title": "Orders",
@@ -1505,18 +1728,6 @@
     "errors": {
       "onlyCompleted": "Only completed orders.",
       "alreadyIssued": "This order already has an e-invoice."
-    }
-  },
-  "portal": {
-    "linkTitle": "Online ordering link",
-    "desc": "Generate a private link so this customer can order at their price group — orders arrive pending confirmation.",
-    "generate": "Generate link",
-    "regenerate": "New link",
-    "copy": "Copy link",
-    "copied": "Copied ✓",
-    "hint": "Share via Zalo. Generating a new link invalidates the old one.",
-    "errors": {
-      "invalidToken": "Invalid link."
     }
   },
   "pricing": {

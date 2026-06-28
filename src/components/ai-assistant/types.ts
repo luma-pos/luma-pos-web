@@ -61,10 +61,39 @@ export type AiSessionSummary = {
   messageCount?: number;
 };
 
-export type AssistantActionPresetId = "create_invoice" | "draft_purchase_order" | "create_inventory_inbound" | "receive_stock";
+export type AssistantActionPresetId =
+  | "create_invoice"
+  | "draft_purchase_order"
+  | "create_inventory_inbound"
+  | "create_quote"
+  | "find_invoice"
+  | "edit_invoice"
+  | "sales_order"
+  | "check_stock"
+  | "create_stocktake"
+  | "adjust_stock"
+  | "transfer_stock"
+  | "create_product"
+  | "edit_product"
+  | "update_product_price"
+  | "toggle_product_active"
+  | "create_customer"
+  | "create_supplier"
+  | "check_customer_debt"
+  | "record_supplier_payment"
+  | "today_sales_report"
+  | "best_sellers_report"
+  | "low_stock_report"
+  | "customer_purchase_report"
+  | "customer_profit_report"
+  | "slow_moving_stock_report";
+
+export type AssistantActionPresetGroup = "sales" | "inventory" | "products" | "partners" | "reports";
 
 export type AssistantActionPreset = {
   id: AssistantActionPresetId;
+  placement: "primary" | "secondary";
+  group: AssistantActionPresetGroup;
   label: string;
   sessionTitle: string;
   description: string;

@@ -169,3 +169,31 @@ export async function POST(request: Request) {
     return mobileError("errors.serverError", 500);
   }
 }
+
+export async function GET(request: Request) {
+  const gate = await requireMobileManager();
+  const blocked = mobileGate(gate);
+  if (blocked) return blocked;
+  if (!gate.ok) return mobileError("errors.unauthorized", 401);
+
+  const url = new URL(request.url);
+  const bucket = url.searchParams.get("bucket")?.trim();
+  const path = url.searchParams.get("path")?.trim();
+  const configuredBucket = await getAiAttachmentsBucket();
+
+  if (!bucket || !path || bucket !== configuredBucket || !path.startsWith(`${gate.userId}/`)) {
+    return mobileError("errors.forbidden", 403);
+  }
+
+  try {
+    const supabase = createSupabaseAdminClient();
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(path, 60 * 60);
+    if (error) throw error;
+    return mobileOk({ signedUrl: data.signedUrl });
+  } catch (error) {
+    console.error("sign_ai_attachment failed:", error);
+    return mobileError("errors.serverError", 500);
+  }
+}

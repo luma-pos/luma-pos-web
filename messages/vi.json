@@ -257,34 +257,15 @@
     "digest": "mã lỗi: {digest}"
   },
   "portal": {
-    "title": "Đặt hàng — {customer}",
-    "searchPlaceholder": "Tìm vật tư…",
-    "add": "+ Thêm",
-    "noProducts": "Không tìm thấy sản phẩm",
-    "projectPlaceholder": "Công trình (tùy chọn)",
-    "notePlaceholder": "Ghi chú cho cửa hàng",
-    "submit": "Gửi đơn đặt hàng",
-    "footnote": "Cửa hàng xác nhận xong đơn mới có hiệu lực. Giá hiển thị theo nhóm giá của bạn.",
-    "priceTypes": {
-      "retail": "Giá lẻ",
-      "wholesale": "Giá sỉ",
-      "contractor": "Giá thầu",
-      "agent": "Giá đại lý"
-    },
-    "cart": {
-      "title": "Đơn đặt hàng",
-      "itemCount": "{count} SP",
-      "empty": "Chưa chọn sản phẩm nào",
-      "subtotal": "Tổng tạm tính"
-    },
-    "success": {
-      "title": "Đã gửi đơn đặt hàng",
-      "code": "Mã đơn",
-      "description": "Cửa hàng sẽ xác nhận và báo lại cho bạn. Đơn chưa tính vào công nợ cho đến khi được xác nhận.",
-      "newOrder": "Đặt đơn khác"
-    },
+    "linkTitle": "Link đặt hàng online",
+    "desc": "Tạo link riêng để khách tự đặt hàng theo bảng giá của họ — đơn về dạng chờ xác nhận.",
+    "generate": "Tạo link",
+    "regenerate": "Đổi link mới",
+    "copy": "Copy link",
+    "copied": "Đã copy ✓",
+    "hint": "Gửi link qua Zalo cho khách. Đổi link mới sẽ vô hiệu link cũ.",
     "errors": {
-      "submit": "Có lỗi xảy ra — thử lại hoặc gọi cửa hàng."
+      "invalidToken": "Link không hợp lệ."
     }
   },
   "products": {
@@ -546,7 +527,11 @@
     "restockEmpty": "Hiện chưa cần nhập thêm.",
     "perDay": "ngày",
     "createPo": "Tạo phiếu nhập",
-    "priority": { "high": "Cao", "medium": "Trung bình", "low": "Thấp" },
+    "priority": {
+      "high": "Cao",
+      "medium": "Trung bình",
+      "low": "Thấp"
+    },
     "cols": {
       "onHand": "Tồn",
       "velocity": "TB/ngày",
@@ -589,45 +574,258 @@
       "drafts": "Tạo nháp"
     },
     "actions": {
-      "createInvoice": {
+      "more": "Thêm action",
+      "moreDescription": "Action phụ theo nhóm",
+      "userInformation": "Thông tin người dùng",
+      "create_invoice": {
         "label": "Tạo hóa đơn",
         "sessionTitle": "Tạo hóa đơn",
         "description": "Đơn bán/hóa đơn nháp",
         "emptyText": "Gửi tên khách, danh sách hàng và số lượng.",
         "placeholder": "Ví dụ: Khách lẻ, 2 cà phê Robusta, 1 bánh mì thịt...",
-        "promptPrefix": "[AI_ACTION_PRESET:order_action]\nTạo hóa đơn bán hàng từ thông tin sau. Hãy đọc danh sách hàng và số lượng để tạo đơn bán; chưa ghi nhận thanh toán trừ khi người dùng nói đã thanh toán.\n\nThông tin người dùng:",
+        "promptInstruction": "Tạo hóa đơn bán hàng từ thông tin sau. Hãy đọc danh sách hàng và số lượng để tạo đơn bán; chưa ghi nhận thanh toán trừ khi người dùng nói đã thanh toán.",
         "example1": "Khách lẻ: 2 cà phê Robusta, 1 bánh mì thịt",
         "example2": "Anh Nam lấy 5 đèn âm trần 8W, ghi công nợ"
       },
-      "draftPurchaseOrder": {
+      "draft_purchase_order": {
         "label": "Đặt hàng",
         "sessionTitle": "Đặt hàng nhập",
         "description": "PO nháp với NCC",
         "emptyText": "Gửi danh sách hàng cần đặt, NCC và kho nếu có.",
         "placeholder": "Ví dụ: Đặt 20 thùng cà phê Robusta từ NCC A về kho chính...",
-        "promptPrefix": "[AI_ACTION_PRESET:create_draft_purchase_order]\nTạo PO nháp/đơn đặt hàng nhập từ nhà cung cấp theo thông tin sau. Chỉ tạo đơn đặt hàng nháp, chưa nhập kho và chưa thanh toán.\n\nThông tin người dùng:",
+        "promptInstruction": "Tạo PO nháp/đơn đặt hàng nhập từ nhà cung cấp theo thông tin sau. Chỉ tạo đơn đặt hàng nháp, chưa nhập kho và chưa thanh toán.",
         "example1": "Đặt 20 thùng cà phê Robusta từ NCC A về kho chính",
         "example2": "Đặt 10 át đôi 32A, 5 đèn âm trần 8W"
       },
-      "createInventoryInbound": {
-        "label": "Tạo phiếu nhập hàng",
-        "sessionTitle": "Tạo phiếu nhập hàng",
+      "create_inventory_inbound": {
+        "label": "Nhập hàng",
+        "sessionTitle": "Nhập hàng",
         "description": "Nhận hàng/cộng kho",
         "emptyText": "Gửi hàng đã nhận, số lượng, NCC và kho.",
         "placeholder": "Ví dụ: Nhập 20 thùng cà phê Robusta vào kho chính từ NCC A...",
-        "promptPrefix": "[AI_ACTION_PRESET:create_inventory_inbound]\nTạo phiếu nhập hàng từ thông tin sau. Đây là nhận hàng thật để nhập kho; hãy tạo preview phiếu nhập và yêu cầu xác nhận trước khi cộng tồn.\n\nThông tin người dùng:",
+        "promptInstruction": "Tạo phiếu nhập hàng từ thông tin sau. Đây là nhận hàng thật để nhập kho; hãy tạo preview phiếu nhập và yêu cầu xác nhận trước khi cộng tồn.",
         "example1": "Nhập 20 thùng cà phê Robusta vào kho chính từ NCC A",
         "example2": "Nhận 5 đèn âm trần 8W giá 90.000 từ NCC Rạng Đông"
       },
-      "receiveStock": {
-        "label": "Nhập hàng",
-        "sessionTitle": "Nhập hàng",
-        "description": "Nhập nhanh hàng đã nhận",
-        "emptyText": "Nhập tên hàng, số lượng, giá nhập, kho và NCC nếu có.",
-        "placeholder": "Ví dụ: Nhập 20 thùng cà phê Robusta vào kho chính, giá 1.200.000/thùng...",
-        "promptPrefix": "[AI_ACTION_PRESET:create_inventory_inbound]\nNhập hàng từ thông tin sau. Đây là hàng đã nhận thực tế; hãy tạo preview phiếu nhập và yêu cầu xác nhận trước khi cộng tồn.\n\nThông tin người dùng:",
-        "example1": "Nhập 20 thùng cà phê Robusta vào kho chính",
-        "example2": "Nhập 12 hộp bánh quy giá 45.000/hộp từ NCC Minh Anh"
+      "create_quote": {
+        "label": "Tạo báo giá",
+        "sessionTitle": "Tạo báo giá",
+        "description": "Báo giá nháp",
+        "emptyText": "Gửi khách hàng, hàng hóa, số lượng và giá nếu có.",
+        "placeholder": "Ví dụ: Báo giá cho anh Nam 5 đèn âm trần 8W...",
+        "promptInstruction": "Tạo báo giá từ thông tin sau. Chỉ lập nháp báo giá/POS quote; không trừ kho, không tạo hóa đơn bán.",
+        "example1": "Báo giá cho anh Nam 5 đèn âm trần 8W",
+        "example2": "Báo giá 10 át đôi 32A cho công trình Hòa Bình"
+      },
+      "find_invoice": {
+        "label": "Tìm hóa đơn",
+        "sessionTitle": "Tìm hóa đơn",
+        "description": "Mở đơn liên quan",
+        "emptyText": "Nhập mã hóa đơn, SĐT, tên khách hoặc nội dung cần tìm.",
+        "placeholder": "Ví dụ: Tìm hóa đơn HD008236 của anh Nam...",
+        "promptInstruction": "Tìm hóa đơn/đơn hàng từ thông tin sau và mở danh sách/detail phù hợp. Chỉ mở màn kiểm tra, không thay đổi dữ liệu.",
+        "example1": "Tìm hóa đơn HD008236",
+        "example2": "Tìm đơn của anh Nam hôm nay"
+      },
+      "edit_invoice": {
+        "label": "Sửa/hủy hóa đơn",
+        "sessionTitle": "Sửa/hủy hóa đơn",
+        "description": "Mở đơn để xử lý",
+        "emptyText": "Nhập mã đơn và thao tác muốn sửa, hủy hoặc xóa.",
+        "placeholder": "Ví dụ: Sửa hóa đơn HD008236 đổi số lượng đèn...",
+        "promptInstruction": "Tìm đúng hóa đơn/đơn hàng rồi tạo preview thao tác sửa/hủy/xóa. Đây là thao tác nhạy cảm; chỉ mở màn review trước.",
+        "example1": "Sửa hóa đơn HD008236 đổi số lượng đèn thành 3",
+        "example2": "Hủy hóa đơn HD008236 vì khách trả hàng"
+      },
+      "sales_order": {
+        "label": "Tạo đơn bán",
+        "sessionTitle": "Tạo đơn bán",
+        "description": "Sales order nháp",
+        "emptyText": "Gửi khách hàng, hàng hóa và số lượng.",
+        "placeholder": "Ví dụ: Anh Nam đặt 5 đèn âm trần, giao mai...",
+        "promptInstruction": "Tạo đơn bán/sales order nháp từ thông tin sau. Chưa thanh toán và chưa mutate trước khi xác nhận.",
+        "example1": "Anh Nam đặt 5 đèn âm trần, giao mai",
+        "example2": "Khách công trình lấy 10 át đôi 32A, ghi công nợ"
+      },
+      "check_stock": {
+        "label": "Kiểm tồn kho",
+        "sessionTitle": "Kiểm tồn kho",
+        "description": "Mở tồn kho đã lọc",
+        "emptyText": "Nhập SKU, tên hàng hoặc nhóm hàng cần kiểm.",
+        "placeholder": "Ví dụ: Kiểm tồn SP004935...",
+        "promptInstruction": "Mở màn tồn kho theo thông tin sau, lọc SKU/tên hàng nếu match được sản phẩm active. Không thay đổi dữ liệu.",
+        "example1": "Kiểm tồn SP004935",
+        "example2": "Xem tồn bột chít mạch Iron"
+      },
+      "create_stocktake": {
+        "label": "Tạo phiếu kiểm kho",
+        "sessionTitle": "Tạo phiếu kiểm kho",
+        "description": "Mở form kiểm kho",
+        "emptyText": "Nhập kho/khu vực muốn kiểm kê.",
+        "placeholder": "Ví dụ: Tạo phiếu kiểm kho kho chính...",
+        "promptInstruction": "Chỉ khi người dùng yêu cầu tạo kiểm kê: mở form tạo phiếu kiểm kho từ thông tin sau. Chưa lưu phiếu.",
+        "example1": "Tạo phiếu kiểm kho kho chính",
+        "example2": "Lập kiểm kê nhóm thiết bị điện"
+      },
+      "adjust_stock": {
+        "label": "Điều chỉnh tồn",
+        "sessionTitle": "Điều chỉnh tồn",
+        "description": "Preview điều chỉnh",
+        "emptyText": "Nhập sản phẩm, kho, số lượng và lý do.",
+        "placeholder": "Ví dụ: Điều chỉnh SP004935 giảm 2 vì hư hỏng...",
+        "promptInstruction": "Chuẩn bị preview điều chỉnh tồn từ thông tin sau. Nếu chưa có form riêng, mở màn tồn kho để kiểm tra; không tự cộng/trừ kho.",
+        "example1": "Điều chỉnh SP004935 giảm 2 vì hư hỏng",
+        "example2": "Tăng tồn SP004908 thêm 3 sau kiểm kê"
+      },
+      "transfer_stock": {
+        "label": "Chuyển kho",
+        "sessionTitle": "Chuyển kho",
+        "description": "Preview chuyển kho",
+        "emptyText": "Nhập kho đi, kho đến, sản phẩm và số lượng.",
+        "placeholder": "Ví dụ: Chuyển 5 SP004935 từ kho chính sang kho phụ...",
+        "promptInstruction": "Chuẩn bị preview chuyển kho từ thông tin sau. Nếu chưa có form riêng, mở màn tồn kho để kiểm tra; không tự chuyển tồn.",
+        "example1": "Chuyển 5 SP004935 từ kho chính sang kho phụ",
+        "example2": "Chuyển 10 đèn 8W sang kho công trình"
+      },
+      "create_product": {
+        "label": "Thêm sản phẩm",
+        "sessionTitle": "Thêm sản phẩm",
+        "description": "Form sản phẩm nháp",
+        "emptyText": "Nhập tên, SKU, đơn vị, giá bán và nhóm hàng nếu có.",
+        "placeholder": "Ví dụ: Thêm sản phẩm Keo dán gạch 20kg SKU KDG20...",
+        "promptInstruction": "Tạo preview sản phẩm mới từ thông tin sau và mở form sản phẩm để kiểm tra/chỉnh sửa trước khi lưu.",
+        "example1": "Thêm sản phẩm Keo dán gạch 20kg SKU KDG20 giá 120.000",
+        "example2": "Tạo sản phẩm Đèn âm trần 8W, đơn vị cái"
+      },
+      "edit_product": {
+        "label": "Sửa sản phẩm",
+        "sessionTitle": "Sửa sản phẩm",
+        "description": "Mở form sản phẩm",
+        "emptyText": "Nhập SKU/tên hàng và trường cần sửa.",
+        "placeholder": "Ví dụ: Sửa SP004935 min tồn 10...",
+        "promptInstruction": "Tìm sản phẩm active từ thông tin sau. Nếu có productId thì mở form sửa, nếu không thì mở danh sách đã lọc.",
+        "example1": "Sửa SP004935 min tồn 10",
+        "example2": "Cập nhật tên Bột chít mạch Iron"
+      },
+      "update_product_price": {
+        "label": "Cập nhật giá",
+        "sessionTitle": "Cập nhật giá",
+        "description": "Preview giá bán",
+        "emptyText": "Nhập SKU/tên hàng và giá mới.",
+        "placeholder": "Ví dụ: Đặt giá SP004935 là 180.000...",
+        "promptInstruction": "Tạo preview cập nhật giá từ thông tin sau. Đây là thay đổi nhạy cảm, cần kiểm tra bảng giá trước khi xác nhận.",
+        "example1": "Đặt giá SP004935 là 180.000",
+        "example2": "Tăng giá SKU A lên 120.000"
+      },
+      "toggle_product_active": {
+        "label": "Bật/tắt sản phẩm",
+        "sessionTitle": "Bật/tắt sản phẩm",
+        "description": "Preview active",
+        "emptyText": "Nhập sản phẩm và trạng thái muốn bật/tắt.",
+        "placeholder": "Ví dụ: Tắt bán SP004935...",
+        "promptInstruction": "Tạo preview bật/tắt trạng thái sản phẩm từ thông tin sau. Nếu chưa có action riêng, mở danh sách sản phẩm đã lọc để kiểm tra.",
+        "example1": "Tắt bán SP004935",
+        "example2": "Bật lại sản phẩm Keo dán gạch"
+      },
+      "create_customer": {
+        "label": "Tạo khách hàng",
+        "sessionTitle": "Tạo khách hàng",
+        "description": "Form khách hàng nháp",
+        "emptyText": "Nhập tên khách, SĐT và loại khách nếu có.",
+        "placeholder": "Ví dụ: Thêm khách anh Nam SĐT 0909123456...",
+        "promptInstruction": "Tạo preview khách hàng từ thông tin sau và mở form khách hàng để kiểm tra trước khi lưu.",
+        "example1": "Thêm khách anh Nam SĐT 0909123456",
+        "example2": "Tạo khách sỉ Công ty Minh Anh"
+      },
+      "create_supplier": {
+        "label": "Tạo NCC",
+        "sessionTitle": "Tạo nhà cung cấp",
+        "description": "Nhà cung cấp nháp",
+        "emptyText": "Nhập tên NCC, SĐT, MST nếu có.",
+        "placeholder": "Ví dụ: Tạo NCC Minh Anh SĐT 0909123456...",
+        "promptInstruction": "Tạo preview nhà cung cấp từ thông tin sau. Nếu chưa có route form riêng, mở tab nhà cung cấp để nhập/chỉnh trước khi lưu.",
+        "example1": "Tạo NCC Minh Anh SĐT 0909123456",
+        "example2": "Thêm nhà cung cấp Rạng Đông MST 0100100100"
+      },
+      "check_customer_debt": {
+        "label": "Công nợ khách",
+        "sessionTitle": "Công nợ khách",
+        "description": "Báo cáo theo khách",
+        "emptyText": "Nhập tên khách, SĐT hoặc mã khách.",
+        "placeholder": "Ví dụ: Anh Nam còn nợ bao nhiêu?...",
+        "promptInstruction": "Mở báo cáo/đối soát công nợ khách hàng theo thông tin sau. Không ghi nhận thu tiền.",
+        "example1": "Anh Nam còn nợ bao nhiêu?",
+        "example2": "Công nợ khách Minh Anh"
+      },
+      "record_supplier_payment": {
+        "label": "Trả tiền NCC",
+        "sessionTitle": "Trả tiền NCC",
+        "description": "Preview chi tiền",
+        "emptyText": "Nhập NCC, số tiền và phương thức.",
+        "placeholder": "Ví dụ: Trả NCC Rạng Đông 2.000.000 tiền mặt...",
+        "promptInstruction": "Tạo preview ghi chi/trả tiền nhà cung cấp từ thông tin sau. Đây là nghiệp vụ tài chính, cần xác nhận mạnh trước khi ghi sổ.",
+        "example1": "Trả NCC Rạng Đông 2.000.000 tiền mặt",
+        "example2": "Chuyển khoản trả NCC Minh Anh 5 triệu"
+      },
+      "today_sales_report": {
+        "label": "Doanh số hôm nay",
+        "sessionTitle": "Doanh số hôm nay",
+        "description": "Mở báo cáo",
+        "emptyText": "Hỏi nhanh doanh số/ngày.",
+        "placeholder": "Ví dụ: Hôm nay bán được bao nhiêu?...",
+        "promptInstruction": "Mở báo cáo doanh số theo thông tin sau. Chỉ đọc số liệu, không thay đổi dữ liệu.",
+        "example1": "Hôm nay bán được bao nhiêu?",
+        "example2": "Doanh thu hôm nay thế nào?"
+      },
+      "best_sellers_report": {
+        "label": "Hàng bán chạy",
+        "sessionTitle": "Hàng bán chạy",
+        "description": "Top sản phẩm",
+        "emptyText": "Hỏi sản phẩm bán chạy theo thời gian.",
+        "placeholder": "Ví dụ: Mặt hàng bán chạy nhất tuần này...",
+        "promptInstruction": "Mở báo cáo hàng bán chạy theo thông tin sau. Chỉ đọc số liệu.",
+        "example1": "Mặt hàng bán chạy nhất?",
+        "example2": "Top sản phẩm tuần này"
+      },
+      "low_stock_report": {
+        "label": "Hàng sắp hết",
+        "sessionTitle": "Hàng sắp hết",
+        "description": "Báo cáo tồn thấp",
+        "emptyText": "Hỏi sản phẩm sắp hết/tồn thấp.",
+        "placeholder": "Ví dụ: Sản phẩm nào sắp hết?...",
+        "promptInstruction": "Mở báo cáo/tồn kho thấp theo thông tin sau. Chỉ đọc số liệu.",
+        "example1": "Sản phẩm nào sắp hết?",
+        "example2": "Hàng tồn dưới định mức"
+      },
+      "customer_purchase_report": {
+        "label": "Khách đã mua",
+        "sessionTitle": "Khách đã mua",
+        "description": "Mua hàng theo khách",
+        "emptyText": "Nhập tên khách hoặc mã khách.",
+        "placeholder": "Ví dụ: Anh Nam đã mua bao nhiêu tháng này?...",
+        "promptInstruction": "Mở báo cáo khách hàng đã mua theo thông tin sau, lọc khách nếu match được.",
+        "example1": "Anh Nam đã mua bao nhiêu tháng này?",
+        "example2": "Khách Minh Anh mua những gì?"
+      },
+      "customer_profit_report": {
+        "label": "Lợi nhuận theo khách",
+        "sessionTitle": "Lợi nhuận theo khách",
+        "description": "Profit by customer",
+        "emptyText": "Nhập tên khách hoặc nhóm khách.",
+        "placeholder": "Ví dụ: Lợi nhuận theo khách Minh Anh...",
+        "promptInstruction": "Mở báo cáo lợi nhuận theo khách từ thông tin sau, lọc khách nếu match được.",
+        "example1": "Lợi nhuận theo khách Minh Anh",
+        "example2": "Khách nào lợi nhuận cao nhất?"
+      },
+      "slow_moving_stock_report": {
+        "label": "Hàng chậm bán",
+        "sessionTitle": "Hàng chậm bán",
+        "description": "Tồn lâu/chậm bán",
+        "emptyText": "Hỏi hàng tồn lâu hoặc bán chậm.",
+        "placeholder": "Ví dụ: Hàng nào tồn lâu chưa bán?...",
+        "promptInstruction": "Mở báo cáo/tồn kho để kiểm tra hàng chậm bán từ thông tin sau. Chỉ đọc số liệu.",
+        "example1": "Hàng nào tồn lâu chưa bán?",
+        "example2": "Sản phẩm chậm bán trong tháng này"
       }
     },
     "errors": {
@@ -671,7 +869,11 @@
       "enterBeforeSend": "Nhập nội dung trước khi gửi",
       "removeAttachment": "Xóa {name}",
       "uploading": "Đang upload...",
-      "uploadFailed": "Upload lỗi"
+      "uploadFailed": "Upload lỗi",
+      "previewAttachment": "Xem {name}",
+      "openAttachment": "Mở file",
+      "openAttachmentHint": "Bấm Mở file để xem trong tab mới.",
+      "attachmentUnavailable": "Không mở được file đính kèm. Hãy thử tải lại cuộc chat."
     },
     "preview": {
       "posDraftLines": "{count} dòng đã nhận · kiểm tra trước khi đưa vào POS",
@@ -718,6 +920,13 @@
       "topSellers": "Mặt hàng bán chạy nhất?",
       "lowStock": "Sản phẩm nào sắp hết?",
       "restockToday": "Hôm nay nên nhập gì?"
+    },
+    "actionGroups": {
+      "sales": "Bán hàng",
+      "inventory": "Kho",
+      "products": "Sản phẩm",
+      "partners": "Đối tác",
+      "reports": "Báo cáo"
     }
   },
   "tables": {
@@ -732,7 +941,10 @@
     "order": "Gọi món",
     "emptyCart": "Chưa có món — tìm để thêm.",
     "close": "Đóng bàn",
-    "tabs": { "floor": "Sơ đồ bàn", "modifiers": "Tùy chọn món" },
+    "tabs": {
+      "floor": "Sơ đồ bàn",
+      "modifiers": "Tùy chọn món"
+    },
     "merge": "Gộp bàn",
     "mergeHint": "Chạm các bàn đang phục vụ để gộp (bàn ★ đầu tiên là bàn đích).",
     "mergeInto": "Gộp {count} bàn vào {name}",
@@ -852,7 +1064,10 @@
       "opened": "Mở",
       "closed": "Đóng"
     },
-    "status": { "open": "Đang mở", "closed": "Đã đóng" },
+    "status": {
+      "open": "Đang mở",
+      "closed": "Đã đóng"
+    },
     "errors": {
       "alreadyOpen": "Bạn đang có ca mở.",
       "noOpen": "Không có ca mở để đóng."
@@ -887,7 +1102,10 @@
       "cost": "Giá vốn",
       "by": "Nhân viên"
     },
-    "status": { "pending": "Chờ duyệt", "approved": "Đã duyệt" }
+    "status": {
+      "pending": "Chờ duyệt",
+      "approved": "Đã duyệt"
+    }
   },
   "orders": {
     "title": "Đơn hàng",
@@ -1510,18 +1728,6 @@
     "errors": {
       "onlyCompleted": "Chỉ phát hành cho đơn hoàn tất.",
       "alreadyIssued": "Đơn này đã có HĐĐT."
-    }
-  },
-  "portal": {
-    "linkTitle": "Link đặt hàng online",
-    "desc": "Tạo link riêng để khách tự đặt hàng theo bảng giá của họ — đơn về dạng chờ xác nhận.",
-    "generate": "Tạo link",
-    "regenerate": "Đổi link mới",
-    "copy": "Copy link",
-    "copied": "Đã copy ✓",
-    "hint": "Gửi link qua Zalo cho khách. Đổi link mới sẽ vô hiệu link cũ.",
-    "errors": {
-      "invalidToken": "Link không hợp lệ."
     }
   },
   "pricing": {
