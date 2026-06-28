@@ -482,15 +482,9 @@ export function AssistantChatSurface({
               onPaste={handlePaste}
               onKeyDown={(e) => {
                 if (e.key !== "Enter") return;
-                if (e.metaKey || e.ctrlKey) {
-                  e.preventDefault();
-                  submitComposer();
-                  return;
-                }
-                if (input.trim().length === 0) {
-                  e.preventDefault();
-                  if (input.length > 0) setInput("");
-                }
+                if (e.shiftKey) return;
+                e.preventDefault();
+                submitComposer();
               }}
               placeholder={attachments.length ? t("ai.composer.attachmentPlaceholder") : composerPlaceholder}
               rows={1}

@@ -71,6 +71,22 @@ export type AiAssistantResponse = {
 };
 
 type OrderActionMode = "create_invoice" | "create_quote" | "find_invoice" | "edit_invoice" | null;
+type ProductCommandMode = "create_product" | "edit_product" | "toggle_product_active" | null;
+type CustomerActionMode = "create_customer" | "create_supplier" | null;
+type CashbookActionMode = "record_supplier_payment" | null;
+type ReportSummaryMode =
+  | "check_stock"
+  | "create_stocktake"
+  | "adjust_stock"
+  | "transfer_stock"
+  | "check_customer_debt"
+  | "today_sales_report"
+  | "best_sellers_report"
+  | "low_stock_report"
+  | "customer_purchase_report"
+  | "customer_profit_report"
+  | "slow_moving_stock_report"
+  | null;
 
 const PLANNER_CONFIDENCE_THRESHOLD = 0.55;
 const AI_TOOL_LOOP_MAX_DEPTH = 2;
@@ -153,7 +169,7 @@ function buildAiReviewAction(preview: AiActionPreview): AiActionPreview["reviewA
   if (preview.intent === "create_product") {
     return { type: "open", href: "/products/new?source=ai-preview", label: "Mở form sản phẩm", target: "product_form" };
   }
-  if (preview.intent === "update_product" || preview.intent === "update_product_min_stock") {
+  if (preview.intent === "update_product" || preview.intent === "update_product_min_stock" || preview.intent === "toggle_product_active") {
     return {
       type: "open",
       href: productId
@@ -180,6 +196,9 @@ function buildAiReviewAction(preview: AiActionPreview): AiActionPreview["reviewA
   }
   if (preview.intent === "inventory_stock_view") {
     return { type: "open", href: hrefWithParams("/inventory", { tab: "stock", q: productQuery || reportQuery, source: "ai-preview" }), label: "Mở tồn kho", target: "inventory" };
+  }
+  if (preview.intent === "adjust_stock" || preview.intent === "transfer_stock") {
+    return { type: "open", href: hrefWithParams("/inventory", { tab: "stock", q: productQuery || reportQuery, source: "ai-preview" }), label: preview.intent === "adjust_stock" ? "Mở điều chỉnh kho" : "Mở chuyển kho", target: "inventory" };
   }
   if (preview.intent === "create_stocktake") {
     return { type: "open", href: "/stocktakes/new?source=ai-preview", label: "Mở phiếu kiểm kho", target: "stocktakes" };
@@ -1550,13 +1569,14 @@ export async function pricePreview(prompt: string): Promise<AiActionPreview> {
   };
 }
 
-export async function productCommandPreview(prompt: string): Promise<AiActionPreview> {
+export async function productCommandPreview(prompt: string, mode: ProductCommandMode = null): Promise<AiActionPreview> {
   const q = normalize(prompt);
   const context = await getProductCommandContext();
-  const isCategory = q.includes("danh muc") || q.includes("category");
-  const isBrand = q.includes("thuong hieu") || q.includes("brand");
-  const isMinStock = q.includes("ton toi thieu") || q.includes("min stock");
-  const isGenericUpdate = q.includes("sua san pham") || q.includes("sửa sản phẩm") || q.includes("cap nhat san pham") || q.includes("cập nhật sản phẩm") || q.includes("edit product") || q.includes("update product");
+  const freeMode = mode == null;
+  const isCategory = freeMode && (q.includes("danh muc") || q.includes("category"));
+  const isBrand = freeMode && (q.includes("thuong hieu") || q.includes("brand"));
+  const isMinStock = freeMode && (q.includes("ton toi thieu") || q.includes("min stock"));
+  const isGenericUpdate = mode === "edit_product" || (freeMode && (q.includes("sua san pham") || q.includes("sửa sản phẩm") || q.includes("cap nhat san pham") || q.includes("cập nhật sản phẩm") || q.includes("edit product") || q.includes("update product")));
 
   if (isCategory) {
     const name = textAfter(prompt, [/tạo danh mục\s+(.+)$/i, /tao danh muc\s+(.+)$/i, /category\s+(.+)$/i]);
@@ -1653,6 +1673,37 @@ export async function productCommandPreview(prompt: string): Promise<AiActionPre
     };
   }
 
+  if (mode === "toggle_product_active") {
+    const productMatch = matchNamed(prompt, context.products);
+    const product = productMatch.match;
+    const shouldActivate = q.includes("ban lai") || q.includes("mo ban") || q.includes("active") || q.includes("resume");
+    const canPreview = Boolean(product) && productMatch.ambiguous.length === 0;
+    return {
+      id: randomUUID(),
+      intent: "toggle_product_active",
+      title: "Đổi trạng thái bán sản phẩm",
+      description: canPreview ? "Tôi đã match được sản phẩm. Hãy kiểm tra trước khi đổi trạng thái." : "Cần xác định sản phẩm trước khi đổi trạng thái.",
+      confidence: canPreview ? 0.78 : 0.5,
+      state: canPreview ? "preview" : productMatch.ambiguous.length ? "needs_selection" : "needs_input",
+      confirmationRequired: true,
+      entityType: "product",
+      entityId: product?.id ?? null,
+      requiredFields: ["product"],
+      missingFields: product ? [] : ["product"],
+      fields: [
+        { label: "Sản phẩm", value: product ? `${product.name} (${product.sku})` : "Cần chọn", tone: product ? "success" : "warning" },
+        { label: "Trạng thái mới", value: shouldActivate ? "Bán lại" : "Ngừng bán" },
+      ],
+      lines: product ? [{ label: product.name, value: shouldActivate ? "Bán lại" : "Ngừng bán", meta: product.sku, tone: "warning" }] : [],
+      warnings: productMatch.ambiguous.map((item) => `Sản phẩm có thể là: ${item.name} (${item.sku}). Hãy ghi rõ SKU/tên hơn.`),
+      action: {
+        type: "toggle_product_active",
+        target: "products",
+        payload: { prompt, productId: product?.id ?? null, productName: product?.name ?? null, sku: product?.sku ?? null, active: shouldActivate },
+      },
+    };
+  }
+
   const name = textAfter(prompt, [/tạo sản phẩm\s+(.+?)(?:,\s*sku|\s+sku|\s+giá|\s+gia|$)/i, /tao san pham\s+(.+?)(?:,\s*sku|\s+sku|\s+gia|$)/i]);
   const sku = prompt.match(/\bsku\s*[:#-]?\s*([a-z0-9._-]+)/i)?.[1]?.toUpperCase() ?? "";
   const price = parseMoneyAmount(prompt) ?? 0;
@@ -1720,9 +1771,10 @@ function simpleCreatePreview(input: {
   };
 }
 
-export async function customerPreview(prompt: string): Promise<AiActionPreview> {
+export async function customerPreview(prompt: string, mode: CustomerActionMode = null): Promise<AiActionPreview> {
   const q = normalize(prompt);
-  const asksSupplier = q.includes("ncc") || q.includes("nha cung cap") || q.includes("supplier");
+  const freeMode = mode == null;
+  const asksSupplier = mode === "create_supplier" || (freeMode && (q.includes("ncc") || q.includes("nha cung cap") || q.includes("supplier")));
   if (asksSupplier) {
     const phone = prompt.match(/(?:số điện thoại|sdt|phone)\s*[:#-]?\s*([0-9+\s.-]{8,})/i)?.[1]?.replace(/\s+/g, "") ?? "";
     const name = textAfter(prompt, [
@@ -1741,7 +1793,7 @@ export async function customerPreview(prompt: string): Promise<AiActionPreview> 
     });
   }
   const customers = await getCustomerContext();
-  const isUpdate = q.includes("cap nhat") || q.includes("sua ");
+  const isUpdate = freeMode && (q.includes("cap nhat") || q.includes("sua "));
   if (isUpdate) {
     const match = matchNamed(prompt, customers);
     const customer = match.match;
@@ -1811,18 +1863,18 @@ export async function customerPreview(prompt: string): Promise<AiActionPreview> 
   };
 }
 
-export function cashbookPreview(prompt: string): AiActionPreview {
+export function cashbookPreview(prompt: string, mode: CashbookActionMode = null): AiActionPreview {
   const q = normalize(prompt);
   const amount = parseMoneyAmount(prompt);
-  const isIncome = q.includes("ghi thu") || q.includes("thu ");
-  const category = q.includes("cong no") ? "debt_collect" : isIncome ? "other" : "expense";
+  const isIncome = mode === "record_supplier_payment" ? false : q.includes("ghi thu") || q.includes("thu ");
+  const category = mode === "record_supplier_payment" ? "supplier_payment" : q.includes("cong no") ? "debt_collect" : isIncome ? "other" : "expense";
   const note = cleanName(prompt.replace(/ghi\s*(thu|chi)/i, "").replace(/\d[\d.,]*(?:\s*(k|nghin|ngàn|ngan|₫|d|đ|vnd))?/gi, ""));
   const missingFields = amount == null ? ["amount"] : [];
   const canPreview = missingFields.length === 0;
   return {
     id: randomUUID(),
     intent: "create_cashbook_entry",
-    title: isIncome ? "Ghi thu sổ quỹ" : "Ghi chi sổ quỹ",
+    title: mode === "record_supplier_payment" ? "Ghi thanh toán nhà cung cấp" : isIncome ? "Ghi thu sổ quỹ" : "Ghi chi sổ quỹ",
     description: canPreview ? "Tôi đã đọc được khoản thu/chi. Hãy kiểm tra trước khi ghi sổ." : "Cần số tiền trước khi ghi sổ.",
     confidence: canPreview ? 0.82 : 0.52,
     state: canPreview ? "preview" : "needs_input",
@@ -1838,25 +1890,34 @@ export function cashbookPreview(prompt: string): AiActionPreview {
       { label: "Danh mục", value: category },
     ],
     lines: amount != null ? [{ label: note || prompt, value: moneyText(amount), tone: isIncome ? "success" : "warning" }] : [],
-    warnings: ["Ghi sổ quỹ là nghiệp vụ tiền mặt, cần quản lý xác nhận."],
+    warnings: [mode === "record_supplier_payment" ? "Thanh toán nhà cung cấp là nghiệp vụ chi tiền, cần quản lý xác nhận." : "Ghi sổ quỹ là nghiệp vụ tiền mặt, cần quản lý xác nhận."],
     action: { type: "create_cashbook_entry", target: "cashbook", payload: { prompt, type: isIncome ? "in" : "out", fund: "cash", amount, category, note: note || prompt } },
   };
 }
 
-export async function reportSummaryPreview(prompt: string): Promise<AiActionPreview> {
+export async function reportSummaryPreview(prompt: string, mode: ReportSummaryMode = null): Promise<AiActionPreview> {
   const q = normalize(prompt);
+  const freeMode = mode == null;
   const asksCreateStocktake =
-    (q.includes("tao") || q.includes("lap") || q.includes("create")) &&
-    (q.includes("phieu kiem kho") || q.includes("stocktake"));
+    mode === "create_stocktake" ||
+    (freeMode && (q.includes("tao") || q.includes("lap") || q.includes("create")) &&
+    (q.includes("phieu kiem kho") || q.includes("stocktake")));
   const asksStockView =
     !asksCreateStocktake &&
-    (q.includes("ton kho") || q.includes("kiem ton") || q.includes("kiem kho") || q.includes("stock"));
+    (mode === "check_stock" ||
+      mode === "low_stock_report" ||
+      (freeMode && (q.includes("ton kho") || q.includes("kiem ton") || q.includes("kiem kho") || q.includes("stock"))));
   const asksCustomerReport =
-    q.includes("khach") ||
-    q.includes("customer") ||
-    q.includes("da mua") ||
-    q.includes("mua bao nhieu") ||
-    q.includes("loi nhuan theo khach");
+    mode === "check_customer_debt" ||
+    mode === "customer_purchase_report" ||
+    mode === "customer_profit_report" ||
+    (freeMode && (
+      q.includes("khach") ||
+      q.includes("customer") ||
+      q.includes("da mua") ||
+      q.includes("mua bao nhieu") ||
+      q.includes("loi nhuan theo khach")
+    ));
 
   if (asksCreateStocktake) {
     return {
@@ -1902,6 +1963,31 @@ export async function reportSummaryPreview(prompt: string): Promise<AiActionPrev
         type: "open_inventory_stock_view",
         target: "inventory",
         payload: { prompt, productId: product?.id ?? null, productName: product?.name ?? null, sku: product?.sku ?? null, query: product?.sku ?? prompt },
+      },
+    };
+  }
+
+  if (mode === "adjust_stock" || mode === "transfer_stock") {
+    return {
+      id: randomUUID(),
+      intent: mode,
+      title: mode === "adjust_stock" ? "Mở màn điều chỉnh kho" : "Mở màn chuyển kho",
+      description: mode === "adjust_stock"
+        ? "Tôi sẽ mở màn tồn kho/kiểm kho để bạn kiểm tra trước khi điều chỉnh."
+        : "Tôi sẽ mở màn kho để bạn kiểm tra trước khi tạo phiếu chuyển kho.",
+      confidence: 0.68,
+      state: "preview",
+      confirmationRequired: false,
+      entityType: "inventory",
+      requiredFields: [],
+      missingFields: [],
+      fields: [{ label: "Màn hình", value: mode === "adjust_stock" ? "Điều chỉnh kho" : "Chuyển kho", tone: "success" }],
+      lines: [],
+      warnings: ["CTA chỉ mở màn nghiệp vụ; chưa thay đổi tồn kho."],
+      action: {
+        type: mode === "adjust_stock" ? "open_stock_adjustment" : "open_stock_transfer",
+        target: "inventory",
+        payload: { prompt },
       },
     };
   }
@@ -2278,10 +2364,45 @@ export async function posCartPreview(prompt: string, source: "voice" | "image"):
   };
 }
 
-function forcedIntentFromActionPreset(prompt: string): AiPlannerIntent | null {
+function actionPresetMarker(prompt: string) {
   const match = prompt.match(/\[AI_ACTION_PRESET:([a-z_]+)\]/);
-  if (!match) return null;
-  const intent = match[1];
+  return match?.[1] ?? null;
+}
+
+function forcedIntentFromActionPreset(prompt: string): AiPlannerIntent | null {
+  const marker = actionPresetMarker(prompt);
+  if (!marker) return null;
+  if (
+    marker === "create_invoice" ||
+    marker === "create_quote" ||
+    marker === "find_invoice" ||
+    marker === "edit_invoice" ||
+    marker === "sales_order"
+  ) {
+    return "order_action";
+  }
+  if (marker === "draft_purchase_order") return "create_draft_purchase_order";
+  if (marker === "update_product_price") return "set_product_price";
+  if (marker === "create_product" || marker === "edit_product" || marker === "toggle_product_active") return "product_command";
+  if (marker === "create_customer" || marker === "create_supplier") return "customer_action";
+  if (marker === "record_supplier_payment") return "cashbook_action";
+  if (
+    marker === "check_stock" ||
+    marker === "create_stocktake" ||
+    marker === "adjust_stock" ||
+    marker === "transfer_stock" ||
+    marker === "check_customer_debt" ||
+    marker === "today_sales_report" ||
+    marker === "best_sellers_report" ||
+    marker === "low_stock_report" ||
+    marker === "customer_purchase_report" ||
+    marker === "customer_profit_report" ||
+    marker === "slow_moving_stock_report"
+  ) {
+    return "report_summary";
+  }
+
+  const intent = marker;
   if (
     intent === "order_action" ||
     intent === "create_draft_purchase_order" ||
@@ -2301,12 +2422,53 @@ function forcedIntentFromActionPreset(prompt: string): AiPlannerIntent | null {
 }
 
 function forcedOrderActionModeFromPreset(prompt: string): OrderActionMode {
-  if (!/\[AI_ACTION_PRESET:order_action\]/.test(prompt)) return null;
+  const marker = actionPresetMarker(prompt);
+  if (marker === "create_invoice" || marker === "sales_order") return "create_invoice";
+  if (marker === "create_quote") return "create_quote";
+  if (marker === "find_invoice") return "find_invoice";
+  if (marker === "edit_invoice") return "edit_invoice";
+  if (marker !== "order_action") return null;
   const instruction = normalize(prompt.split(/(?:Thông tin người dùng|User information):/i)[0] ?? prompt);
   if (instruction.includes("tao bao gia") || instruction.includes("create a quote")) return "create_quote";
   if (instruction.includes("tim hoa don") || instruction.includes("find the invoice")) return "find_invoice";
   if (instruction.includes("sua") || instruction.includes("huy") || instruction.includes("edit/cancel")) return "edit_invoice";
   if (instruction.includes("tao hoa don ban hang") || instruction.includes("create a sales invoice")) return "create_invoice";
+  return null;
+}
+
+function forcedProductCommandModeFromPreset(prompt: string): ProductCommandMode {
+  const marker = actionPresetMarker(prompt);
+  if (marker === "create_product" || marker === "edit_product" || marker === "toggle_product_active") return marker;
+  return null;
+}
+
+function forcedCustomerActionModeFromPreset(prompt: string): CustomerActionMode {
+  const marker = actionPresetMarker(prompt);
+  if (marker === "create_customer" || marker === "create_supplier") return marker;
+  return null;
+}
+
+function forcedCashbookActionModeFromPreset(prompt: string): CashbookActionMode {
+  return actionPresetMarker(prompt) === "record_supplier_payment" ? "record_supplier_payment" : null;
+}
+
+function forcedReportSummaryModeFromPreset(prompt: string): ReportSummaryMode {
+  const marker = actionPresetMarker(prompt);
+  if (
+    marker === "check_stock" ||
+    marker === "create_stocktake" ||
+    marker === "adjust_stock" ||
+    marker === "transfer_stock" ||
+    marker === "check_customer_debt" ||
+    marker === "today_sales_report" ||
+    marker === "best_sellers_report" ||
+    marker === "low_stock_report" ||
+    marker === "customer_purchase_report" ||
+    marker === "customer_profit_report" ||
+    marker === "slow_moving_stock_report"
+  ) {
+    return marker;
+  }
   return null;
 }
 
@@ -2328,6 +2490,10 @@ export async function buildAiAssistantResponse(input: {
   const rawPrompt = input.prompt.trim();
   const forcedIntent = forcedIntentFromActionPreset(rawPrompt);
   const forcedOrderMode = forcedOrderActionModeFromPreset(rawPrompt);
+  const forcedProductMode = forcedProductCommandModeFromPreset(rawPrompt);
+  const forcedCustomerMode = forcedCustomerActionModeFromPreset(rawPrompt);
+  const forcedCashbookMode = forcedCashbookActionModeFromPreset(rawPrompt);
+  const forcedReportMode = forcedReportSummaryModeFromPreset(rawPrompt);
   const planner = await planAiAssistantIntent({
     prompt: stripActionPresetMarker(rawPrompt),
     hasAttachments: Boolean(input.parsedAttachments?.length),
@@ -2391,11 +2557,11 @@ export async function buildAiAssistantResponse(input: {
         : previewTool === "buildPriceFormulaPreview"
           ? formulaPreview(prompt, (await getPriceContext()).priceBooks)
         : previewTool === "buildProductPreview"
-          ? await productCommandPreview(prompt)
+          ? await productCommandPreview(prompt, forcedProductMode)
         : previewTool === "buildCustomerPreview"
-          ? await customerPreview(prompt)
+          ? await customerPreview(prompt, forcedCustomerMode)
         : previewTool === "buildCashbookPreview"
-          ? cashbookPreview(prompt)
+          ? cashbookPreview(prompt, forcedCashbookMode)
         : previewTool === "buildPosCartPreview:voice"
           ? await posCartPreview(prompt, "voice")
         : previewTool === "buildPosCartPreview:image"
@@ -2403,7 +2569,7 @@ export async function buildAiAssistantResponse(input: {
         : previewTool === "buildOrderPreview"
           ? await orderActionPreview(prompt, forcedOrderMode)
         : previewTool === "buildReportSummaryPreview"
-          ? await reportSummaryPreview(prompt)
+          ? await reportSummaryPreview(prompt, forcedReportMode)
         : previewTool === "buildPriceUpdatePreview"
           ? await pricePreview(prompt)
           : undefined;
