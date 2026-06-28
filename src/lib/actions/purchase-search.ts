@@ -44,6 +44,22 @@ function textValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : "";
 }
 
+function compactSpaces(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function productNameQueries(label: string) {
+  const raw = compactSpaces(label);
+  const cleaned = compactSpaces(label.replace(/\b[A-Z]{1,6}\d[A-Z0-9._-]{2,}\b/gi, "").replace(/[·|,;:]+/g, " "));
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  return Array.from(new Set([
+    raw,
+    cleaned,
+    words.length >= 3 ? words.slice(0, 3).join(" ") : "",
+    words.length >= 2 ? words.slice(0, 2).join(" ") : "",
+  ].filter(Boolean)));
+}
+
 /** Tìm sản phẩm cho phiếu nhập (server-side, bỏ dấu, quét toàn bộ). */
 export async function searchPurchaseProducts(q: string): Promise<PurchaseProductRow[]> {
   if (!q.trim()) return [];
@@ -90,6 +106,14 @@ export async function resolvePurchaseDraftProducts(
     return resolved;
   }
 
+  async function resolveByName(label: string) {
+    for (const query of productNameQueries(label)) {
+      const product = await resolveByQuery(query, "name");
+      if (product) return product;
+    }
+    return null;
+  }
+
   const out: PurchaseDraftProductResolution[] = [];
   for (const [index, item] of items.entries()) {
     const productId = textValue(item.productId);
@@ -98,7 +122,7 @@ export async function resolvePurchaseDraftProducts(
     const product =
       (UUID_RE.test(productId) ? byId.get(productId) ?? null : null) ??
       (sku ? await resolveByQuery(sku, "sku") : null) ??
-      (label ? await resolveByQuery(label, "name") : null);
+      (label ? await resolveByName(label) : null);
     const seedProductId = product?.id ?? productId;
     const quantity = Math.max(1, Number(item.quantity) || 1);
     const unitCost = Math.max(0, Number(item.unitCost) || 0);
