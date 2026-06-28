@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Copy, FilePenLine, Printer, ReceiptText } from "lucide-react";
+import { PurchaseCancelButton } from "../../purchases/purchase-cancel-button";
 import { Routes } from "@/lib/routes";
 import { cn, formatCurrency, formatDate, formatNumber } from "@/lib/utils";
 import type { getPurchases } from "@/lib/data/inventory";
@@ -283,6 +284,7 @@ function ExpandedPurchase({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {canChange && <PurchaseCancelButton purchaseId={purchase.id} compact />}
             <Link href={printHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-semibold text-primary-600 hover:bg-surface-2">
               <Printer className="h-3.5 w-3.5" />
               {t("print.printBtn")}
