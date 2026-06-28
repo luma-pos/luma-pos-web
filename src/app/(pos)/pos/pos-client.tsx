@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Search, Plus, Minus, Trash2, Loader2, ShoppingCart, X, GripVertical, WifiOff, RefreshCw, Tag, ChevronDown, Check, Printer, MoreVertical } from "lucide-react";
+import { Search, Plus, Minus, Trash2, Loader2, ShoppingCart, X, GripVertical, WifiOff, RefreshCw, ChevronDown, Printer, MoreVertical } from "lucide-react";
 import { formatCurrency, formatNumber, cn } from "@/lib/utils";
 import { normalizeSearch } from "@/lib/normalize";
 import { createPortal } from "react-dom";
@@ -227,7 +227,6 @@ export function PosClient({
   const [overKey, setOverKey] = useState<string | null>(null);
   const [dropHover, setDropHover] = useState(false);
   const [mobileView, setMobileView] = useState<"catalog" | "cart">("catalog"); // chuyển đổi trên mobile
-  const [priceBookOpen, setPriceBookOpen] = useState(false); // modal chọn bảng giá
   const [variantParent, setVariantParent] = useState<PosProduct | null>(null);
   const [browsing, setBrowsing] = useState(false); // click vào ô tìm → mở dropdown SP
   const searchRef = useRef<HTMLDivElement>(null);
@@ -298,7 +297,6 @@ export function PosClient({
   const { cart, customerId, projectId, projectName, discountInput, discountMode, taxRate, shippingFee, payMethod, paidInput, note: orderNote } = active;
   const priceBook: PriceBook = active.priceBook ?? ""; // "" = bảng giá mặc định
   const defaultBook = data.priceBooks.find((b) => b.isDefault) ?? data.priceBooks[0];
-  const priceBookName = (priceBook && data.priceBooks.find((b) => b.id === priceBook)?.name) || defaultBook?.name || "Giá lẻ";
   const isDefaultBook = !priceBook || priceBook === defaultBook?.id;
 
   /** Patch hóa đơn đang mở (nhận object hoặc hàm cập nhật). */
@@ -1004,20 +1002,18 @@ export function PosClient({
                 options={data.customers.map((c) => ({ value: c.id, label: c.name, hint: c.phone ?? undefined }))}
               />
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setPriceBookOpen(true)}
-              title={t("pos.priceBook.title")}
-              className={cn(
-                "shrink-0 gap-1.5 whitespace-nowrap",
-                !isDefaultBook && "border-primary-500 text-primary-700 dark:text-primary-300"
-              )}
-            >
-              <Tag className="text-slate-400" />
-              <span className="hidden sm:inline">{priceBookName}</span>
-              <ChevronDown className="text-slate-400" />
-            </Button>
+            <Combobox
+              value={priceBook || defaultBook?.id || ""}
+              onChange={(id) => {
+                const pb = data.priceBooks.find((book) => book.id === id);
+                changePriceBook(!pb || pb.isDefault ? "" : pb.id);
+              }}
+              placeholder={t("pos.priceBook.title")}
+              allowClear={false}
+              showSearch={false}
+              className={cn("w-48 shrink-0", !isDefaultBook && "[&_button]:border-primary-500 [&_button]:text-primary-700 dark:[&_button]:text-primary-300")}
+              options={data.priceBooks.map((pb) => ({ value: pb.id, label: pb.name }))}
+            />
           </div>
           {customer && Number(customer.currentDebt) > 0 && (
             <p className="text-xs text-warn">
@@ -1176,47 +1172,6 @@ export function PosClient({
             closeSearch();
           }}
         />
-      )}
-
-      {priceBookOpen && (
-        <div
-          className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4"
-          onClick={() => setPriceBookOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm bg-surface rounded-2xl shadow-e2 overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Tag className="w-4 h-4 text-primary-600" /> {t("pos.priceBook.title")}
-              </h3>
-              <Button variant="ghost" size="iconSm" onClick={() => setPriceBookOpen(false)} aria-label={t("common.close")}>
-                <X />
-              </Button>
-            </div>
-            <div className="p-2">
-              {data.priceBooks.map((pb) => {
-                const selected = pb.id === priceBook || (isDefaultBook && pb.id === defaultBook?.id);
-                return (
-                  <Button
-                    key={pb.id}
-                    variant="ghost"
-                    block
-                    onClick={() => { changePriceBook(pb.isDefault ? "" : pb.id); setPriceBookOpen(false); }}
-                    className={cn(
-                      "h-auto justify-between py-2.5 font-normal",
-                      selected && "bg-primary-50 dark:bg-primary-950/40 font-medium"
-                    )}
-                  >
-                    <span>{pb.name}</span>
-                    {selected && <Check className="text-primary-600" />}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Phiếu tạm để in (ẩn trên màn hình, chỉ hiện khi in) */}
