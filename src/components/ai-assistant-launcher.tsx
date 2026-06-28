@@ -10,6 +10,7 @@ import {
   Info,
   Maximize2,
   MessageSquare,
+  Mic,
   Minus,
   Paperclip,
   Send,
@@ -22,6 +23,17 @@ import type { AiActionPreview, AiAssistantState } from "@/lib/ai/actions";
 
 type PreviewResolutionState = AiAssistantState | "confirmed" | "cancelled";
 type AssistantSurface = "web" | "pos";
+
+type SpeechRecognitionCtor = new () => {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+};
 
 type Msg = {
   role: "user" | "assistant";
@@ -254,6 +266,7 @@ function useAssistantState(surface: AssistantSurface) {
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [usage, setUsage] = useState<AiUsageStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const [listening, setListening] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -390,6 +403,39 @@ function useAssistantState(surface: AssistantSurface) {
     addFiles(files);
   }
 
+  function startVoiceInput() {
+    if (typeof window === "undefined" || busy || listening) return;
+    const SpeechRecognition =
+      (window as Window & { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor }).SpeechRecognition ??
+      (window as Window & { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor }).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setAttachmentError("Trình duyệt hiện chưa hỗ trợ speech-to-text.");
+      return;
+    }
+    setAttachmentError(null);
+    const recognition = new SpeechRecognition();
+    recognition.lang = "vi-VN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript ?? "")
+        .join(" ")
+        .trim();
+      if (transcript) {
+        setInput(transcript);
+        if (surface === "pos") void send(transcript);
+      }
+    };
+    recognition.onerror = () => {
+      setListening(false);
+      setAttachmentError("Không nghe được giọng nói. Hãy thử lại hoặc nhập tay.");
+    };
+    recognition.onend = () => setListening(false);
+    setListening(true);
+    recognition.start();
+  }
+
   async function send(text: string) {
     const q = text.trim();
     if ((!q && attachments.length === 0) || busy) return;
@@ -499,9 +545,12 @@ function useAssistantState(surface: AssistantSurface) {
     handlePaste,
     msgs,
     busy,
+    listening,
+    surface,
     usage,
     suggestions,
     send,
+    startVoiceInput,
     resolvePreview,
     clearMessages,
   };
@@ -738,9 +787,12 @@ function AssistantChatSurface({
     handlePaste,
     msgs,
     busy,
+    listening,
+    surface,
     usage,
     suggestions,
     send,
+    startVoiceInput,
     resolvePreview,
     clearMessages,
   } = assistant;
@@ -897,6 +949,21 @@ function AssistantChatSurface({
             >
               <Paperclip className="w-4 h-4" />
             </button>
+            {surface === "pos" && (
+              <button
+                disabled={busy || listening}
+                type="button"
+                onClick={startVoiceInput}
+                className={cn(
+                  "w-9 h-9 grid place-items-center rounded-full border border-border bg-surface text-slate-600 hover:bg-surface-2 shrink-0 disabled:opacity-50",
+                  listening && "border-primary-500 text-primary-600 bg-primary-50"
+                )}
+                title={listening ? "Đang nghe..." : "Đọc sản phẩm bằng giọng nói"}
+                aria-label="Voice POS cart"
+              >
+                <Mic className="w-4 h-4" />
+              </button>
+            )}
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
