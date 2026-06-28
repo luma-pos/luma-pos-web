@@ -8,6 +8,7 @@ import { ModeSwitcher } from "@/components/mode-switcher";
 import { AppNav } from "@/components/app-nav";
 import { MobileNavBackdrop } from "@/components/mobile-nav";
 import { MobileTabBar } from "@/components/mobile-tabbar";
+import { AiAssistantLauncher } from "@/components/ai-assistant-launcher";
 import { Text } from "@/components/ui/text";
 import { Routes } from "@/lib/routes";
 import { getTheme, getMode } from "@/lib/theme/cookie";
@@ -56,6 +57,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <main className="flex-1 min-w-0 overflow-auto overflow-x-hidden">
         <div className="pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
         <MobileTabBar />
+        <AiAssistantLauncher />
       </main>
     </div>
   );

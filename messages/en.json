@@ -136,6 +136,7 @@
   },
   "pos": {
     "searchPlaceholder": "Search by name / SKU / barcode... (F2)",
+    "backToAdmin": "Admin",
     "order": "Order",
     "calcTiles": "Calc m²",
     "noItems": "No items yet",
@@ -551,8 +552,16 @@
       "priority": "Priority"
     },
     "assistantNotice": "Assistant preview — connect an AI provider (API key) to get real answers.",
+    "actionNotice": "Action framework preview - AI drafts, writes audit, and waits for confirmation before mutating data.",
     "assistantEmpty": "Ask about sales, stock, or what to restock.",
     "askPlaceholder": "Ask the assistant…",
+    "launcherTitle": "Luma AI",
+    "launcherStatus": "Preview mode - audit enabled",
+    "openWorkspace": "Open full AI workspace",
+    "minimize": "Minimize",
+    "posTitle": "POS assistant",
+    "posEmpty": "Use quick POS commands, check stock, or create a cart draft.",
+    "posPlaceholder": "Quick POS command…",
     "placeholderReply": "AI provider not configured yet — answers will appear once an API key is enabled.",
     "q": {
       "todaySales": "How much did we sell today?",

@@ -55,7 +55,6 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           {(order.status === "completed" || order.status === "quote") && order.returns.length === 0 && (
             <Link
               href={posSourceHref("edit")}
-              target="_blank"
               className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 shrink-0")}
             >
               ✏️ {t("orderEdit.action")}
@@ -64,7 +63,6 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           {!cancelled && (
             <Link
               href={posSourceHref("copy")}
-              target="_blank"
               className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 shrink-0")}
             >
               {t("pos.modes.copyShort")}

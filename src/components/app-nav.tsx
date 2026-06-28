@@ -11,7 +11,7 @@ import { Routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 
-type Item = { href: string; icon: React.ComponentType<{ className?: string }>; key: string; newTab?: boolean };
+type Item = { href: string; icon: React.ComponentType<{ className?: string }>; key: string };
 type Group = { labelKey: string; items: Item[] };
 
 const GROUPS: Group[] = [
@@ -19,7 +19,7 @@ const GROUPS: Group[] = [
     labelKey: "nav.groups.overview",
     items: [
       { href: Routes.Dashboard, icon: LayoutDashboard, key: "nav.dashboard" },
-      { href: Routes.POS, icon: ShoppingCart, key: "nav.pos", newTab: true },
+      { href: Routes.POS, icon: ShoppingCart, key: "nav.pos" },
     ],
   },
   {
@@ -71,7 +71,6 @@ export function AppNav({ industry }: { industry?: string }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  target={item.newTab ? "_blank" : undefined}
                   onClick={() => { document.documentElement.dataset.mobilenav = ""; }}
                   className={cn(
                     "flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium transition",

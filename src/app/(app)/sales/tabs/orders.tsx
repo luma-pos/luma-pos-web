@@ -57,7 +57,7 @@ export async function OrdersTab({ searchParams }: { searchParams: SP }) {
             </Link>
           ))}
         </div>
-        <Link href={Routes.POS} target="_blank" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 hover:brightness-110 text-white text-sm font-medium transition active:scale-[0.98] mb-1.5 shrink-0">
+        <Link href={Routes.POS} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 hover:brightness-110 text-white text-sm font-medium transition active:scale-[0.98] mb-1.5 shrink-0">
           <ShoppingCart className="w-4 h-4" />
           {t("orders.createViaPos")}
         </Link>
@@ -180,11 +180,11 @@ async function OrdersContent({ searchParams }: { searchParams: SP }) {
                         {o.status !== "cancelled" && (
                           <div className="flex items-center justify-end gap-2">
                             {(o.status === "completed" || o.status === "quote") && (
-                              <Link href={posSourceHref(o, "edit")} target="_blank" className="text-xs font-medium text-primary-600 hover:underline">
+                              <Link href={posSourceHref(o, "edit")} className="text-xs font-medium text-primary-600 hover:underline">
                                 {t("common.edit")}
                               </Link>
                             )}
-                            <Link href={posSourceHref(o, "copy")} target="_blank" className="text-xs font-medium text-primary-600 hover:underline">
+                            <Link href={posSourceHref(o, "copy")} className="text-xs font-medium text-primary-600 hover:underline">
                               {t("pos.modes.copyShort")}
                             </Link>
                           </div>

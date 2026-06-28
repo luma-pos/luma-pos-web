@@ -53,7 +53,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
               </Link>
             ))}
           </div>
-          <Link href={Routes.POS} target="_blank" className={cn(buttonVariants({ block: true }), "sm:w-auto gap-2")}>
+          <Link href={Routes.POS} className={cn(buttonVariants({ block: true }), "sm:w-auto gap-2")}>
             + {t("nav.pos")}
             <Text as="span" className="text-[10px] font-mono bg-white/20 rounded px-1.5 py-0.5 text-current" text="F2" />
           </Link>

@@ -27,7 +27,7 @@ export function MobileTabBar() {
         <LayoutDashboard className="w-5 h-5" />
         <Text as="span" weight="semibold" className="text-current text-[10.5px]" text={t("nav.dashboard")} />
       </Link>
-      <Link href={Routes.POS} target="_blank" className={cn(item, off)}>
+      <Link href={Routes.POS} className={cn(item, off)}>
         <ShoppingCart className="w-5 h-5" />
         <Text as="span" weight="semibold" className="text-current text-[10.5px]" text={t("nav.pos")} />
       </Link>

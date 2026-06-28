@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AiAssistantLauncher } from "@/components/ai-assistant-launcher";
 import { requireUser } from "@/lib/actions/common";
 import { Routes } from "@/lib/routes";
 
@@ -13,5 +14,10 @@ export default async function PosLayout({ children }: { children: React.ReactNod
     redirect(Routes.Login);
   }
 
-  return <div className="h-dvh overflow-hidden bg-canvas">{children}</div>;
+  return (
+    <div className="h-dvh overflow-hidden bg-canvas">
+      {children}
+      <AiAssistantLauncher surface="pos" />
+    </div>
+  );
 }

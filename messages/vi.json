@@ -136,6 +136,7 @@
   },
   "pos": {
     "searchPlaceholder": "Tìm sản phẩm theo tên / SKU / barcode... (F2)",
+    "backToAdmin": "Quản trị",
     "order": "Đơn hàng",
     "calcTiles": "Tính m²",
     "noItems": "Chưa có sản phẩm nào",
@@ -551,8 +552,16 @@
       "priority": "Ưu tiên"
     },
     "assistantNotice": "Bản xem trước — kết nối nhà cung cấp AI (API key) để có câu trả lời thật.",
+    "actionNotice": "Action framework preview - AI sẽ tạo nháp, ghi audit, và chờ xác nhận trước khi mutate dữ liệu.",
     "assistantEmpty": "Hỏi về doanh số, tồn kho, hay nên nhập gì.",
     "askPlaceholder": "Hỏi trợ lý…",
+    "launcherTitle": "Luma AI",
+    "launcherStatus": "Preview mode - audit enabled",
+    "openWorkspace": "Mở màn hình AI đầy đủ",
+    "minimize": "Thu nhỏ",
+    "posTitle": "Trợ lý POS",
+    "posEmpty": "Ra lệnh nhanh cho POS, kiểm tra tồn hoặc tạo giỏ nháp.",
+    "posPlaceholder": "Lệnh nhanh cho POS…",
     "placeholderReply": "Chưa cấu hình nhà cung cấp AI — sẽ trả lời khi bật API key.",
     "q": {
       "todaySales": "Hôm nay bán được bao nhiêu?",
