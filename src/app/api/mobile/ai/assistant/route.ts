@@ -5,7 +5,7 @@ import { attachmentPromptBlock, parseAiAttachment, type AiAttachmentMetadata, ty
 import { buildAiAssistantResponse } from "@/lib/ai/actions";
 import { consumeAiUsage, recordAiTokenUsage } from "@/lib/ai/usage";
 import { writeAuditLog } from "@/lib/audit";
-import { requireMobileManager } from "@/lib/mobile/auth";
+import { requireMobileUser } from "@/lib/mobile/auth";
 import { mobileError, mobileGate, mobileOk, readJson } from "@/lib/mobile/response";
 
 function sanitizeAttachmentPreview<T>(preview: T, prompt: string, attachmentCount: number): T {
@@ -48,6 +48,17 @@ function attachmentAuditDetails(parsedAttachments: ParsedAiAttachment[]) {
   }));
 }
 
+function canPreviewAiAction(role: string, actionType?: string, target?: string) {
+  if (role === "owner" || role === "manager") return true;
+  if (role === "warehouse") {
+    return target === "purchases" || target === "inventory" || target === "products";
+  }
+  if (role === "cashier") {
+    return target === "pos" || target === "orders" || actionType === "create_order";
+  }
+  return false;
+}
+
 async function writeAttachmentParseAudit(input: {
   userId: string;
   prompt: string;
@@ -74,7 +85,7 @@ async function writeAttachmentParseAudit(input: {
 }
 
 export async function POST(request: Request) {
-  const gate = await requireMobileManager();
+  const gate = await requireMobileUser();
   const blocked = mobileGate(gate);
   if (blocked) return blocked;
   if (!gate.ok) return mobileGate(gate)!;
@@ -165,6 +176,23 @@ export async function POST(request: Request) {
       parsedAttachments.length,
     );
   }
+  if (
+    response.actionPreview &&
+    !canPreviewAiAction(
+      gate.role,
+      response.actionPreview.action.type,
+      response.actionPreview.action.target,
+    )
+  ) {
+    response.state = "unauthorized";
+    response.text = "Bạn không có quyền thực hiện preview AI này. AI không thay đổi dữ liệu.";
+    response.actions = [];
+    response.actionPreview = {
+      ...response.actionPreview,
+      state: "unauthorized",
+      warnings: [...response.actionPreview.warnings, "Không đủ quyền theo vai trò hiện tại."],
+    };
+  }
   await writeAttachmentParseAudit({ userId: gate.userId, prompt, parsedAttachments });
   await writeAuditLog({
     actorUserId: gate.userId,
@@ -172,7 +200,7 @@ export async function POST(request: Request) {
     action: response.actionPreview?.intent ?? "ask_ai_assistant",
     entityType: response.actionPreview?.entityType ?? "ai_assistant",
     entityId: response.actionPreview?.entityId ?? null,
-    status: response.actionPreview ? "previewed" : "succeeded",
+    status: response.state === "unauthorized" ? "unauthorized" : response.actionPreview ? "previewed" : "succeeded",
     prompt,
     parsedIntent: response.actionPreview ?? { mode: "summary", rangeDays: 30, attachmentCount: parsedAttachments.length },
     after: {
