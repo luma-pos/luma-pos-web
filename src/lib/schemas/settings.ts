@@ -64,20 +64,36 @@ const appPrefs = z.object({
   offlineMode: z.boolean().default(true),
 });
 
+const aiPrefs = z.object({
+  openaiApiKey: z.string().max(500).default(""),
+  openaiApiKeySet: z.boolean().default(false),
+  openaiVisionModel: z.string().max(80).default("gpt-4.1-mini"),
+  attachmentsBucket: z.string().max(80).default("ai-attachments"),
+});
+
 export const storePrefsSchema = z.object({
   tax: taxPrefs.default({ defaultRate: 8, priceIncludesTax: false, einvoiceEnabled: false, einvoiceProvider: "VNPT", einvoiceTaxId: "" }),
   payments: paymentPrefs.default({ cash: true, qr: true, momo: false, zalopay: false, vnpay: false, card: false }),
   notifications: notificationPrefs.default({ lowStock: true, stagnant: true, shiftClose: true, einvoiceError: true, syncDone: false, channels: { zalo: true, email: true, inApp: true, sms: false } }),
   hardware: hardwarePrefs.default({ paperSize: "K80", autoPrint: false, openDrawer: true, printEinvoiceQr: true }),
   app: appPrefs.default({ biometricAuth: true, offlineMode: true }),
+  ai: aiPrefs.default({ openaiApiKey: "", openaiApiKeySet: false, openaiVisionModel: "gpt-4.1-mini", attachmentsBucket: "ai-attachments" }),
 });
 export type StorePrefs = z.infer<typeof storePrefsSchema>;
 
 /** Đầu vào cập nhật từng phần (mỗi section gửi slice của nó). */
-export const storePrefsPatchSchema = storePrefsSchema.partial();
+export const storePrefsPatchSchema = storePrefsSchema.omit({ ai: true }).partial();
 export type StorePrefsPatch = z.infer<typeof storePrefsPatchSchema>;
 
 /** Parse prefs lưu trong DB → đầy đủ field (điền default cho field thiếu). */
 export function parseStorePrefs(raw: unknown): StorePrefs {
   return storePrefsSchema.parse(raw ?? {});
 }
+
+export const aiSettingsInputSchema = z.object({
+  openaiApiKey: z.string().max(500).optional(),
+  clearOpenaiApiKey: z.boolean().default(false),
+  openaiVisionModel: z.string().trim().min(1).max(80).default("gpt-4.1-mini"),
+  attachmentsBucket: z.string().trim().min(1).max(80).default("ai-attachments"),
+});
+export type AiSettingsInput = z.input<typeof aiSettingsInputSchema>;

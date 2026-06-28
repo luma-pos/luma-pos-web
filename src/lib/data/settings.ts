@@ -14,14 +14,41 @@ const DEFAULTS: StoreSettings = {
   prefs: parseStorePrefs({}),
 };
 
+export function sanitizeStorePrefsForClient(prefs: StorePrefs): StorePrefs {
+  const hasOpenaiApiKey = Boolean(prefs.ai.openaiApiKey);
+  return {
+    ...prefs,
+    ai: {
+      ...prefs.ai,
+      openaiApiKey: "",
+      openaiApiKeySet: hasOpenaiApiKey || prefs.ai.openaiApiKeySet,
+    },
+  };
+}
+
+export async function getRawStorePrefs(): Promise<StorePrefs> {
+  const [row] = await db.select({ prefs: storeSettings.prefs }).from(storeSettings).where(eq(storeSettings.id, "default")).limit(1);
+  return parseStorePrefs(row?.prefs);
+}
+
+export async function getAiProviderSettings() {
+  const prefs = await getRawStorePrefs();
+  return prefs.ai;
+}
+
+export async function getAiAttachmentsBucket() {
+  const ai = await getAiProviderSettings();
+  return ai.attachmentsBucket || process.env.AI_ATTACHMENTS_BUCKET || "ai-attachments";
+}
+
 /** Cấu hình cửa hàng (1 dòng id='default'). Trả mặc định nếu chưa có. */
 export async function getStoreSettings(): Promise<StoreSettings> {
   const [row] = await db.select().from(storeSettings).where(eq(storeSettings.id, "default")).limit(1);
-  if (!row) return DEFAULTS;
+  if (!row) return { ...DEFAULTS, prefs: sanitizeStorePrefsForClient(DEFAULTS.prefs) };
   return {
     name: row.name, address: row.address, phone: row.phone, taxCode: row.taxCode,
     industry: row.industry, currency: row.currency, locale: row.locale, onboarded: row.onboarded,
-    prefs: parseStorePrefs(row.prefs),
+    prefs: sanitizeStorePrefsForClient(parseStorePrefs(row.prefs)),
   };
 }
 

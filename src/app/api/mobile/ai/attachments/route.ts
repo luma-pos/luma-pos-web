@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/audit";
+import { getAiAttachmentsBucket } from "@/lib/data/settings";
 import { requireMobileManager } from "@/lib/mobile/auth";
 import { mobileError, mobileGate, mobileOk } from "@/lib/mobile/response";
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
-const BUCKET = process.env.AI_ATTACHMENTS_BUCKET || "ai-attachments";
 
 const ACCEPTED: Map<string, { ext: string; kind: "image" | "document" }> = new Map([
   ["image/png", { ext: "png", kind: "image" }],
@@ -42,12 +42,12 @@ function sniffMime(bytes: Uint8Array, declared: string) {
   return null;
 }
 
-async function ensureBucket() {
+async function ensureBucket(bucketName: string) {
   const supabase = createSupabaseAdminClient();
   const { data: buckets, error: listError } = await supabase.storage.listBuckets();
   if (listError) throw listError;
-  if (!buckets.some((bucket) => bucket.name === BUCKET)) {
-    const { error } = await supabase.storage.createBucket(BUCKET, {
+  if (!buckets.some((bucket) => bucket.name === bucketName)) {
+    const { error } = await supabase.storage.createBucket(bucketName, {
       public: false,
       fileSizeLimit: MAX_ATTACHMENT_BYTES,
       allowedMimeTypes: [...ACCEPTED.keys()],
@@ -106,11 +106,12 @@ export async function POST(request: Request) {
 
   const name = safeFileName(file.name);
   const path = `${gate.userId}/${Date.now()}-${randomUUID()}-${name}`;
+  const bucketName = await getAiAttachmentsBucket();
 
   try {
-    const supabase = await ensureBucket();
+    const supabase = await ensureBucket(bucketName);
     const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
+      .from(bucketName)
       .upload(path, buffer, {
         contentType: file.type,
         upsert: false,
@@ -118,13 +119,13 @@ export async function POST(request: Request) {
     if (uploadError) throw uploadError;
 
     const { data: signed, error: signedError } = await supabase.storage
-      .from(BUCKET)
+      .from(bucketName)
       .createSignedUrl(path, 60 * 60);
     if (signedError) throw signedError;
 
     const attachment = {
       id: path,
-      bucket: BUCKET,
+      bucket: bucketName,
       path,
       name: file.name,
       mimeType: file.type,
@@ -148,7 +149,7 @@ export async function POST(request: Request) {
         kind: accepted.kind,
       },
       affectedRecords: [{ type: "ai_attachment", id: path, code: file.name }],
-      metadata: { bucket: BUCKET, surface: form.get("surface") || "web" },
+      metadata: { bucket: bucketName, surface: form.get("surface") || "web" },
     });
 
     return mobileOk(attachment);

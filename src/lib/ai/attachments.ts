@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { parseAiAttachmentWithProvider, type AiAttachmentParseResult } from "@/lib/ai/provider";
+import { getAiAttachmentsBucket } from "@/lib/data/settings";
 
 export type AiAttachmentMetadata = {
   id?: string;
@@ -13,8 +14,6 @@ export type AiAttachmentMetadata = {
 };
 
 export type ParsedAiAttachment = AiAttachmentMetadata & AiAttachmentParseResult;
-
-const DEFAULT_BUCKET = process.env.AI_ATTACHMENTS_BUCKET || "ai-attachments";
 
 function decodeText(bytes: Buffer) {
   return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
@@ -66,7 +65,7 @@ function unsupportedResult(message: string): AiAttachmentParseResult {
 }
 
 async function downloadAttachment(input: AiAttachmentMetadata, userId: string) {
-  const bucket = input.bucket || DEFAULT_BUCKET;
+  const bucket = input.bucket || await getAiAttachmentsBucket();
   const path = input.path || input.id;
   if (!path || !path.startsWith(`${userId}/`)) {
     throw new Error("ATTACHMENT_FORBIDDEN");

@@ -58,5 +58,8 @@ export const requireMobileStockAccess = () =>
 export const requireMobileManager = () =>
   requireMobileRole(["owner", "manager"]);
 
+export const requireMobileOwner = () =>
+  requireMobileRole(["owner"]);
+
 export const requireMobileUser = () =>
   requireMobileRole(["owner", "manager", "cashier", "warehouse"]);

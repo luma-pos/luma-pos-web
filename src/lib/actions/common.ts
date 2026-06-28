@@ -77,6 +77,9 @@ export async function requireRole(roles: Role[]): Promise<Gate> {
 /** Chủ/Quản lý — nghiệp vụ quản trị (giá, hủy/sửa đơn, hoàn tiền, KM, sổ quỹ...). */
 export const requireManager = () => requireRole(["owner", "manager"]);
 
+/** Chỉ Chủ cửa hàng — cấu hình nhạy cảm như AI provider/API key. */
+export const requireOwner = () => requireRole(["owner"]);
+
 /** Chủ/Quản lý/Thủ kho — hàng hóa & kho (sản phẩm, nhập hàng, kiểm kho). */
 export const requireStockAccess = () => requireRole(["owner", "manager", "warehouse"]);
 

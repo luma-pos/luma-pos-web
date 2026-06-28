@@ -1,3 +1,5 @@
+import { getAiProviderSettings } from "@/lib/data/settings";
+
 export type AiAttachmentCandidate = {
   text: string;
   quantity?: number | null;
@@ -23,6 +25,15 @@ export type AiAttachmentProviderInput = {
 };
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
+
+async function loadProviderConfig() {
+  const ai = await getAiProviderSettings();
+  return {
+    provider: process.env.AI_ATTACHMENT_PROVIDER || "openai",
+    apiKey: ai.openaiApiKey || process.env.OPENAI_API_KEY || "",
+    model: ai.openaiVisionModel || process.env.OPENAI_VISION_MODEL || "gpt-4.1-mini",
+  };
+}
 
 function fallbackResult(reason: string): AiAttachmentParseResult {
   return {
@@ -105,24 +116,23 @@ function normalizeProviderResult(raw: unknown): AiAttachmentParseResult {
   };
 }
 
-export function aiAttachmentProviderStatus() {
-  const provider = process.env.AI_ATTACHMENT_PROVIDER || "openai";
-  const apiKey = process.env.OPENAI_API_KEY;
+export async function aiAttachmentProviderStatus() {
+  const config = await loadProviderConfig();
   return {
-    provider,
-    configured: provider === "openai" && Boolean(apiKey),
-    model: process.env.OPENAI_VISION_MODEL || "gpt-4.1-mini",
+    provider: config.provider,
+    configured: config.provider === "openai" && Boolean(config.apiKey),
+    model: config.model,
   };
 }
 
 export async function parseAiAttachmentWithProvider(
   input: AiAttachmentProviderInput
 ): Promise<AiAttachmentParseResult> {
-  const status = aiAttachmentProviderStatus();
-  if (status.provider !== "openai") {
-    return fallbackResult(`AI attachment provider "${status.provider}" is not supported yet.`);
+  const config = await loadProviderConfig();
+  if (config.provider !== "openai") {
+    return fallbackResult(`AI attachment provider "${config.provider}" is not supported yet.`);
   }
-  if (!process.env.OPENAI_API_KEY) {
+  if (!config.apiKey) {
     return fallbackResult("OPENAI_API_KEY is not configured, so attachment OCR/vision parsing is disabled.");
   }
   if (!input.mimeType.startsWith("image/")) {
@@ -131,7 +141,7 @@ export async function parseAiAttachmentWithProvider(
 
   const imageUrl = `data:${input.mimeType};base64,${input.bytes.toString("base64")}`;
   const body = {
-    model: status.model,
+    model: config.model,
     input: [
       {
         role: "user",
@@ -160,7 +170,7 @@ export async function parseAiAttachmentWithProvider(
       method: "POST",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        authorization: `Bearer ${config.apiKey}`,
       },
       body: JSON.stringify(body),
     });

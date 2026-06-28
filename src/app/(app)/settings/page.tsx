@@ -7,9 +7,11 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const [store, staff] = await Promise.all([getStoreSettings(), getStaff()]);
   let canManage = false;
+  let canEditAi = false;
   try {
     const role = await getRole((await requireUser()).id);
     canManage = role === "owner" || role === "manager";
+    canEditAi = role === "owner";
   } catch { /* layout handles auth */ }
-  return <SettingsClient store={store} staff={staff} canManage={canManage} />;
+  return <SettingsClient store={store} staff={staff} canManage={canManage} canEditAi={canEditAi} />;
 }

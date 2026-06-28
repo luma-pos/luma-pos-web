@@ -4,8 +4,19 @@ import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { profiles, storeSettings } from "@/db/schema";
-import { storeSettingsSchema, storePrefsPatchSchema, parseStorePrefs, STAFF_ROLES, type StoreSettingsInput, type StaffRole, type StorePrefsPatch } from "@/lib/schemas/settings";
-import { type ActionResult, requireManager } from "./common";
+import {
+  aiSettingsInputSchema,
+  storeSettingsSchema,
+  storePrefsPatchSchema,
+  parseStorePrefs,
+  STAFF_ROLES,
+  type AiSettingsInput,
+  type StoreSettingsInput,
+  type StaffRole,
+  type StorePrefsPatch,
+} from "@/lib/schemas/settings";
+import { writeAuditLog } from "@/lib/audit";
+import { type ActionResult, requireManager, requireOwner } from "./common";
 import { Routes } from "@/lib/routes";
 
 export async function updateStoreSettings(input: StoreSettingsInput): Promise<ActionResult> {
@@ -43,6 +54,56 @@ export async function updateStorePrefs(patch: StorePrefsPatch): Promise<ActionRe
     return { ok: true, data: undefined };
   } catch (e) {
     console.error("updateStorePrefs failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
+}
+
+export async function updateAiSettings(input: AiSettingsInput): Promise<ActionResult> {
+  const gate = await requireOwner();
+  if (!gate.ok) return gate;
+  const parsed = aiSettingsInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "errors.invalidData" };
+  const v = parsed.data;
+  try {
+    const [row] = await db.select({ prefs: storeSettings.prefs }).from(storeSettings).where(eq(storeSettings.id, "default")).limit(1);
+    const current = parseStorePrefs(row?.prefs);
+    const nextKey = v.clearOpenaiApiKey
+      ? ""
+      : (v.openaiApiKey?.trim() || current.ai.openaiApiKey);
+    const nextAi = {
+      ...current.ai,
+      openaiApiKey: nextKey,
+      openaiApiKeySet: Boolean(nextKey),
+      openaiVisionModel: v.openaiVisionModel,
+      attachmentsBucket: v.attachmentsBucket,
+    };
+    const next = { ...current, ai: nextAi };
+    await db.insert(storeSettings)
+      .values({ id: "default", prefs: next })
+      .onConflictDoUpdate({ target: storeSettings.id, set: { prefs: next, updatedAt: sql`now()` } });
+    await writeAuditLog({
+      actorUserId: gate.userId,
+      source: "manual",
+      action: "update_ai_settings",
+      entityType: "store_settings",
+      entityId: "default",
+      status: "succeeded",
+      before: {
+        openaiApiKeySet: Boolean(current.ai.openaiApiKey),
+        openaiVisionModel: current.ai.openaiVisionModel,
+        attachmentsBucket: current.ai.attachmentsBucket,
+      },
+      after: {
+        openaiApiKeySet: Boolean(nextAi.openaiApiKey),
+        openaiVisionModel: nextAi.openaiVisionModel,
+        attachmentsBucket: nextAi.attachmentsBucket,
+      },
+      metadata: { keyChanged: v.clearOpenaiApiKey || Boolean(v.openaiApiKey?.trim()) },
+    });
+    revalidatePath(Routes.Settings);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    console.error("updateAiSettings failed:", e);
     return { ok: false, error: "errors.serverError" };
   }
 }

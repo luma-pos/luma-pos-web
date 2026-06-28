@@ -7,7 +7,7 @@ import { Check, Printer, Loader2 } from "lucide-react";
 import { SearchableSelect } from "@/components/combobox";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
-import { updateStoreSettings, updateStaffRole, setStaffActive, updateStorePrefs } from "@/lib/actions/settings";
+import { updateAiSettings, updateStoreSettings, updateStaffRole, setStaffActive, updateStorePrefs } from "@/lib/actions/settings";
 import type { StoreSettings, StaffRow } from "@/lib/data/settings";
 import { STAFF_ROLES, PAPER_SIZES, type StaffRole, type StorePrefs } from "@/lib/schemas/settings";
 
@@ -55,7 +55,7 @@ const MIGRATION = [
   { ico: "⬛", name: "Excel / CSV", color: "#374151", desc: "Universal import w/ column mapping" },
 ];
 
-type SectionId = "store" | "staff" | "hardware" | "payments" | "print" | "tax" | "notifications" | "migration";
+type SectionId = "store" | "staff" | "hardware" | "payments" | "print" | "tax" | "notifications" | "ai" | "migration";
 
 const NAV: { group: [string, string]; items: { id: SectionId; ico: string; en: string; vi: string; badge?: string }[] }[] = [
   { group: ["Store", "Cửa hàng"], items: [
@@ -72,6 +72,7 @@ const NAV: { group: [string, string]; items: { id: SectionId; ico: string; en: s
   ] },
   { group: ["System", "Hệ thống"], items: [
     { id: "notifications", ico: "🔔", en: "Notifications", vi: "Thông báo" },
+    { id: "ai", ico: "✨", en: "AI", vi: "AI" },
     { id: "migration", ico: "📦", en: "Data Migration", vi: "Di chuyển dữ liệu" },
   ] },
 ];
@@ -83,6 +84,7 @@ const SEC_META: Record<SectionId, { en: string; vi: string; subEn: string; subVi
   print: { en: "Print Templates", vi: "Mẫu in", subEn: "Receipt & document template designer", subVi: "Thiết kế mẫu hóa đơn & chứng từ" },
   tax: { en: "Tax & E-Invoice", vi: "Thuế & Hóa đơn điện tử", subEn: "VAT rates + Decree 70/2025 e-invoice", subVi: "Thuế GTGT + HĐĐT theo Nghị định 70/2025" },
   notifications: { en: "Notifications", vi: "Thông báo", subEn: "Alert types and channels", subVi: "Loại thông báo và kênh gửi" },
+  ai: { en: "AI Settings", vi: "Cấu hình AI", subEn: "Provider key, vision model, and attachment bucket", subVi: "API key, model vision và bucket lưu file AI" },
   migration: { en: "Data Migration", vi: "Di chuyển dữ liệu", subEn: "Import from other POS systems", subVi: "Nhập dữ liệu từ hệ thống POS khác" },
 };
 
@@ -107,7 +109,7 @@ const ROW = "flex items-center justify-between gap-3 px-3.5 py-2.5 bg-canvas rou
 const btnS = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-semibold hover:bg-surface-2 transition";
 const btnF = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-semibold hover:brightness-110 transition";
 
-export function SettingsClient({ store, staff, canManage }: { store: StoreSettings; staff: StaffRow[]; canManage: boolean }) {
+export function SettingsClient({ store, staff, canManage, canEditAi }: { store: StoreSettings; staff: StaffRow[]; canManage: boolean; canEditAi: boolean }) {
   const locale = useLocale();
   const L = locale === "vi";
   const [active, setActive] = useState<SectionId>("store");
@@ -171,6 +173,7 @@ export function SettingsClient({ store, staff, canManage }: { store: StoreSettin
         {active === "print" && <PrintSection L={L} />}
         {active === "tax" && <TaxSection L={L} prefs={store.prefs.tax} canManage={canManage} />}
         {active === "notifications" && <NotificationsSection L={L} prefs={store.prefs.notifications} canManage={canManage} />}
+        {active === "ai" && <AiSection L={L} prefs={store.prefs.ai} canEdit={canEditAi} />}
         {active === "migration" && <MigrationSection L={L} />}
       </div>
     </div>
@@ -490,6 +493,96 @@ function NotificationsSection({ L, prefs, canManage }: { L: boolean; prefs: Stor
         </div>
       </Card>
       <SaveBar L={L} dirty={dirty} saved={saved} pending={pending} canManage={canManage} onSave={save} />
+    </>
+  );
+}
+
+function AiSection({ L, prefs, canEdit }: { L: boolean; prefs: StorePrefs["ai"]; canEdit: boolean }) {
+  const [openaiApiKeySet, setOpenaiApiKeySet] = useState(prefs.openaiApiKeySet);
+  const [form, setForm] = useState({
+    openaiApiKey: "",
+    openaiVisionModel: prefs.openaiVisionModel,
+    attachmentsBucket: prefs.attachmentsBucket,
+  });
+  const [clearOpenaiApiKey, setClearOpenaiApiKey] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  const mark = () => { setDirty(true); setSaved(false); setError(""); };
+  const set = (key: keyof typeof form, value: string) => { setForm((p) => ({ ...p, [key]: value })); mark(); };
+  const toggleClearKey = (value: boolean) => { setClearOpenaiApiKey(value); mark(); };
+  function save() {
+    start(async () => {
+      const res = await updateAiSettings({ ...form, clearOpenaiApiKey });
+      if (res.ok) {
+        setOpenaiApiKeySet(clearOpenaiApiKey ? false : openaiApiKeySet || Boolean(form.openaiApiKey.trim()));
+        setForm((p) => ({ ...p, openaiApiKey: "" }));
+        setClearOpenaiApiKey(false);
+        setDirty(false);
+        setSaved(true);
+      } else {
+        setError(res.error);
+      }
+    });
+  }
+  const configured = clearOpenaiApiKey ? false : openaiApiKeySet || Boolean(form.openaiApiKey.trim());
+  return (
+    <>
+      <Card title={L ? "Nhà cung cấp AI" : "AI Provider"} vi={L ? "OCR/vision cho trợ lý AI" : "OCR/vision for AI Assistant"}>
+        <div className="p-4.5 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={cn(
+              "inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold",
+              configured ? "bg-ok-soft text-ok" : "bg-warn-soft text-warn"
+            )}>
+              {configured ? (L ? "Đã cấu hình API key" : "API key configured") : (L ? "Chưa có API key" : "API key missing")}
+            </span>
+            <span className="text-[11px] text-slate-500">{L ? "AI sẽ dùng key trong Settings trước, sau đó mới fallback về env." : "AI uses the Settings key first, then falls back to env."}</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <span className={FL}>{L ? "OpenAI API key" : "OpenAI API key"}</span>
+              <input
+                className={cn(FI, "font-mono")}
+                type="password"
+                value={form.openaiApiKey}
+                disabled={!canEdit || clearOpenaiApiKey}
+                placeholder={openaiApiKeySet ? (L ? "Nhập key mới để thay thế" : "Enter a new key to replace") : "sk-..."}
+                onChange={(e) => set("openaiApiKey", e.target.value)}
+              />
+              <label className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
+                <input type="checkbox" checked={clearOpenaiApiKey} disabled={!canEdit} onChange={(e) => toggleClearKey(e.target.checked)} />
+                {L ? "Xóa API key đang lưu" : "Clear saved API key"}
+              </label>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className={FL}>{L ? "Vision model" : "Vision model"}</span>
+              <input className={cn(FI, "font-mono")} value={form.openaiVisionModel} disabled={!canEdit} onChange={(e) => set("openaiVisionModel", e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <span className={FL}>{L ? "Bucket lưu attachment" : "Attachment bucket"}</span>
+              <input className={cn(FI, "font-mono")} value={form.attachmentsBucket} disabled={!canEdit} onChange={(e) => set("attachmentsBucket", e.target.value)} />
+            </div>
+          </div>
+          <div className="px-3.5 py-2.5 bg-in-soft border border-in/20 rounded-[10px] text-[11px] text-in leading-relaxed">
+            {L
+              ? "API key không hiển thị lại sau khi lưu và không được ghi raw vào audit log. Thay đổi ở đây áp dụng cho OCR/vision khi upload hoặc paste ảnh trong AI Assistant/POS."
+              : "The API key is never shown again after saving and is not written raw into audit logs. These settings apply to OCR/vision for AI Assistant/POS image uploads."}
+          </div>
+        </div>
+      </Card>
+      {!canEdit && <p className="text-[11px] text-slate-400 italic mt-1">{L ? "Chỉ owner được sửa cấu hình AI." : "Only the owner can edit AI settings."}</p>}
+      {canEdit && (dirty || saved || error) && (
+        <div className="flex items-center gap-2 pt-1">
+          <span className={cn("text-[11px] flex-1", error ? "text-er" : "text-slate-500")}>{error || (dirty ? (L ? "Có thay đổi chưa lưu" : "Unsaved changes") : (L ? "Đã lưu" : "Saved"))}</span>
+          <button disabled={!dirty || pending} onClick={save} className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary-600 text-white text-xs font-semibold disabled:opacity-50">
+            {pending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}{L ? "Lưu" : "Save"}
+          </button>
+        </div>
+      )}
     </>
   );
 }
