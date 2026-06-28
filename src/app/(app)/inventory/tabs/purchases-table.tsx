@@ -283,25 +283,30 @@ function ExpandedPurchase({
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {canChange && <PurchaseCancelButton purchaseId={purchase.id} compact />}
-            <Link href={printHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-semibold text-primary-600 hover:bg-surface-2">
-              <Printer className="h-3.5 w-3.5" />
-              {t("print.printBtn")}
+        </div>
+      </div>
+
+      <div className={cn("mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border-soft pt-3", compact && "items-stretch")}>
+        <div className="flex flex-wrap items-center gap-2">
+          {canChange && <PurchaseCancelButton purchaseId={purchase.id} compact />}
+          {canChange && (
+            <Link href={Routes.purchaseCopy(purchase.id)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-semibold text-slate-600 hover:bg-surface-2">
+              <Copy className="h-3.5 w-3.5" />
+              {t("purchases.copy")}
             </Link>
-            {canChange && (
-              <>
-                <Link href={Routes.purchaseCopy(purchase.id)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-semibold text-slate-600 hover:bg-surface-2">
-                  <Copy className="h-3.5 w-3.5" />
-                  {t("purchases.copy")}
-                </Link>
-                <Link href={Routes.purchaseEdit(purchase.id)} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary-600 px-3 text-xs font-semibold text-white hover:brightness-110">
-                  <FilePenLine className="h-3.5 w-3.5" />
-                  {t("purchases.edit")}
-                </Link>
-              </>
-            )}
-          </div>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href={printHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-semibold text-primary-600 hover:bg-surface-2">
+            <Printer className="h-3.5 w-3.5" />
+            {t("print.printBtn")}
+          </Link>
+          {canChange && (
+            <Link href={Routes.purchaseEdit(purchase.id)} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary-600 px-3 text-xs font-semibold text-white hover:brightness-110">
+              <FilePenLine className="h-3.5 w-3.5" />
+              {t("purchases.edit")}
+            </Link>
+          )}
         </div>
       </div>
     </div>
