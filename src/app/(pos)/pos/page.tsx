@@ -60,11 +60,15 @@ export default async function POSPage({ searchParams }: { searchParams: Promise<
     <div className="h-full flex flex-col">
       {/* top bar gọn — thay cho sidebar admin (giống KiotViet) */}
       <header className="shrink-0 h-[58px] px-4 sm:px-6 flex items-center justify-between bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <Link
+          href={Routes.Home}
+          className="flex items-center gap-2.5 min-w-0 rounded-lg pr-2 transition hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          aria-label={t("common.appName")}
+        >
           <div className="w-7 h-7 rounded-lg grid place-items-center text-white font-extrabold text-sm bg-gradient-to-br from-primary-600 to-primary-400">S</div>
           <span className="font-bold text-sm truncate">{t("common.appName")}</span>
           <span className="text-xs text-slate-400 hidden sm:inline">· {t("nav.pos")}</span>
-        </div>
+        </Link>
         <Link
           href={Routes.Dashboard}
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary-600 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
