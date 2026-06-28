@@ -38,7 +38,7 @@ export async function getAiProviderSettings() {
 
 export async function getAiAttachmentsBucket() {
   const ai = await getAiProviderSettings();
-  return ai.attachmentsBucket || process.env.AI_ATTACHMENTS_BUCKET || "ai-attachments";
+  return ai.attachmentsBucket || "ai-attachments";
 }
 
 /** Cấu hình cửa hàng (1 dòng id='default'). Trả mặc định nếu chưa có. */

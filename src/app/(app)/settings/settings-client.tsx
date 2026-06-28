@@ -123,13 +123,13 @@ type AiProviderTestResult = {
   };
 };
 function coerceAiProvider(value: string): AiProvider {
-  return AI_PROVIDERS.includes(value as AiProvider) ? value as AiProvider : "openai";
+  return AI_PROVIDERS.includes(value as AiProvider) ? value as AiProvider : "gemini";
 }
 function coerceAiTextModel(value: string): AiTextModel {
-  return AI_TEXT_MODELS.includes(value as AiTextModel) ? value as AiTextModel : "gpt-4.1-mini";
+  return AI_TEXT_MODELS.includes(value as AiTextModel) ? value as AiTextModel : "gemini-2.5-flash";
 }
 function coerceAiVisionModel(value: string): AiVisionModel {
-  return AI_VISION_MODELS.includes(value as AiVisionModel) ? value as AiVisionModel : "gpt-4.1-mini";
+  return AI_VISION_MODELS.includes(value as AiVisionModel) ? value as AiVisionModel : "gemini-2.5-flash";
 }
 function defaultTextModelForProvider(provider: AiProvider): AiTextModel {
   if (provider === "deepseek") return "deepseek-chat";
@@ -139,6 +139,27 @@ function defaultTextModelForProvider(provider: AiProvider): AiTextModel {
 function defaultVisionModelForProvider(provider: AiProvider): AiVisionModel {
   if (provider === "gemini") return "gemini-2.5-flash";
   return "gpt-4.1-mini";
+}
+function providerKeyPlaceholder(provider: AiProvider, keySet: boolean, L: boolean) {
+  if (keySet) return L ? "Nhập key mới để thay thế" : "Enter a new key to replace";
+  if (provider === "gemini") return "AIza...";
+  if (provider === "openai") return "sk-...";
+  return "sk-... or DeepSeek key";
+}
+function providerKeyHelp(provider: AiProvider, L: boolean) {
+  if (provider === "gemini") {
+    return L
+      ? "Tạo key trong Google AI Studio, rồi lưu tại đây. Server sẽ dùng key này cho chat và OCR/ảnh."
+      : "Create a key in Google AI Studio, then save it here. The server uses this key for chat and vision/OCR.";
+  }
+  if (provider === "deepseek") {
+    return L
+      ? "DeepSeek chỉ dùng cho lập kế hoạch text; OCR/ảnh sẽ không khả dụng."
+      : "DeepSeek is text-planning only; vision/OCR is unavailable.";
+  }
+  return L
+    ? "Dùng OpenAI API key cho text và OCR/ảnh."
+    : "Use an OpenAI API key for text and vision/OCR.";
 }
 function coerceAiAttachmentBucket(value: string): AiAttachmentBucket {
   return AI_ATTACHMENT_BUCKETS.includes(value as AiAttachmentBucket) ? value as AiAttachmentBucket : "ai-attachments";
@@ -683,7 +704,7 @@ function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs
             )}>
               {configured ? (L ? "Đã cấu hình API key" : "API key configured") : (L ? "Chưa có API key" : "API key missing")}
             </span>
-            <span className="text-[11px] text-slate-500">{L ? "AI ưu tiên API key trong Settings; nếu trống mới dùng env." : "AI uses the Settings API key first; env is only used when Settings is empty."}</span>
+            <span className="text-[11px] text-slate-500">{L ? "AI chỉ dùng cấu hình lưu trong Settings; không đọc API key/model từ env." : "AI only uses settings saved here; API keys and models are not read from env."}</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
@@ -709,15 +730,16 @@ function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className={FL}>{L ? "AI API key" : "AI API key"}</span>
+              <span className={FL}>{L ? "API key của provider" : "Provider API key"}</span>
               <input
                 className={cn(FI, "font-mono")}
                 type="password"
                 value={form.openaiApiKey}
                 disabled={!canEdit || clearOpenaiApiKey}
-                placeholder={openaiApiKeySet ? (L ? "Nhập key mới để thay thế" : "Enter a new key to replace") : "sk-..."}
+                placeholder={providerKeyPlaceholder(form.provider, openaiApiKeySet, L)}
                 onChange={(e) => set("openaiApiKey", e.target.value)}
               />
+              <span className="text-[11px] text-slate-500">{providerKeyHelp(form.provider, L)}</span>
               <label className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
                 <input type="checkbox" checked={clearOpenaiApiKey} disabled={!canEdit} onChange={(e) => toggleClearKey(e.target.checked)} />
                 {L ? "Xóa API key đang lưu" : "Clear saved API key"}
@@ -805,8 +827,8 @@ function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs
           </div>
           <div className="px-3.5 py-2.5 bg-in-soft border border-in/20 rounded-[10px] text-[11px] text-in leading-relaxed">
             {L
-              ? `API key không hiển thị lại sau khi lưu và không được ghi raw vào audit log. Usage được tính theo tháng ${usage.period}; mỗi lần hỏi AI tốn 1 lượt, mỗi file đính kèm được xử lý (tối đa 4 file/lần) tốn thêm 1 lượt. Giới hạn/còn lại hiển thị theo giá trị đang nhập${limitPreviewChanged ? ", có hiệu lực sau khi lưu" : ""}. Token/chi phí là ước tính từ provider/model trả về, không phải hóa đơn chính thức.`
-              : `The API key is never shown again after saving and is not written raw into audit logs. Usage is tracked for ${usage.period}; each AI request costs 1 unit, and each processed attachment (up to 4 files per request) adds 1 unit. Limit/remaining values follow the current input${limitPreviewChanged ? " and take effect after saving" : ""}. Token/cost totals are provider/model estimates, not official billing.`}
+              ? `API key không hiển thị lại sau khi lưu, chỉ được dùng server-side từ Settings và không được ghi raw vào audit log. Usage được tính theo tháng ${usage.period}; mỗi lần hỏi AI tốn 1 lượt, mỗi file đính kèm được xử lý (tối đa 4 file/lần) tốn thêm 1 lượt. Giới hạn/còn lại hiển thị theo giá trị đang nhập${limitPreviewChanged ? ", có hiệu lực sau khi lưu" : ""}. Token/chi phí là ước tính từ provider/model trả về, không phải hóa đơn chính thức.`
+              : `The API key is never shown again after saving, is used server-side from Settings only, and is not written raw into audit logs. Usage is tracked for ${usage.period}; each AI request costs 1 unit, and each processed attachment (up to 4 files per request) adds 1 unit. Limit/remaining values follow the current input${limitPreviewChanged ? " and take effect after saving" : ""}. Token/cost totals are provider/model estimates, not official billing.`}
           </div>
         </div>
       </Card>

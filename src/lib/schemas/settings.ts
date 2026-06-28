@@ -77,12 +77,12 @@ const appPrefs = z.object({
 });
 
 const aiPrefs = z.object({
-  provider: z.enum(AI_PROVIDERS).default("openai"),
-  textModel: z.string().max(80).default("gpt-4.1-mini"),
-  visionModel: z.string().max(80).default("gpt-4.1-mini"),
+  provider: z.enum(AI_PROVIDERS).default("gemini"),
+  textModel: z.string().max(80).default("gemini-2.5-flash"),
+  visionModel: z.string().max(80).default("gemini-2.5-flash"),
   openaiApiKey: z.string().max(500).default(""),
   openaiApiKeySet: z.boolean().default(false),
-  openaiVisionModel: z.string().max(80).default("gpt-4.1-mini"),
+  openaiVisionModel: z.string().max(80).default("gemini-2.5-flash"),
   attachmentsBucket: z.string().max(80).default("ai-attachments"),
   monthlyUsageLimit: z.number().int().min(0).max(100000).default(1000),
 });
@@ -94,12 +94,12 @@ export const storePrefsSchema = z.object({
   hardware: hardwarePrefs.default({ paperSize: "K80", autoPrint: false, openDrawer: true, printEinvoiceQr: true }),
   app: appPrefs.default({ biometricAuth: true, offlineMode: true }),
   ai: aiPrefs.default({
-    provider: "openai",
-    textModel: "gpt-4.1-mini",
-    visionModel: "gpt-4.1-mini",
+    provider: "gemini",
+    textModel: "gemini-2.5-flash",
+    visionModel: "gemini-2.5-flash",
     openaiApiKey: "",
     openaiApiKeySet: false,
-    openaiVisionModel: "gpt-4.1-mini",
+    openaiVisionModel: "gemini-2.5-flash",
     attachmentsBucket: "ai-attachments",
     monthlyUsageLimit: 1000,
   }),
@@ -116,12 +116,12 @@ export function parseStorePrefs(raw: unknown): StorePrefs {
 }
 
 export const aiSettingsInputSchema = z.object({
-  provider: z.enum(AI_PROVIDERS).default("openai"),
-  textModel: z.enum(AI_TEXT_MODELS).default("gpt-4.1-mini"),
-  visionModel: z.enum(AI_VISION_MODELS).default("gpt-4.1-mini"),
+  provider: z.enum(AI_PROVIDERS).default("gemini"),
+  textModel: z.enum(AI_TEXT_MODELS).default("gemini-2.5-flash"),
+  visionModel: z.enum(AI_VISION_MODELS).default("gemini-2.5-flash"),
   openaiApiKey: z.string().max(500).optional(),
   clearOpenaiApiKey: z.boolean().default(false),
-  openaiVisionModel: z.enum(AI_VISION_MODELS).default("gpt-4.1-mini"),
+  openaiVisionModel: z.enum(AI_VISION_MODELS).default("gemini-2.5-flash"),
   attachmentsBucket: z.enum(AI_ATTACHMENT_BUCKETS).default("ai-attachments"),
   monthlyUsageLimit: z.number().int().min(0).max(100000).default(1000),
 });

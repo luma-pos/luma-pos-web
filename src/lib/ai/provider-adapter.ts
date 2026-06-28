@@ -73,38 +73,25 @@ const PROVIDER_DEFAULTS: Record<AiProviderId, {
 function coerceProvider(value: unknown): AiProviderId {
   return typeof value === "string" && AI_PROVIDERS.includes(value as AiProviderId)
     ? value as AiProviderId
-    : "openai";
+    : "gemini";
 }
 
-function providerApiKey(provider: AiProviderId, prefs: StorePrefs["ai"]) {
-  if (prefs.openaiApiKey) return prefs.openaiApiKey;
-  if (provider === "deepseek") return process.env.DEEPSEEK_API_KEY || "";
-  if (provider === "gemini") return process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-  return process.env.OPENAI_API_KEY || "";
+function providerApiKey(prefs: StorePrefs["ai"]) {
+  return prefs.openaiApiKey || "";
 }
 
 function providerBaseUrl(provider: AiProviderId) {
-  if (provider === "deepseek") return process.env.DEEPSEEK_BASE_URL || PROVIDER_DEFAULTS.deepseek.baseUrl;
-  if (provider === "gemini") return process.env.GEMINI_OPENAI_BASE_URL || PROVIDER_DEFAULTS.gemini.baseUrl;
-  return process.env.OPENAI_BASE_URL || PROVIDER_DEFAULTS.openai.baseUrl;
+  return PROVIDER_DEFAULTS[provider].baseUrl;
 }
 
 export function buildAiProviderConfig(prefs: StorePrefs["ai"]): AiProviderConfig {
-  const provider = coerceProvider(prefs.provider || process.env.AI_PROVIDER || process.env.AI_ATTACHMENT_PROVIDER);
+  const provider = coerceProvider(prefs.provider);
   const defaults = PROVIDER_DEFAULTS[provider];
-  const envTextModel = provider === "deepseek"
-    ? process.env.DEEPSEEK_TEXT_MODEL
-    : provider === "gemini"
-      ? process.env.GEMINI_TEXT_MODEL
-      : process.env.OPENAI_TEXT_MODEL;
-  const envVisionModel = provider === "gemini"
-    ? process.env.GEMINI_VISION_MODEL
-    : process.env.OPENAI_VISION_MODEL;
   return {
     provider,
-    apiKey: providerApiKey(provider, prefs),
-    textModel: prefs.textModel || envTextModel || defaults.textModel,
-    visionModel: prefs.visionModel || prefs.openaiVisionModel || envVisionModel || defaults.visionModel,
+    apiKey: providerApiKey(prefs),
+    textModel: prefs.textModel || defaults.textModel,
+    visionModel: prefs.visionModel || prefs.openaiVisionModel || defaults.visionModel,
     baseUrl: providerBaseUrl(provider).replace(/\/$/, ""),
     capabilities: defaults.capabilities,
   };
