@@ -7,6 +7,7 @@ import type { RestockRow } from "@/lib/data/ai-restock";
 import {
   cashbookPreview,
   customerPreview,
+  draftPurchaseOrderPreview,
   formulaPreview,
   getPriceContext,
   inboundPreview,
@@ -25,6 +26,7 @@ export type AiToolName =
   | "searchCustomers"
   | "searchWarehouses"
   | "buildRestockPoPreview"
+  | "buildDraftPurchaseOrderPreview"
   | "buildInboundPreview"
   | "buildPriceUpdatePreview"
   | "buildPriceFormulaPreview"
@@ -65,6 +67,7 @@ export const AI_TOOL_CATALOG: AiToolDescriptor[] = [
   { name: "searchCustomers", description: "Search active customers by name, code, or phone.", category: "search", mutation: false, requiresConfirmation: false },
   { name: "searchWarehouses", description: "Search warehouses by name.", category: "search", mutation: false, requiresConfirmation: false },
   { name: "buildRestockPoPreview", description: "Build a draft purchase-order preview from restocking rows.", category: "preview", mutation: false, requiresConfirmation: true },
+  { name: "buildDraftPurchaseOrderPreview", description: "Build a draft supplier purchase-order preview from a user-provided item list; does not receive stock.", category: "preview", mutation: false, requiresConfirmation: true },
   { name: "buildInboundPreview", description: "Build an inventory inbound preview.", category: "preview", mutation: false, requiresConfirmation: true },
   { name: "buildPriceUpdatePreview", description: "Build a single product price update preview.", category: "preview", mutation: false, requiresConfirmation: true },
   { name: "buildPriceFormulaPreview", description: "Build a bulk price formula preview.", category: "preview", mutation: false, requiresConfirmation: true },
@@ -164,6 +167,8 @@ export async function runAiTool(input: AiToolRunInput): Promise<AiToolResult> {
       return searchWarehouses(query, limit);
     case "buildRestockPoPreview":
       return { kind: "preview", preview: restockPreview(prompt, input.restock ?? []) };
+    case "buildDraftPurchaseOrderPreview":
+      return { kind: "preview", preview: await draftPurchaseOrderPreview(prompt) };
     case "buildInboundPreview":
       return { kind: "preview", preview: await inboundPreview(prompt, input.parsedAttachments ?? []) };
     case "buildPriceUpdatePreview":

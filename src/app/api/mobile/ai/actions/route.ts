@@ -70,6 +70,36 @@ function inboundPayload(preview: Record<string, unknown>) {
   };
 }
 
+function draftPurchasePayload(preview: Record<string, unknown>) {
+  const payload = previewPayload(preview);
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  const safeItems = items
+    .map((item) => objectValue(item))
+    .filter((item): item is Record<string, unknown> => Boolean(item))
+    .map((item) => ({
+      productId: stringValue(item.productId),
+      quantity: numberValue(item.quantity),
+      unitCost: numberValue(item.unitCost, Number.NaN),
+      discount: numberValue(item.discount),
+    }))
+    .filter((item) => item.productId && item.quantity > 0)
+    .map((item) => ({
+      productId: item.productId as string,
+      quantity: item.quantity,
+      ...(Number.isFinite(item.unitCost) ? { unitCost: item.unitCost } : {}),
+      discount: item.discount,
+    }));
+
+  if (safeItems.length === 0) return null;
+
+  return {
+    supplierId: stringValue(payload?.supplierId) ?? undefined,
+    warehouseId: stringValue(payload?.warehouseId) ?? undefined,
+    note: typeof payload?.note === "string" ? payload.note : "AI draft purchase order",
+    items: safeItems,
+  };
+}
+
 function pricePayload(preview: Record<string, unknown>) {
   const action = objectValue(preview.action);
   const payload = objectValue(action?.payload);
@@ -277,6 +307,91 @@ export async function POST(request: Request) {
         status: "succeeded",
         executed: true,
         message: `Đã tạo PO nháp ${result.data.code} từ gợi ý nhập hàng AI.`,
+        record: {
+          type: "purchase_order",
+          id: result.data.id,
+          code: result.data.code,
+          href: `/inventory?tab=purchases&q=${encodeURIComponent(result.data.code)}`,
+        },
+      },
+    });
+  }
+
+  if (event === "confirmed" && intent === "create_draft_purchase_order") {
+    if (!["owner", "manager", "warehouse"].includes(gate.role)) {
+      await writeAuditLog({
+        actorUserId: gate.userId,
+        source: "ai",
+        action: intent,
+        entityType,
+        entityId,
+        status: "unauthorized",
+        prompt,
+        parsedIntent: preview,
+        metadata: { surface: body.surface ?? "assistant" },
+      });
+      return mobileAction({ ok: false, error: "errors.forbidden" });
+    }
+
+    const payload = preview ? draftPurchasePayload(preview) : null;
+    if (!payload) {
+      await logAiExecution({
+        userId: gate.userId,
+        action: intent,
+        entityType,
+        entityId,
+        status: "failed",
+        prompt,
+        preview,
+        surface: body.surface,
+        reason: "missing_required_draft_purchase_fields",
+      });
+      return mobileAction({ ok: false, error: "errors.invalidData" });
+    }
+
+    const result = await createDraftPurchaseForUser(gate.userId, payload);
+    await writeAuditLog({
+      actorUserId: gate.userId,
+      source: "ai",
+      action: intent,
+      entityType: "purchase_order",
+      entityId: result.ok ? result.data.id : entityId,
+      status: result.ok ? "succeeded" : "failed",
+      prompt,
+      parsedIntent: preview,
+      after: result.ok
+        ? {
+            id: result.data.id,
+            code: result.data.code,
+            href: `/inventory?tab=purchases&q=${encodeURIComponent(result.data.code)}`,
+          }
+        : null,
+      affectedRecords: result.ok
+        ? [
+            {
+              type: "purchase_order",
+              id: result.data.id,
+              code: result.data.code,
+            },
+          ]
+        : null,
+      metadata: {
+        surface: body.surface ?? "assistant",
+        event,
+        executedTool: "createDraftPurchaseForUser",
+      },
+    });
+
+    if (!result.ok) {
+      return mobileAction(result);
+    }
+
+    return mobileAction({
+      ok: true,
+      data: {
+        status: "succeeded",
+        executed: true,
+        message: `Đã tạo PO nháp ${result.data.code}. Phiếu này chưa tăng tồn kho.`,
         record: {
           type: "purchase_order",
           id: result.data.id,

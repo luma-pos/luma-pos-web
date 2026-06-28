@@ -13,14 +13,18 @@ import {
   MessageSquare,
   Mic,
   Minus,
+  PackagePlus,
   Paperclip,
   Pencil,
   Plus,
+  ReceiptText,
   Send,
+  ShoppingBag,
   Sparkles,
   Trash2,
   X,
   XCircle,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AiActionPreview, AiAssistantState } from "@/lib/ai/actions";
@@ -80,7 +84,104 @@ type AiSessionSummary = {
   messageCount?: number;
 };
 
+type AssistantActionPresetId = "create_invoice" | "draft_purchase_order" | "create_inventory_inbound";
+
+type AssistantActionPreset = {
+  id: AssistantActionPresetId;
+  label: string;
+  sessionTitle: string;
+  description: string;
+  emptyText: string;
+  placeholder: string;
+  promptPrefix: string;
+  examples: string[];
+  icon: LucideIcon;
+  tone: "sale" | "purchase" | "inbound";
+};
+
+const ASSISTANT_ACTION_PRESETS: AssistantActionPreset[] = [
+  {
+    id: "create_invoice",
+    label: "Tạo hóa đơn",
+    sessionTitle: "Tạo hóa đơn",
+    description: "Đơn bán/hóa đơn nháp",
+    emptyText: "Gửi tên khách, danh sách hàng và số lượng.",
+    placeholder: "Ví dụ: Khách lẻ, 2 cà phê Robusta, 1 bánh mì thịt...",
+    promptPrefix:
+      "[AI_ACTION_PRESET:order_action]\nTạo hóa đơn bán hàng từ thông tin sau. Hãy đọc danh sách hàng và số lượng để tạo đơn bán; chưa ghi nhận thanh toán trừ khi người dùng nói đã thanh toán.",
+    examples: [
+      "Khách lẻ: 2 cà phê Robusta, 1 bánh mì thịt",
+      "Anh Nam lấy 5 đèn âm trần 8W, ghi công nợ",
+    ],
+    icon: ReceiptText,
+    tone: "sale",
+  },
+  {
+    id: "draft_purchase_order",
+    label: "Đặt hàng",
+    sessionTitle: "Đặt hàng nhập",
+    description: "PO nháp với NCC",
+    emptyText: "Gửi danh sách hàng cần đặt, NCC và kho nếu có.",
+    placeholder: "Ví dụ: Đặt 20 thùng cà phê Robusta từ NCC A về kho chính...",
+    promptPrefix:
+      "[AI_ACTION_PRESET:create_draft_purchase_order]\nTạo PO nháp/đơn đặt hàng nhập từ nhà cung cấp theo thông tin sau. Chỉ tạo đơn đặt hàng nháp, chưa nhập kho và chưa thanh toán.",
+    examples: [
+      "Đặt 20 thùng cà phê Robusta từ NCC A về kho chính",
+      "Đặt 10 át đôi 32A, 5 đèn âm trần 8W",
+    ],
+    icon: ShoppingBag,
+    tone: "purchase",
+  },
+  {
+    id: "create_inventory_inbound",
+    label: "Tạo phiếu nhập hàng",
+    sessionTitle: "Tạo phiếu nhập hàng",
+    description: "Nhận hàng/cộng kho",
+    emptyText: "Gửi hàng đã nhận, số lượng, NCC và kho.",
+    placeholder: "Ví dụ: Nhập 20 thùng cà phê Robusta vào kho chính từ NCC A...",
+    promptPrefix:
+      "[AI_ACTION_PRESET:create_inventory_inbound]\nTạo phiếu nhập hàng từ thông tin sau. Đây là nhận hàng thật để nhập kho; hãy tạo preview phiếu nhập và yêu cầu xác nhận trước khi cộng tồn.",
+    examples: [
+      "Nhập 20 thùng cà phê Robusta vào kho chính từ NCC A",
+      "Nhận 5 đèn âm trần 8W giá 90.000 từ NCC Rạng Đông",
+    ],
+    icon: PackagePlus,
+    tone: "inbound",
+  },
+];
+
 const POS_AI_DRAFT_STORAGE_KEY = "luma-pos-ai-cart-draft";
+
+function actionPresetById(id: string | null | undefined) {
+  return ASSISTANT_ACTION_PRESETS.find((preset) => preset.id === id) ?? null;
+}
+
+function readSessionPresetMap(key: string): Record<string, AssistantActionPresetId> {
+  if (typeof window === "undefined") return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(key) ?? "{}") as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(parsed).filter((entry): entry is [string, AssistantActionPresetId] =>
+        Boolean(actionPresetById(entry[1] as string))
+      )
+    );
+  } catch {
+    return {};
+  }
+}
+
+function writeSessionPresetMap(key: string, map: Record<string, AssistantActionPresetId>) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(map));
+  } catch {
+    // Ignore private-mode/quota failures; action mode still works for the current session.
+  }
+}
+
+function actionPromptForPreset(preset: AssistantActionPreset, userText: string) {
+  return `${preset.promptPrefix}\n\nThông tin người dùng:\n${userText.trim()}`;
+}
 
 function isPosCartPreview(preview: AiActionPreview) {
   return preview.intent === "pos_voice_cart_draft" || preview.intent === "pos_image_cart_draft";
@@ -391,10 +492,12 @@ async function uploadAiAttachment(file: File): Promise<ComposerAttachment> {
 function useAssistantState(surface: AssistantSurface) {
   const t = useTranslations();
   const chatHistoryKey = `luma-ai-chat-history:${surface}`;
+  const sessionPresetKey = `luma-ai-session-action-preset:${surface}`;
   const [input, setInput] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>(() => readChatHistory(chatHistoryKey));
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<AiSessionSummary[]>([]);
+  const [activePresetId, setActivePresetId] = useState<AssistantActionPresetId | null>(null);
   const [serverHydrated, setServerHydrated] = useState(false);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
@@ -415,6 +518,7 @@ function useAssistantState(surface: AssistantSurface) {
       : [];
     setSessionId(id);
     setMsgs(serverMessagesToChat(messages));
+    setActivePresetId(readSessionPresetMap(sessionPresetKey)[id] ?? null);
   }
 
   async function refreshSessions(selectLatest = false) {
@@ -451,7 +555,7 @@ function useAssistantState(surface: AssistantSurface) {
       void putJson("/api/mobile/ai/sessions", {
         sessionId,
         surface,
-        title: msgs.find((msg) => msg.role === "user")?.text.slice(0, 80) || "AI Assistant",
+        title: actionPresetById(activePresetId)?.sessionTitle ?? (msgs.find((msg) => msg.role === "user")?.text.slice(0, 80) || "AI Assistant"),
         messages: sanitizeMessagesForStorage(msgs),
       }).then((data) => {
         const id = (data as { session?: { id?: unknown } }).session?.id;
@@ -462,7 +566,7 @@ function useAssistantState(surface: AssistantSurface) {
     return () => {
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     };
-  }, [msgs, serverHydrated, sessionId, surface]);
+  }, [activePresetId, msgs, serverHydrated, sessionId, surface]);
 
   useEffect(() => {
     let cancelled = false;
@@ -472,14 +576,17 @@ function useAssistantState(surface: AssistantSurface) {
     return () => { cancelled = true; };
   }, []);
 
-  const suggestions = surface === "pos"
-    ? [
+  const activePreset = actionPresetById(activePresetId);
+  const suggestions = activePreset
+    ? activePreset.examples
+    : surface === "pos"
+      ? [
         "2 cà phê Robusta, 1 bánh mì thịt",
         "Tìm sản phẩm sắp hết trong giỏ",
         t("ai.q.lowStock"),
         t("ai.q.todaySales"),
       ]
-    : [
+      : [
         t("ai.q.todaySales"),
         t("ai.q.topSellers"),
         t("ai.q.lowStock"),
@@ -592,9 +699,11 @@ function useAssistantState(surface: AssistantSurface) {
       return;
     }
     const outgoingAttachments = attachments;
+    const visibleText = q || "Phân tích file đính kèm";
+    const actionText = activePreset ? actionPromptForPreset(activePreset, visibleText) : visibleText;
     const prompt = outgoingAttachments.length
-      ? `${q || "Phân tích file đính kèm"}\n\n[${outgoingAttachments.length} attachment(s): ${outgoingAttachments.map((item) => item.name).join(", ")}]`
-      : q;
+      ? `${actionText}\n\n[${outgoingAttachments.length} attachment(s): ${outgoingAttachments.map((item) => item.name).join(", ")}]`
+      : actionText;
     setMsgs((m) => [...m, { role: "user", text: q || "File đính kèm", attachments: outgoingAttachments }]);
     setInput("");
     setAttachments([]);
@@ -703,17 +812,35 @@ function useAssistantState(surface: AssistantSurface) {
     if (sessionId) {
       await deleteJson(`/api/mobile/ai/sessions?sessionId=${sessionId}`).catch(() => {});
       setSessionId(null);
+      setActivePresetId(null);
+      const map = readSessionPresetMap(sessionPresetKey);
+      delete map[currentId];
+      writeSessionPresetMap(sessionPresetKey, map);
       setSessions((current) => current.filter((item) => item.id !== currentId));
     }
   }
 
-  async function newSession() {
+  async function newSession(preset?: AssistantActionPreset | null) {
     setMsgs([]);
     setInput("");
-    const data = await postJson("/api/mobile/ai/sessions", { surface, title: "AI Assistant" });
+    setActivePresetId(preset?.id ?? null);
+    const data = await postJson("/api/mobile/ai/sessions", { surface, title: preset?.sessionTitle ?? "AI Assistant" });
     const id = (data as { session?: { id?: unknown } }).session?.id;
-    if (typeof id === "string") setSessionId(id);
+    if (typeof id === "string") {
+      setSessionId(id);
+      const map = readSessionPresetMap(sessionPresetKey);
+      if (preset) {
+        map[id] = preset.id;
+      } else {
+        delete map[id];
+      }
+      writeSessionPresetMap(sessionPresetKey, map);
+    }
     await refreshSessions(false).catch(() => {});
+  }
+
+  async function startActionSession(preset: AssistantActionPreset) {
+    await newSession(preset);
   }
 
   async function switchSession(id: string) {
@@ -750,10 +877,13 @@ function useAssistantState(surface: AssistantSurface) {
     listening,
     surface,
     usage,
+    activePreset,
+    actionPresets: surface === "web" ? ASSISTANT_ACTION_PRESETS : [],
     suggestions,
     send,
     startVoiceInput,
     newSession,
+    startActionSession,
     switchSession,
     renameSession,
     deleteSession,
@@ -998,10 +1128,13 @@ function AssistantChatSurface({
     listening,
     surface,
     usage,
+    activePreset,
+    actionPresets,
     suggestions,
     send,
     startVoiceInput,
     newSession,
+    startActionSession,
     switchSession,
     renameSession,
     deleteSession,
@@ -1009,9 +1142,13 @@ function AssistantChatSurface({
     clearMessages,
   } = assistant;
   const compact = mode === "launcher";
+  const panelEmptyText = activePreset?.emptyText ?? emptyText;
+  const composerPlaceholder = activePreset?.placeholder ?? placeholder;
   const hasUploadingAttachment = attachments.some((item) => item.status === "uploading");
   const hasFailedAttachment = attachments.some((item) => item.status === "failed");
-  const sendDisabled = busy || hasUploadingAttachment || hasFailedAttachment || Boolean(usage?.exhausted);
+  const composerDisabled = busy || hasUploadingAttachment || hasFailedAttachment || Boolean(usage?.exhausted);
+  const hasComposerPayload = input.trim().length > 0 || attachments.length > 0;
+  const sendDisabled = composerDisabled || !hasComposerPayload;
   const activeSession = sessions.find((session) => session.id === sessionId) ?? null;
   const [sessionDialog, setSessionDialog] = useState<"rename" | "delete" | null>(null);
   const [sessionTitleDraft, setSessionTitleDraft] = useState("");
@@ -1023,6 +1160,14 @@ function AssistantChatSurface({
     composer.style.height = "0px";
     composer.style.height = `${Math.min(composer.scrollHeight, compact ? 128 : 160)}px`;
   }, [compact, input]);
+
+  function submitComposer() {
+    if (!hasComposerPayload) {
+      if (input.length > 0) setInput("");
+      return;
+    }
+    void send(input);
+  }
 
   function openRenameDialog() {
     if (!sessionId) return;
@@ -1229,13 +1374,22 @@ function AssistantChatSurface({
         compact ? "p-3" : "p-4"
       )}>
         {msgs.length === 0 ? (
-          <div className="m-auto text-center text-slate-400 px-4">
+          <div className="m-auto w-full max-w-3xl px-4 text-center text-slate-400">
             {compact ? (
               <MessageSquare className="w-9 h-9 mx-auto mb-3 opacity-60" />
             ) : (
               <Sparkles className="w-10 h-10 mx-auto mb-3 opacity-60" />
             )}
-            <p className="text-sm font-medium">{emptyText}</p>
+            <p className="text-sm font-medium">{panelEmptyText}</p>
+            {!compact && actionPresets.length > 0 && (
+              <ActionPresetButtons
+                presets={actionPresets}
+                activePreset={activePreset}
+                busy={busy}
+                onSelect={(preset) => void startActionSession(preset)}
+                variant="grid"
+              />
+            )}
           </div>
         ) : msgs.map((m, i) => (
           <div key={`${m.role}-${i}`} className={cn("flex flex-col gap-2", m.role === "user" ? "items-end" : "items-start")}>
@@ -1287,12 +1441,24 @@ function AssistantChatSurface({
           </div>
         )}
 
+        {actionPresets.length > 0 && (compact || msgs.length > 0) && (
+          <div className={cn("px-3 pt-2", !compact && "px-4")}>
+            <ActionPresetButtons
+              presets={actionPresets}
+              activePreset={activePreset}
+              busy={busy}
+              onSelect={(preset) => void startActionSession(preset)}
+              variant="strip"
+            />
+          </div>
+        )}
+
         <div className={cn("px-3 pt-2 flex gap-1.5 overflow-x-auto", compact ? "shrink-0" : "flex-wrap")}>
           {suggestions.map((s) => (
             <button
               key={s}
               type="button"
-              disabled={sendDisabled}
+              disabled={composerDisabled}
               onClick={() => send(s)}
               className="shrink-0 px-2.5 py-1 rounded-full border border-border text-xs text-slate-600 dark:text-slate-300 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -1301,7 +1467,7 @@ function AssistantChatSurface({
           ))}
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="p-3 border-t border-border mt-2">
+        <form onSubmit={(e) => { e.preventDefault(); submitComposer(); }} className="p-3 border-t border-border mt-2">
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
               {attachments.map((attachment) => (
@@ -1361,26 +1527,98 @@ function AssistantChatSurface({
               onChange={(e) => setInput(e.target.value)}
               onPaste={handlePaste}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                if (e.key !== "Enter") return;
+                if (e.metaKey || e.ctrlKey) {
                   e.preventDefault();
-                  void send(input);
+                  submitComposer();
+                  return;
+                }
+                if (input.trim().length === 0) {
+                  e.preventDefault();
+                  if (input.length > 0) setInput("");
                 }
               }}
-              placeholder={attachments.length ? "Nhập yêu cầu cho file đính kèm..." : placeholder}
+              placeholder={attachments.length ? "Nhập yêu cầu cho file đính kèm..." : composerPlaceholder}
               rows={1}
-              className="min-h-9 max-h-32 sm:max-h-40 flex-1 min-w-0 resize-none rounded-[18px] border border-border bg-canvas px-3 py-2 text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              disabled={composerDisabled}
+              className="ai-composer-scrollbar min-h-9 max-h-32 sm:max-h-40 flex-1 min-w-0 resize-none overflow-y-auto rounded-[18px] border border-border bg-canvas px-3 py-2 text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
             <button
               disabled={sendDisabled}
               type="submit"
               className="w-9 h-9 grid place-items-center rounded-full bg-primary-600 text-white shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
-              title={hasUploadingAttachment ? "Đang upload file" : "Send"}
+              title={hasUploadingAttachment ? "Đang upload file" : hasComposerPayload ? "Send" : "Nhập nội dung trước khi gửi"}
             >
               <Send className="w-4 h-4" />
             </button>
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+function actionPresetToneClass(tone: AssistantActionPreset["tone"], active: boolean) {
+  if (active) {
+    if (tone === "sale") return "border-primary-500 bg-primary-50 text-primary-700";
+    if (tone === "purchase") return "border-amber-500 bg-amber-50 text-amber-800";
+    return "border-emerald-500 bg-emerald-50 text-emerald-800";
+  }
+  if (tone === "sale") return "border-border bg-surface text-slate-600 hover:border-primary-200 hover:bg-primary-50";
+  if (tone === "purchase") return "border-border bg-surface text-slate-600 hover:border-amber-200 hover:bg-amber-50";
+  return "border-border bg-surface text-slate-600 hover:border-emerald-200 hover:bg-emerald-50";
+}
+
+function ActionPresetButtons({
+  presets,
+  activePreset,
+  busy,
+  onSelect,
+  variant,
+}: {
+  presets: AssistantActionPreset[];
+  activePreset: AssistantActionPreset | null;
+  busy: boolean;
+  onSelect: (preset: AssistantActionPreset) => void;
+  variant: "grid" | "strip";
+}) {
+  return (
+    <div className={cn(
+      variant === "grid" ? "mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3" : "flex gap-1.5 overflow-x-auto"
+    )}>
+      {presets.map((preset) => {
+        const Icon = preset.icon;
+        const active = activePreset?.id === preset.id;
+        return (
+          <button
+            key={preset.id}
+            type="button"
+            disabled={busy}
+            onClick={() => onSelect(preset)}
+            className={cn(
+              "group min-w-0 border text-left transition disabled:cursor-not-allowed disabled:opacity-50",
+              actionPresetToneClass(preset.tone, active),
+              variant === "grid"
+                ? "rounded-xl px-3 py-3"
+                : "shrink-0 rounded-full px-2.5 py-1.5"
+            )}
+            title={preset.description}
+          >
+            <span className={cn("flex min-w-0 items-center", variant === "grid" ? "gap-2.5" : "gap-1.5")}>
+              <span className={cn(
+                "grid shrink-0 place-items-center rounded-lg bg-white/70",
+                variant === "grid" ? "h-8 w-8" : "h-5 w-5"
+              )}>
+                <Icon className={cn(variant === "grid" ? "h-4 w-4" : "h-3.5 w-3.5")} />
+              </span>
+              <span className="min-w-0">
+                <span className={cn("block truncate font-bold", variant === "grid" ? "text-sm" : "text-xs")}>{preset.label}</span>
+                {variant === "grid" && <span className="mt-0.5 block truncate text-xs opacity-70">{preset.description}</span>}
+              </span>
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

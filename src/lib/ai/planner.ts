@@ -4,6 +4,7 @@ import type { AiTokenUsage } from "@/lib/ai/usage";
 
 export type AiPlannerIntent =
   | "create_draft_purchase_order_from_restocking"
+  | "create_draft_purchase_order"
   | "create_inventory_inbound"
   | "set_product_price"
   | "apply_price_formula"
@@ -37,6 +38,7 @@ export type AiPlannerResponse =
 
 const INTENTS = [
   "create_draft_purchase_order_from_restocking",
+  "create_draft_purchase_order",
   "create_inventory_inbound",
   "set_product_price",
   "apply_price_formula",
@@ -106,6 +108,7 @@ export async function planAiAssistantIntent(input: {
         `Supported intents: ${INTENTS.join(", ")}.\n` +
         "Intent guide:\n" +
         "- create_draft_purchase_order_from_restocking: create draft PO from AI restocking suggestions.\n" +
+        "- create_draft_purchase_order: create a draft supplier purchase order/PO from user-provided item list; do not receive stock.\n" +
         "- create_inventory_inbound: receive/import stock or create purchase/inbound record.\n" +
         "- set_product_price: set one product price.\n" +
         "- apply_price_formula: bulk price formula or percentage changes.\n" +

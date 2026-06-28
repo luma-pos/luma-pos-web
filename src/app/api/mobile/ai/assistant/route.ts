@@ -61,6 +61,10 @@ function canPreviewAiAction(role: string, actionType?: string, target?: string) 
   return false;
 }
 
+function hasForcedActionPreset(prompt: string) {
+  return /\[AI_ACTION_PRESET:[a-z_]+\]/.test(prompt);
+}
+
 async function writeAttachmentParseAudit(input: {
   userId: string;
   prompt: string;
@@ -197,17 +201,19 @@ export async function POST(request: Request) {
     getReports(30),
     getRestockSuggestions(30),
   ]);
-  const toolLoop = await runAiToolLoop({
-    prompt: enrichedPrompt,
-    restock,
-    parsedAttachments,
-    reportSummary: {
-      revenue: reports.summary.revenue,
-      collected: reports.summary.collected,
-      rangeDays: 30,
-      restockCount: restock.length,
-    },
-  });
+  const toolLoop = hasForcedActionPreset(enrichedPrompt)
+    ? { ok: false as const, reason: "forced_action_preset", trace: [] }
+    : await runAiToolLoop({
+        prompt: enrichedPrompt,
+        restock,
+        parsedAttachments,
+        reportSummary: {
+          revenue: reports.summary.revenue,
+          collected: reports.summary.collected,
+          rangeDays: 30,
+          restockCount: restock.length,
+        },
+      });
   if (toolLoop.tokenUsage) {
     usage.usage = await recordAiTokenUsage(toolLoop.tokenUsage, undefined, {
       provider: providerConfig?.provider,

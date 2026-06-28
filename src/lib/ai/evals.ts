@@ -53,6 +53,16 @@ export const AI_EVALUATION_CASES: AiEvaluationCase[] = [
     tags: ["typo", "no-accents", "restocking"],
   },
   {
+    id: "manual-draft-purchase-order",
+    prompt: "Đặt hàng nhập 20 thùng cà phê Robusta từ NCC A về kho chính",
+    expectedIntent: "create_draft_purchase_order",
+    expectedMissingFields: [],
+    expectedPreviewType: "draft_purchase_order",
+    confirmation: "standard",
+    shouldFallback: false,
+    tags: ["clear", "purchase-order"],
+  },
+  {
     id: "mixed-language-pos",
     prompt: "POS cart: 2 ca phe sua, 1 banh mi thit",
     expectedIntent: "pos_voice_cart_draft",

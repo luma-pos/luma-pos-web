@@ -171,6 +171,7 @@ type InboundProductOption = {
   baseUnit: string;
   costPrice: unknown;
   lastPurchasePrice: unknown;
+  retailPrice: unknown;
 };
 
 type PriceProductOption = InboundProductOption & {
@@ -227,6 +228,7 @@ async function getInboundContext(): Promise<InboundContext> {
         baseUnit: products.baseUnit,
         costPrice: products.costPrice,
         lastPurchasePrice: products.lastPurchasePrice,
+        retailPrice: products.retailPrice,
       })
       .from(products)
       .where(eq(products.isActive, true))
@@ -1146,6 +1148,75 @@ export function restockPreview(prompt: string, restock: RestockRow[]): AiActionP
   };
 }
 
+export async function draftPurchaseOrderPreview(prompt: string): Promise<AiActionPreview> {
+  const context = await getInboundContext();
+  const lines = parseProductLines(prompt, context.products);
+  const supplierMatch = matchNamed(prompt, context.suppliers);
+  const warehouseMatch = matchNamed(prompt, context.warehouses);
+  const warehouse = warehouseMatch.match ?? context.warehouses.find((item) => item.isDefault) ?? context.warehouses[0] ?? null;
+  const missingFields = [
+    ...(lines.length ? [] : ["items"]),
+    ...(warehouse ? [] : ["warehouse"]),
+  ];
+  const canPreview = missingFields.length === 0;
+  const total = lines.reduce((sum, line) => sum + defaultCost(line.product) * line.quantity, 0);
+  return {
+    id: randomUUID(),
+    intent: "create_draft_purchase_order",
+    title: "Đặt hàng nhập: PO nháp",
+    description: canPreview
+      ? "AI đã đọc được danh sách hàng để tạo PO nháp. Hãy kiểm tra trước khi xác nhận."
+      : "Cần xác định ít nhất một sản phẩm và kho trước khi tạo PO nháp.",
+    confidence: canPreview ? Math.min(0.9, 0.58 + lines.reduce((sum, line) => sum + line.confidence, 0) / Math.max(lines.length, 1) * 0.25) : 0.48,
+    state: canPreview ? "preview" : "needs_input",
+    confirmationRequired: true,
+    entityType: "purchase_order",
+    requiredFields: ["items", "warehouse"],
+    missingFields,
+    fields: [
+      { label: "Loại", value: "PO nháp", tone: "default" },
+      { label: "Nhà cung cấp", value: supplierMatch.match?.name ?? "Tự chọn theo sản phẩm" },
+      { label: "Kho", value: warehouse?.name ?? "Cần chọn", tone: warehouse ? (warehouseMatch.match ? "success" : "default") : "warning" },
+      { label: "Số dòng", value: String(lines.length), tone: lines.length ? "success" : "warning" },
+      { label: "Tạm tính", value: moneyText(total) },
+    ],
+    lines: lines.map((line) => {
+      const unitCost = defaultCost(line.product);
+      return {
+        label: line.product.name,
+        value: `${line.quantity} ${line.product.baseUnit}`,
+        meta: `${line.product.sku} · giá nhập dự kiến ${moneyText(unitCost)}`,
+        tone: line.confidence >= 0.86 ? "success" : "warning",
+      };
+    }),
+    warnings: [
+      "PO nháp chưa tăng tồn kho và chưa ghi thanh toán.",
+      supplierMatch.match
+        ? "Nhà cung cấp đã được nhận theo nội dung người dùng."
+        : "Nếu không nêu NCC, hệ thống sẽ dùng NCC chính của sản phẩm hoặc NCC mặc định khi xác nhận.",
+    ],
+    action: {
+      type: "create_draft_purchase_order",
+      target: "purchases",
+      payload: {
+        prompt,
+        supplierId: supplierMatch.match?.id ?? null,
+        supplierName: supplierMatch.match?.name ?? null,
+        warehouseId: warehouse?.id ?? null,
+        warehouseName: warehouse?.name ?? null,
+        items: lines.map((line) => ({
+          productId: line.product.id,
+          productName: line.product.name,
+          quantity: line.quantity,
+          unitCost: defaultCost(line.product),
+          discount: 0,
+        })),
+        note: `AI draft purchase order: ${prompt}`,
+      },
+    },
+  };
+}
+
 export async function inboundPreview(prompt: string, parsedAttachments: ParsedAiAttachment[] = []): Promise<AiActionPreview> {
   const context = await getInboundContext();
   const attachmentPreview = parsedAttachments.length
@@ -1828,6 +1899,24 @@ export async function posCartPreview(prompt: string, source: "voice" | "image"):
   };
 }
 
+function forcedIntentFromActionPreset(prompt: string): AiPlannerIntent | null {
+  const match = prompt.match(/\[AI_ACTION_PRESET:([a-z_]+)\]/);
+  if (!match) return null;
+  const intent = match[1];
+  if (
+    intent === "order_action" ||
+    intent === "create_draft_purchase_order" ||
+    intent === "create_inventory_inbound"
+  ) {
+    return intent;
+  }
+  return null;
+}
+
+function stripActionPresetMarker(prompt: string) {
+  return prompt.replace(/\[AI_ACTION_PRESET:[a-z_]+\]\s*/g, "").trim();
+}
+
 export async function buildAiAssistantResponse(input: {
   prompt: string;
   revenue: unknown;
@@ -1838,8 +1927,9 @@ export async function buildAiAssistantResponse(input: {
   surface?: string;
 }): Promise<AiAssistantResponse> {
   const rawPrompt = input.prompt.trim();
+  const forcedIntent = forcedIntentFromActionPreset(rawPrompt);
   const planner = await planAiAssistantIntent({
-    prompt: rawPrompt,
+    prompt: stripActionPresetMarker(rawPrompt),
     hasAttachments: Boolean(input.parsedAttachments?.length),
   });
   if (planner.ok && planner.tokenUsage) {
@@ -1857,8 +1947,8 @@ export async function buildAiAssistantResponse(input: {
     planner.plan.confidence >= PLANNER_CONFIDENCE_THRESHOLD
       ? planner.plan
       : null;
-  const plannerIntent: AiPlannerIntent | null = plannerPlan?.intent ?? null;
-  const prompt = plannerPlan?.canonicalPrompt ?? rawPrompt;
+  const plannerIntent: AiPlannerIntent | null = forcedIntent ?? plannerPlan?.intent ?? null;
+  const prompt = forcedIntent ? stripActionPresetMarker(rawPrompt) : plannerPlan?.canonicalPrompt ?? rawPrompt;
   const q = normalize(prompt);
   const asksRestock = plannerIntent
     ? plannerIntent === "create_draft_purchase_order_from_restocking"
@@ -1867,12 +1957,27 @@ export async function buildAiAssistantResponse(input: {
     q.includes("restock") ||
     q.includes("goi y nhap") ||
     q.includes("khuyen nghi") ||
-    q.includes("po nhap") ||
     q.includes("sku can nhap");
+  const asksDraftPurchase = plannerIntent
+    ? plannerIntent === "create_draft_purchase_order"
+    :
+    !asksRestock &&
+    (q.includes("dat hang") ||
+      q.includes("don dat hang") ||
+      q.includes("po nhap") ||
+      q.includes("po ncc") ||
+      q.includes("mua hang") ||
+      q.includes("purchase order")) &&
+    (q.includes("nhap") ||
+      q.includes("ncc") ||
+      q.includes("nha cung cap") ||
+      q.includes("po") ||
+      q.includes("mua"));
   const asksInbound = plannerIntent
     ? plannerIntent === "create_inventory_inbound"
     :
     !asksRestock &&
+    !asksDraftPurchase &&
     (q.includes("nhap ") || q.includes("nhap hang") || q.includes("receive"));
   const asksPrice = plannerIntent
     ? plannerIntent === "set_product_price"
@@ -1957,6 +2062,7 @@ export async function buildAiAssistantResponse(input: {
 
   const previewTool =
     asksRestock ? "buildRestockPoPreview"
+    : asksDraftPurchase ? "buildDraftPurchaseOrderPreview"
     : asksInbound ? "buildInboundPreview"
     : asksFormula ? "buildPriceFormulaPreview"
     : asksProductCommand ? "buildProductPreview"
@@ -1975,6 +2081,8 @@ export async function buildAiAssistantResponse(input: {
       actionPreview =
         previewTool === "buildRestockPoPreview"
           ? restockPreview(prompt, input.restock)
+        : previewTool === "buildDraftPurchaseOrderPreview"
+          ? await draftPurchaseOrderPreview(prompt)
         : previewTool === "buildInboundPreview"
           ? await inboundPreview(prompt, input.parsedAttachments ?? [])
         : previewTool === "buildPriceFormulaPreview"
