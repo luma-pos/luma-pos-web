@@ -1,5 +1,6 @@
 import { getReports } from "@/lib/data/reports";
 import { getRestockSuggestions } from "@/lib/data/ai-restock";
+import { attachmentPromptBlock, parseAiAttachment, type AiAttachmentMetadata } from "@/lib/ai/attachments";
 import { buildAiAssistantResponse } from "@/lib/ai/actions";
 import { writeAuditLog } from "@/lib/audit";
 import { requireMobileManager } from "@/lib/mobile/auth";
@@ -16,17 +17,57 @@ export async function POST(request: Request) {
     body && typeof body === "object" && "prompt" in body
       ? String((body as { prompt?: unknown }).prompt ?? "")
       : "";
+  const attachments =
+    body && typeof body === "object" && Array.isArray((body as { attachments?: unknown }).attachments)
+      ? ((body as { attachments: unknown[] }).attachments.filter((item): item is AiAttachmentMetadata => Boolean(item && typeof item === "object")))
+      : [];
+  const parsedAttachments = attachments.length
+    ? await Promise.all(attachments.slice(0, 4).map((attachment) => parseAiAttachment({
+        attachment,
+        userId: gate.userId,
+        prompt,
+      })))
+    : [];
+  const enrichedPrompt = `${prompt}${attachmentPromptBlock(parsedAttachments)}`;
   const [reports, restock] = await Promise.all([
     getReports(30),
     getRestockSuggestions(30),
   ]);
   const response = await buildAiAssistantResponse({
-    prompt,
+    prompt: enrichedPrompt,
     revenue: reports.summary.revenue,
     collected: reports.summary.collected,
     restock,
     chartRows: reports.byDay,
   });
+  if (parsedAttachments.length > 0) {
+    await writeAuditLog({
+      actorUserId: gate.userId,
+      source: "ai",
+      action: "parse_ai_attachment",
+      entityType: "ai_attachment",
+      status: parsedAttachments.every((item) => item.status === "succeeded") ? "succeeded" : "failed",
+      prompt,
+      parsedIntent: {
+        attachments: parsedAttachments.map((item) => ({
+          id: item.id,
+          name: item.name,
+          mimeType: item.mimeType,
+          status: item.status,
+          provider: item.provider,
+          confidence: item.confidence,
+          candidateCount: item.candidates.length,
+          warningCount: item.warnings.length,
+        })),
+      },
+      affectedRecords: parsedAttachments.map((item) => ({
+        type: "ai_attachment",
+        id: item.id ?? item.path ?? "attachment",
+        code: item.name ?? "attachment",
+      })),
+      metadata: { surface: "mobile", count: parsedAttachments.length },
+    });
+  }
   await writeAuditLog({
     actorUserId: gate.userId,
     source: "ai",
@@ -34,8 +75,8 @@ export async function POST(request: Request) {
     entityType: response.actionPreview?.entityType ?? "ai_assistant",
     entityId: response.actionPreview?.entityId ?? null,
     status: response.actionPreview ? "previewed" : "succeeded",
-    prompt,
-    parsedIntent: response.actionPreview ?? { mode: "summary", rangeDays: 30 },
+    prompt: enrichedPrompt,
+    parsedIntent: response.actionPreview ?? { mode: "summary", rangeDays: 30, attachmentCount: parsedAttachments.length },
     after: {
       revenue: reports.summary.revenue,
       collected: reports.summary.collected,
