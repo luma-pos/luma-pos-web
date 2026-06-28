@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Search, Plus, Minus, Trash2, Loader2, ShoppingCart, X, GripVertical, WifiOff, RefreshCw, Tag, ChevronDown, Check, Printer, MoreVertical } from "lucide-react";
+import { Search, Plus, Minus, Trash2, Loader2, ShoppingCart, X, GripVertical, WifiOff, RefreshCw, Tag, ChevronDown, Check, Printer, MoreVertical } from "lucide-react";
 import { formatCurrency, formatNumber, cn } from "@/lib/utils";
 import { normalizeSearch } from "@/lib/normalize";
 import { createPortal } from "react-dom";
@@ -843,17 +843,7 @@ export function PosClient({
           </button>
         )}
         <div className="mb-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <Link
-              href={Routes.Dashboard}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-10 shrink-0 gap-1.5 px-3 text-xs font-semibold")}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("pos.backToAdmin")}</span>
-              <span className="sm:hidden">{t("common.back")}</span>
-            </Link>
-            <div className="min-w-0 flex-1">{invoiceTabs}</div>
-          </div>
+          {invoiceTabs}
           {sourceInvoice && (
             <div className={cn(
               "grid gap-2 rounded-xl border p-3",

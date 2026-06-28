@@ -1,6 +1,6 @@
 "use client";
 
-import { type ClipboardEvent, useRef, useState } from "react";
+import { type ClipboardEvent, type PointerEvent, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
@@ -43,6 +43,20 @@ type AssistantResponse = {
   actionPreview?: AiActionPreview;
 };
 
+type FabPosition = {
+  x: number;
+  y: number;
+};
+
+type FabDrag = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  originX: number;
+  originY: number;
+  moved: boolean;
+};
+
 type ComposerAttachment = {
   id: string;
   localId?: string;
@@ -60,6 +74,8 @@ type ComposerAttachment = {
 
 const MAX_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const FAB_MARGIN = 12;
+const FAB_MOVE_THRESHOLD = 5;
 const ACCEPTED_ATTACHMENT_TYPES = new Set([
   "image/png",
   "image/jpeg",
@@ -68,6 +84,32 @@ const ACCEPTED_ATTACHMENT_TYPES = new Set([
   "text/csv",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ]);
+
+function clampFabPosition(position: FabPosition, size: number): FabPosition {
+  if (typeof window === "undefined") return position;
+  return {
+    x: Math.min(Math.max(FAB_MARGIN, position.x), Math.max(FAB_MARGIN, window.innerWidth - size - FAB_MARGIN)),
+    y: Math.min(Math.max(FAB_MARGIN, position.y), Math.max(FAB_MARGIN, window.innerHeight - size - FAB_MARGIN)),
+  };
+}
+
+function readFabPosition(key: string, size: number): FabPosition | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<FabPosition>;
+    if (typeof parsed.x !== "number" || typeof parsed.y !== "number") return null;
+    return clampFabPosition({ x: parsed.x, y: parsed.y }, size);
+  } catch {
+    return null;
+  }
+}
+
+function saveFabPosition(key: string, position: FabPosition) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(key, JSON.stringify(position));
+}
 
 function attachmentKind(type: string): ComposerAttachment["kind"] | null {
   if (type.startsWith("image/") && ACCEPTED_ATTACHMENT_TYPES.has(type)) return "image";
@@ -322,8 +364,58 @@ export function AiAssistantLauncher({ surface = "web" }: { surface?: AssistantSu
   const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const fabSize = 56;
+  const storageKey = `luma-ai-fab-position:${surface}`;
+  const [fabPosition, setFabPosition] = useState<FabPosition | null>(() => readFabPosition(storageKey, fabSize));
+  const dragRef = useRef<FabDrag | null>(null);
   const assistant = useAssistantState(surface);
   const isPos = surface === "pos";
+
+  function openAssistant() {
+    setOpen(true);
+    setMinimized(false);
+  }
+
+  function startDrag(event: PointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: rect.left,
+      originY: rect.top,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveDrag(event: PointerEvent<HTMLButtonElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) < FAB_MOVE_THRESHOLD) return;
+    drag.moved = true;
+    setFabPosition(clampFabPosition({ x: drag.originX + dx, y: drag.originY + dy }, fabSize));
+  }
+
+  function endDrag(event: PointerEvent<HTMLButtonElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    if (!drag.moved) {
+      openAssistant();
+      return;
+    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    saveFabPosition(storageKey, clampFabPosition({ x: rect.left, y: rect.top }, fabSize));
+  }
+
+  function cancelDrag() {
+    dragRef.current = null;
+  }
 
   if (open && !minimized) {
     return (
@@ -362,16 +454,23 @@ export function AiAssistantLauncher({ surface = "web" }: { surface?: AssistantSu
   return (
     <button
       type="button"
-      onClick={() => {
-        setOpen(true);
-        setMinimized(false);
+      onPointerDown={startDrag}
+      onPointerMove={moveDrag}
+      onPointerUp={endDrag}
+      onPointerCancel={cancelDrag}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openAssistant();
+        }
       }}
+      style={fabPosition ? { left: fabPosition.x, top: fabPosition.y, right: "auto", bottom: "auto" } : undefined}
       className={cn(
-        "fixed z-[45] h-13 w-13 lg:h-14 lg:w-14 rounded-[18px] bg-primary-600 text-white shadow-e2 grid place-items-center",
+        "fixed z-[45] h-13 w-13 lg:h-14 lg:w-14 rounded-[18px] bg-primary-600 text-white shadow-e2 grid place-items-center touch-none cursor-grab select-none active:cursor-grabbing",
         "hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        isPos
+        !fabPosition && (isPos
           ? "left-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] lg:left-auto lg:right-5 lg:bottom-5"
-          : "right-4 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] lg:right-5 lg:bottom-5"
+          : "right-4 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] lg:right-5 lg:bottom-5")
       )}
       aria-label={t("ai.launcherTitle")}
       title={t("ai.launcherTitle")}

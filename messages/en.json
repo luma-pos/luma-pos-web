@@ -136,7 +136,6 @@
   },
   "pos": {
     "searchPlaceholder": "Search by name / SKU / barcode... (F2)",
-    "backToAdmin": "Admin",
     "order": "Order",
     "calcTiles": "Calc m²",
     "noItems": "No items yet",

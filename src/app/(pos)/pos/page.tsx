@@ -59,7 +59,7 @@ export default async function POSPage({ searchParams }: { searchParams: Promise<
   return (
     <div className="h-full flex flex-col">
       {/* top bar gọn — thay cho sidebar admin (giống KiotViet) */}
-      <header className="shrink-0 h-12 px-4 flex items-center justify-between bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+      <header className="shrink-0 h-[58px] px-4 sm:px-6 flex items-center justify-between bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-7 h-7 rounded-lg grid place-items-center text-white font-extrabold text-sm bg-gradient-to-br from-primary-600 to-primary-400">S</div>
           <span className="font-bold text-sm truncate">{t("common.appName")}</span>
