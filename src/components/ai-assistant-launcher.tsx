@@ -614,6 +614,9 @@ function AssistantChatSurface({
     clearMessages,
   } = assistant;
   const compact = mode === "launcher";
+  const hasUploadingAttachment = attachments.some((item) => item.status === "uploading");
+  const hasFailedAttachment = attachments.some((item) => item.status === "failed");
+  const sendDisabled = busy || hasUploadingAttachment || hasFailedAttachment;
 
   return (
     <div className={cn(
@@ -681,13 +684,20 @@ function AssistantChatSurface({
         {busy && <div className="self-start text-xs text-slate-400 px-3 py-2">Đang xử lý...</div>}
       </div>
 
+      {hasUploadingAttachment && (
+        <div className={cn("shrink-0 px-3 pt-2 text-[11px] font-semibold text-slate-400", !compact && "px-4")}>
+          Đang upload file, chờ xong rồi gửi.
+        </div>
+      )}
+
       <div className={cn("px-3 pt-2 flex gap-1.5 overflow-x-auto", compact ? "shrink-0" : "flex-wrap")}>
         {suggestions.map((s) => (
           <button
             key={s}
             type="button"
+            disabled={sendDisabled}
             onClick={() => send(s)}
-            className="shrink-0 px-2.5 py-1 rounded-full border border-border text-xs text-slate-600 dark:text-slate-300 hover:bg-surface-2"
+            className="shrink-0 px-2.5 py-1 rounded-full border border-border text-xs text-slate-600 dark:text-slate-300 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {s}
           </button>
@@ -740,7 +750,12 @@ function AssistantChatSurface({
             placeholder={attachments.length ? "Nhập yêu cầu cho file đính kèm..." : placeholder}
             className="flex-1 min-w-0 px-3 py-2 text-sm rounded-full border border-border bg-canvas focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
-          <button disabled={busy} type="submit" className="w-9 h-9 grid place-items-center rounded-full bg-primary-600 text-white shrink-0 disabled:opacity-50" title="Send">
+          <button
+            disabled={sendDisabled}
+            type="submit"
+            className="w-9 h-9 grid place-items-center rounded-full bg-primary-600 text-white shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
+            title={hasUploadingAttachment ? "Đang upload file" : "Send"}
+          >
             <Send className="w-4 h-4" />
           </button>
         </div>
