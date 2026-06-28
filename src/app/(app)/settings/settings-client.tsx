@@ -9,7 +9,16 @@ import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import { updateAiSettings, updateStoreSettings, updateStaffRole, setStaffActive, updateStorePrefs } from "@/lib/actions/settings";
 import type { StoreSettings, StaffRow } from "@/lib/data/settings";
-import { AI_ATTACHMENT_BUCKETS, AI_VISION_MODELS, STAFF_ROLES, PAPER_SIZES, type StaffRole, type StorePrefs } from "@/lib/schemas/settings";
+import {
+  AI_ATTACHMENT_BUCKETS,
+  AI_PROVIDERS,
+  AI_TEXT_MODELS,
+  AI_VISION_MODELS,
+  STAFF_ROLES,
+  PAPER_SIZES,
+  type StaffRole,
+  type StorePrefs,
+} from "@/lib/schemas/settings";
 
 /* ── sample data (design preview — chưa nối backend) ── */
 const ROLE_LABELS: Record<string, [string, string]> = {
@@ -54,6 +63,20 @@ const MIGRATION = [
   { ico: "🟣", name: "POS365", color: "#7C3AED", desc: "Products, stock, invoices · .xlsx" },
   { ico: "⬛", name: "Excel / CSV", color: "#374151", desc: "Universal import w/ column mapping" },
 ];
+const AI_PROVIDER_OPTIONS = AI_PROVIDERS.map((value) => ({
+  value,
+  label: value === "openai" ? "OpenAI" : value === "deepseek" ? "DeepSeek" : "Gemini",
+  hint: value === "openai" ? "Text + vision" : value === "deepseek" ? "Text planner only" : "Text + vision",
+}));
+const AI_TEXT_MODEL_OPTIONS = AI_TEXT_MODELS.map((value) => ({
+  value,
+  label: value,
+  hint: value === "gpt-4.1-mini" || value === "gemini-2.5-flash" || value === "deepseek-chat"
+    ? "Recommended"
+    : value.includes("reasoner") || value.includes("pro") || value === "gpt-4.1"
+      ? "Higher accuracy"
+      : "Fastest / lowest cost",
+}));
 const AI_MODEL_OPTIONS = AI_VISION_MODELS.map((value) => ({
   value,
   label: value,
@@ -73,6 +96,8 @@ const AI_BUCKET_OPTIONS = AI_ATTACHMENT_BUCKETS.map((value) => ({
       : "Shared AI bucket",
 }));
 type AiVisionModel = (typeof AI_VISION_MODELS)[number];
+type AiProvider = (typeof AI_PROVIDERS)[number];
+type AiTextModel = (typeof AI_TEXT_MODELS)[number];
 type AiAttachmentBucket = (typeof AI_ATTACHMENT_BUCKETS)[number];
 type AiUsageStatus = {
   period: string;
@@ -85,8 +110,23 @@ type AiUsageStatus = {
   totalTokens: number;
   estimatedCostUsd: number;
 };
+function coerceAiProvider(value: string): AiProvider {
+  return AI_PROVIDERS.includes(value as AiProvider) ? value as AiProvider : "openai";
+}
+function coerceAiTextModel(value: string): AiTextModel {
+  return AI_TEXT_MODELS.includes(value as AiTextModel) ? value as AiTextModel : "gpt-4.1-mini";
+}
 function coerceAiVisionModel(value: string): AiVisionModel {
   return AI_VISION_MODELS.includes(value as AiVisionModel) ? value as AiVisionModel : "gpt-4.1-mini";
+}
+function defaultTextModelForProvider(provider: AiProvider): AiTextModel {
+  if (provider === "deepseek") return "deepseek-chat";
+  if (provider === "gemini") return "gemini-2.5-flash";
+  return "gpt-4.1-mini";
+}
+function defaultVisionModelForProvider(provider: AiProvider): AiVisionModel {
+  if (provider === "gemini") return "gemini-2.5-flash";
+  return "gpt-4.1-mini";
 }
 function coerceAiAttachmentBucket(value: string): AiAttachmentBucket {
   return AI_ATTACHMENT_BUCKETS.includes(value as AiAttachmentBucket) ? value as AiAttachmentBucket : "ai-attachments";
@@ -549,13 +589,19 @@ function NotificationsSection({ L, prefs, canManage }: { L: boolean; prefs: Stor
 function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs["ai"]; canEdit: boolean; usage: AiUsageStatus }) {
   const [openaiApiKeySet, setOpenaiApiKeySet] = useState(prefs.openaiApiKeySet);
   const [form, setForm] = useState<{
+    provider: AiProvider;
+    textModel: AiTextModel;
+    visionModel: AiVisionModel;
     openaiApiKey: string;
     openaiVisionModel: AiVisionModel;
     attachmentsBucket: AiAttachmentBucket;
     monthlyUsageLimit: number;
   }>({
+    provider: coerceAiProvider(prefs.provider),
+    textModel: coerceAiTextModel(prefs.textModel),
+    visionModel: coerceAiVisionModel(prefs.visionModel || prefs.openaiVisionModel),
     openaiApiKey: "",
-    openaiVisionModel: coerceAiVisionModel(prefs.openaiVisionModel),
+    openaiVisionModel: coerceAiVisionModel(prefs.visionModel || prefs.openaiVisionModel),
     attachmentsBucket: coerceAiAttachmentBucket(prefs.attachmentsBucket),
     monthlyUsageLimit: prefs.monthlyUsageLimit,
   });
@@ -597,7 +643,29 @@ function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
-              <span className={FL}>{L ? "OpenAI API key" : "OpenAI API key"}</span>
+              <span className={FL}>{L ? "Provider" : "Provider"}</span>
+              <SearchableSelect
+                options={AI_PROVIDER_OPTIONS}
+                value={form.provider}
+                onChange={(value) => {
+                  const provider = coerceAiProvider(value);
+                  const visionModel = defaultVisionModelForProvider(provider);
+                  setForm((p) => ({
+                    ...p,
+                    provider,
+                    textModel: defaultTextModelForProvider(provider),
+                    visionModel,
+                    openaiVisionModel: visionModel,
+                  }));
+                  mark();
+                }}
+                allowClear={false}
+                showSearch={false}
+                disabled={!canEdit}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className={FL}>{L ? "AI API key" : "AI API key"}</span>
               <input
                 className={cn(FI, "font-mono")}
                 type="password"
@@ -611,12 +679,29 @@ function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs
                 {L ? "Xóa API key đang lưu" : "Clear saved API key"}
               </label>
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
-              <span className={FL}>{L ? "Vision model" : "Vision model"}</span>
+              <span className={FL}>{L ? "Text planner model" : "Text planner model"}</span>
+              <SearchableSelect
+                options={AI_TEXT_MODEL_OPTIONS}
+                value={form.textModel}
+                onChange={(value) => set("textModel", coerceAiTextModel(value))}
+                allowClear={false}
+                showSearch={false}
+                disabled={!canEdit}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className={FL}>{L ? "Vision/OCR model" : "Vision/OCR model"}</span>
               <SearchableSelect
                 options={AI_MODEL_OPTIONS}
-                value={form.openaiVisionModel}
-                onChange={(value) => set("openaiVisionModel", coerceAiVisionModel(value))}
+                value={form.visionModel}
+                onChange={(value) => {
+                  const model = coerceAiVisionModel(value);
+                  setForm((p) => ({ ...p, visionModel: model, openaiVisionModel: model }));
+                  mark();
+                }}
                 allowClear={false}
                 showSearch={false}
                 disabled={!canEdit}
@@ -676,8 +761,8 @@ function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs
           </div>
           <div className="px-3.5 py-2.5 bg-in-soft border border-in/20 rounded-[10px] text-[11px] text-in leading-relaxed">
             {L
-              ? `API key không hiển thị lại sau khi lưu và không được ghi raw vào audit log. Usage được tính theo tháng ${usage.period}; mỗi lần hỏi AI tốn 1 lượt, mỗi attachment tốn thêm 1 lượt. Token/cost là ước tính từ response OpenAI.`
-              : `The API key is never shown again after saving and is not written raw into audit logs. Usage is tracked for ${usage.period}; each AI request costs 1 unit, each attachment adds 1 unit. Token/cost totals are estimates from OpenAI responses.`}
+              ? `API key không hiển thị lại sau khi lưu và không được ghi raw vào audit log. Usage được tính theo tháng ${usage.period}; mỗi lần hỏi AI tốn 1 lượt, mỗi attachment tốn thêm 1 lượt. Token/cost là ước tính từ provider/model trả về, không phải billing remaining chính thức.`
+              : `The API key is never shown again after saving and is not written raw into audit logs. Usage is tracked for ${usage.period}; each AI request costs 1 unit, each attachment adds 1 unit. Token/cost totals are provider/model estimates, not official billing remaining.`}
           </div>
         </div>
       </Card>

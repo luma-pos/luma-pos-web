@@ -20,7 +20,17 @@ export const PAYMENT_METHODS = ["cash", "qr", "momo", "zalopay", "vnpay", "card"
 export const NOTIF_TYPES = ["lowStock", "stagnant", "shiftClose", "einvoiceError", "syncDone"] as const;
 export const NOTIF_CHANNELS = ["zalo", "email", "inApp", "sms"] as const;
 export const PAPER_SIZES = ["K80", "K57", "A5", "A4"] as const;
-export const AI_VISION_MODELS = ["gpt-4.1-mini", "gpt-4.1", "gpt-4.1-nano"] as const;
+export const AI_PROVIDERS = ["openai", "deepseek", "gemini"] as const;
+export const AI_TEXT_MODELS = [
+  "gpt-4.1-mini",
+  "gpt-4.1",
+  "gpt-4.1-nano",
+  "deepseek-chat",
+  "deepseek-reasoner",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+] as const;
+export const AI_VISION_MODELS = ["gpt-4.1-mini", "gpt-4.1", "gpt-4.1-nano", "gemini-2.5-flash", "gemini-2.5-pro"] as const;
 export const AI_ATTACHMENT_BUCKETS = ["ai-attachments", "ai-pos-attachments", "luma-ai-attachments"] as const;
 
 const taxPrefs = z.object({
@@ -67,6 +77,9 @@ const appPrefs = z.object({
 });
 
 const aiPrefs = z.object({
+  provider: z.enum(AI_PROVIDERS).default("openai"),
+  textModel: z.string().max(80).default("gpt-4.1-mini"),
+  visionModel: z.string().max(80).default("gpt-4.1-mini"),
   openaiApiKey: z.string().max(500).default(""),
   openaiApiKeySet: z.boolean().default(false),
   openaiVisionModel: z.string().max(80).default("gpt-4.1-mini"),
@@ -80,7 +93,16 @@ export const storePrefsSchema = z.object({
   notifications: notificationPrefs.default({ lowStock: true, stagnant: true, shiftClose: true, einvoiceError: true, syncDone: false, channels: { zalo: true, email: true, inApp: true, sms: false } }),
   hardware: hardwarePrefs.default({ paperSize: "K80", autoPrint: false, openDrawer: true, printEinvoiceQr: true }),
   app: appPrefs.default({ biometricAuth: true, offlineMode: true }),
-  ai: aiPrefs.default({ openaiApiKey: "", openaiApiKeySet: false, openaiVisionModel: "gpt-4.1-mini", attachmentsBucket: "ai-attachments", monthlyUsageLimit: 1000 }),
+  ai: aiPrefs.default({
+    provider: "openai",
+    textModel: "gpt-4.1-mini",
+    visionModel: "gpt-4.1-mini",
+    openaiApiKey: "",
+    openaiApiKeySet: false,
+    openaiVisionModel: "gpt-4.1-mini",
+    attachmentsBucket: "ai-attachments",
+    monthlyUsageLimit: 1000,
+  }),
 });
 export type StorePrefs = z.infer<typeof storePrefsSchema>;
 
@@ -94,6 +116,9 @@ export function parseStorePrefs(raw: unknown): StorePrefs {
 }
 
 export const aiSettingsInputSchema = z.object({
+  provider: z.enum(AI_PROVIDERS).default("openai"),
+  textModel: z.enum(AI_TEXT_MODELS).default("gpt-4.1-mini"),
+  visionModel: z.enum(AI_VISION_MODELS).default("gpt-4.1-mini"),
   openaiApiKey: z.string().max(500).optional(),
   clearOpenaiApiKey: z.boolean().default(false),
   openaiVisionModel: z.enum(AI_VISION_MODELS).default("gpt-4.1-mini"),

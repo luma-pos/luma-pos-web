@@ -73,9 +73,12 @@ export async function updateAiSettings(input: AiSettingsInput): Promise<ActionRe
     const requested = input && typeof input === "object" ? input as Record<string, unknown> : {};
     const nextAi = {
       ...current.ai,
+      provider: v.provider,
+      textModel: v.textModel,
+      visionModel: v.visionModel,
       openaiApiKey: nextKey,
       openaiApiKeySet: Boolean(nextKey),
-      openaiVisionModel: v.openaiVisionModel,
+      openaiVisionModel: v.visionModel,
       attachmentsBucket: v.attachmentsBucket,
       monthlyUsageLimit: typeof requested.monthlyUsageLimit === "number" ? v.monthlyUsageLimit : current.ai.monthlyUsageLimit,
     };
@@ -91,12 +94,18 @@ export async function updateAiSettings(input: AiSettingsInput): Promise<ActionRe
       entityId: "default",
       status: "succeeded",
       before: {
+        provider: current.ai.provider,
+        textModel: current.ai.textModel,
+        visionModel: current.ai.visionModel || current.ai.openaiVisionModel,
         openaiApiKeySet: Boolean(current.ai.openaiApiKey),
         openaiVisionModel: current.ai.openaiVisionModel,
         attachmentsBucket: current.ai.attachmentsBucket,
         monthlyUsageLimit: current.ai.monthlyUsageLimit,
       },
       after: {
+        provider: nextAi.provider,
+        textModel: nextAi.textModel,
+        visionModel: nextAi.visionModel,
         openaiApiKeySet: Boolean(nextAi.openaiApiKey),
         openaiVisionModel: nextAi.openaiVisionModel,
         attachmentsBucket: nextAi.attachmentsBucket,
