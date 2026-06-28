@@ -70,6 +70,8 @@ export type AiAssistantResponse = {
   toolTrace?: AiToolTrace[];
 };
 
+type OrderActionMode = "create_invoice" | "create_quote" | "find_invoice" | "edit_invoice" | null;
+
 const PLANNER_CONFIDENCE_THRESHOLD = 0.55;
 const AI_TOOL_LOOP_MAX_DEPTH = 2;
 
@@ -166,6 +168,9 @@ function buildAiReviewAction(preview: AiActionPreview): AiActionPreview["reviewA
   }
   if (preview.intent === "create_customer") {
     return { type: "open", href: "/customers/new?source=ai-preview", label: "Mở form khách hàng", target: "customers" };
+  }
+  if (preview.intent === "create_supplier") {
+    return { type: "open", href: "/partners?tab=suppliers&source=ai-preview", label: "Mở nhà cung cấp", target: "suppliers" };
   }
   if (preview.intent === "update_customer") {
     return { type: "open", href: "/partners?tab=customers&source=ai-preview", label: "Mở khách hàng", target: "customers" };
@@ -1717,6 +1722,24 @@ function simpleCreatePreview(input: {
 
 export async function customerPreview(prompt: string): Promise<AiActionPreview> {
   const q = normalize(prompt);
+  const asksSupplier = q.includes("ncc") || q.includes("nha cung cap") || q.includes("supplier");
+  if (asksSupplier) {
+    const phone = prompt.match(/(?:số điện thoại|sdt|phone)\s*[:#-]?\s*([0-9+\s.-]{8,})/i)?.[1]?.replace(/\s+/g, "") ?? "";
+    const name = textAfter(prompt, [
+      /(?:thêm|tao|tạo|create)\s+(?:ncc|nhà cung cấp|supplier)\s+(.+?)(?:,\s*số điện thoại|\s+số điện thoại|,\s*sdt|\s+sdt|$)/i,
+      /(?:ncc|nhà cung cấp|supplier)\s+(.+?)(?:,\s*số điện thoại|\s+số điện thoại|,\s*sdt|\s+sdt|$)/i,
+    ]);
+    return simpleCreatePreview({
+      prompt,
+      intent: "create_supplier",
+      title: "Tạo nhà cung cấp",
+      entityType: "supplier",
+      target: "suppliers",
+      name,
+      requiredLabel: "supplier_name",
+      warning: phone ? "CTA mở danh sách nhà cung cấp; nhập/chỉnh thông tin trước khi lưu." : "CTA mở danh sách nhà cung cấp; cần bổ sung thông tin liên hệ nếu có.",
+    });
+  }
   const customers = await getCustomerContext();
   const isUpdate = q.includes("cap nhat") || q.includes("sua ");
   if (isUpdate) {
@@ -1922,16 +1945,17 @@ export async function reportSummaryPreview(prompt: string): Promise<AiActionPrev
   };
 }
 
-export async function orderActionPreview(prompt: string): Promise<AiActionPreview> {
+export async function orderActionPreview(prompt: string, mode: OrderActionMode = null): Promise<AiActionPreview> {
   const q = normalize(prompt);
   const context = await getSalesContext();
   const isPayment = q.includes("thanh toan") || q.includes("da tra") || q.includes("tra tien");
   const isConvert = q.includes("chuyen") && (q.includes("bao gia") || q.includes("quote"));
-  const isCancel = q.includes("huy hoa don") || q.includes("huy don") || q.includes("xoa hoa don") || q.includes("xoa don") || q.includes("delete invoice") || q.includes("delete order") || q.includes("cancel invoice") || q.includes("cancel order");
-  const isEditInvoice = q.includes("sua hoa don") || q.includes("sua don") || q.includes("edit invoice") || q.includes("edit order");
-  const isFindInvoice = q.includes("tim hoa don") || q.includes("tim don") || q.includes("xem hoa don") || q.includes("find invoice") || q.includes("find order");
-  const isReturn = q.includes("tra hang") || q.includes("hoan hang") || q.includes("hoan tien") || q.includes("refund") || q.includes("return");
-  const isEinvoice = q.includes("hoa don dien tu") || q.includes("e invoice") || q.includes("einvoice") || q.includes("e-invoice");
+  const isCreateInvoiceMode = mode === "create_invoice" || mode === "create_quote";
+  const isCancel = !isCreateInvoiceMode && (q.includes("huy hoa don") || q.includes("huy don") || q.includes("xoa hoa don") || q.includes("xoa don") || q.includes("delete invoice") || q.includes("delete order") || q.includes("cancel invoice") || q.includes("cancel order"));
+  const isEditInvoice = mode === "edit_invoice" || (!isCreateInvoiceMode && (q.includes("sua hoa don") || q.includes("sua don") || q.includes("edit invoice") || q.includes("edit order")));
+  const isFindInvoice = mode === "find_invoice" || (!isCreateInvoiceMode && (q.includes("tim hoa don") || q.includes("tim don") || q.includes("xem hoa don") || q.includes("find invoice") || q.includes("find order")));
+  const isReturn = !isCreateInvoiceMode && (q.includes("tra hang") || q.includes("hoan hang") || q.includes("hoan tien") || q.includes("refund") || q.includes("return"));
+  const isEinvoice = !isCreateInvoiceMode && (q.includes("hoa don dien tu") || q.includes("e invoice") || q.includes("einvoice") || q.includes("e-invoice"));
   const orderCode = prompt.match(/\b(?:HD|DH|BG)[A-Z0-9-]+\b/i)?.[0] ?? "";
 
   if (isEditInvoice || isFindInvoice) {
@@ -2125,7 +2149,7 @@ export async function orderActionPreview(prompt: string): Promise<AiActionPrevie
   const unresolvedItems = parseUnresolvedProductSegments(prompt, context.products);
   const customer = matchNamed(prompt, context.customers).match;
   const warehouse = matchNamed(prompt, context.warehouses).match ?? context.warehouses.find((item) => item.isDefault) ?? context.warehouses[0] ?? null;
-  const isQuote = q.includes("bao gia") || q.includes("quote");
+  const isQuote = mode === "create_quote" || q.includes("bao gia") || q.includes("quote");
   const missingFields = [
     ...(lines.length ? [] : ["items"]),
     ...(warehouse ? [] : ["warehouse"]),
@@ -2261,10 +2285,28 @@ function forcedIntentFromActionPreset(prompt: string): AiPlannerIntent | null {
   if (
     intent === "order_action" ||
     intent === "create_draft_purchase_order" ||
-    intent === "create_inventory_inbound"
+    intent === "create_inventory_inbound" ||
+    intent === "set_product_price" ||
+    intent === "apply_price_formula" ||
+    intent === "product_command" ||
+    intent === "customer_action" ||
+    intent === "cashbook_action" ||
+    intent === "pos_voice_cart_draft" ||
+    intent === "pos_image_cart_draft" ||
+    intent === "report_summary"
   ) {
     return intent;
   }
+  return null;
+}
+
+function forcedOrderActionModeFromPreset(prompt: string): OrderActionMode {
+  if (!/\[AI_ACTION_PRESET:order_action\]/.test(prompt)) return null;
+  const instruction = normalize(prompt.split(/(?:Thông tin người dùng|User information):/i)[0] ?? prompt);
+  if (instruction.includes("tao bao gia") || instruction.includes("create a quote")) return "create_quote";
+  if (instruction.includes("tim hoa don") || instruction.includes("find the invoice")) return "find_invoice";
+  if (instruction.includes("sua") || instruction.includes("huy") || instruction.includes("edit/cancel")) return "edit_invoice";
+  if (instruction.includes("tao hoa don ban hang") || instruction.includes("create a sales invoice")) return "create_invoice";
   return null;
 }
 
@@ -2285,6 +2327,7 @@ export async function buildAiAssistantResponse(input: {
 }): Promise<AiAssistantResponse> {
   const rawPrompt = input.prompt.trim();
   const forcedIntent = forcedIntentFromActionPreset(rawPrompt);
+  const forcedOrderMode = forcedOrderActionModeFromPreset(rawPrompt);
   const planner = await planAiAssistantIntent({
     prompt: stripActionPresetMarker(rawPrompt),
     hasAttachments: Boolean(input.parsedAttachments?.length),
@@ -2358,7 +2401,7 @@ export async function buildAiAssistantResponse(input: {
         : previewTool === "buildPosCartPreview:image"
           ? await posCartPreview(prompt, "image")
         : previewTool === "buildOrderPreview"
-          ? await orderActionPreview(prompt)
+          ? await orderActionPreview(prompt, forcedOrderMode)
         : previewTool === "buildReportSummaryPreview"
           ? await reportSummaryPreview(prompt)
         : previewTool === "buildPriceUpdatePreview"
