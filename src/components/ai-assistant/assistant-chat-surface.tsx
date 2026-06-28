@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Eraser, MessageSquare, Mic, Paperclip, Pencil, Plus, Send, Sparkles, Trash2, X } from "lucide-react";
 import { Button, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { ActionPresetButtons } from "./action-preset-buttons";
 import { AttachmentPill } from "./attachment-pill";
 import { PreviewCard } from "./preview-card";
 import type { AssistantController } from "./types";
@@ -46,10 +47,12 @@ export function AssistantChatSurface({
     surface,
     usage,
     activePreset,
+    actionPresets,
     suggestionGroups,
     send,
     startVoiceInput,
     newSession,
+    startActionSession,
     switchSession,
     renameSession,
     deleteSession,
@@ -360,6 +363,17 @@ export function AssistantChatSurface({
       </div>
 
       <div className="shrink-0 bg-surface">
+        {surface === "web" && actionPresets.length > 0 && (
+          <div className={cn("px-3 pt-2", !compact && "px-4")}>
+            <ActionPresetButtons
+              presets={actionPresets}
+              activePreset={activePreset}
+              busy={busy}
+              onSelect={(preset) => void startActionSession(preset)}
+              variant={compact ? "strip" : "grid"}
+            />
+          </div>
+        )}
         {hasUploadingAttachment && (
           <div className={cn("px-3 pt-2 text-[11px] font-semibold text-slate-400", !compact && "px-4")}>
             {t("ai.session.uploadNotice")}
