@@ -82,6 +82,25 @@ function isPosCartPreview(preview: AiActionPreview) {
   return preview.intent === "pos_voice_cart_draft" || preview.intent === "pos_image_cart_draft";
 }
 
+function strongConfirmationText(preview: AiActionPreview) {
+  if (preview.intent === "apply_price_formula") {
+    return "Thao tác này có thể đổi giá hàng loạt. Hãy kiểm tra bảng giá và số lượng sản phẩm bị ảnh hưởng trước khi xác nhận.";
+  }
+  if (preview.intent === "record_invoice_payment") {
+    return "Thao tác này ghi nhận dòng tiền và trạng thái thanh toán hóa đơn. Sau khi xác nhận cần đối soát sổ quỹ.";
+  }
+  if (preview.intent === "create_cashbook_entry") {
+    return "Thao tác này tạo giao dịch sổ quỹ. Hãy kiểm tra số tiền, loại thu/chi và ghi chú.";
+  }
+  if (preview.intent === "convert_quote_to_order") {
+    return "Thao tác này chuyển báo giá thành đơn bán và có thể ảnh hưởng tồn kho.";
+  }
+  if (preview.intent === "create_order") {
+    return "Thao tác này tạo đơn bán nháp từ AI. Hãy kiểm tra khách hàng, dòng hàng và tổng tiền.";
+  }
+  return "Đây là thao tác có ảnh hưởng nghiệp vụ. Hãy kiểm tra preview, cảnh báo và bản ghi liên quan trước khi xác nhận.";
+}
+
 type FabPosition = {
   x: number;
   y: number;
@@ -1194,10 +1213,14 @@ function PreviewCard({
   onCancel: () => void;
   onSelectChoice: (type: string, candidate: { label: string; code?: string; confidence?: number }) => void;
 }) {
+  const [strongConfirmed, setStrongConfirmed] = useState(false);
   const isConfirmed = state === "confirmed";
   const succeeded = state === "succeeded";
   const done = isConfirmed || succeeded || state === "cancelled";
-  const canConfirm = preview.state === "preview" && preview.missingFields.length === 0;
+  const canConfirm = preview.state === "preview" && preview.missingFields.length === 0 && (!preview.strongConfirmation || strongConfirmed);
+  useEffect(() => {
+    setStrongConfirmed(false);
+  }, [preview.id, state]);
   return (
     <div className={cn("w-full bg-surface border border-border rounded-card shadow-e1 overflow-hidden", compact ? "max-w-full" : "max-w-2xl")}>
       <div className="p-3 border-b border-border-soft flex items-start justify-between gap-3">
@@ -1240,6 +1263,22 @@ function PreviewCard({
           <div className="rounded-lg bg-warn-soft text-warn p-2.5 text-xs font-semibold">
             Cần bổ sung: {preview.missingFields.join(", ")}
           </div>
+        )}
+        {preview.strongConfirmation && !done && (
+          <label className="block rounded-lg border border-warn/25 bg-warn-soft p-2.5 text-xs text-warn">
+            <div className="font-bold">Cần xác nhận mạnh</div>
+            <div className="mt-1 leading-relaxed">{strongConfirmationText(preview)}</div>
+            <div className="mt-2 flex items-start gap-2 font-semibold">
+              <input
+                type="checkbox"
+                checked={strongConfirmed}
+                onChange={(event) => setStrongConfirmed(event.target.checked)}
+                disabled={busy}
+                className="mt-0.5"
+              />
+              <span>Tôi đã kiểm tra preview và hiểu hậu quả của thao tác này.</span>
+            </div>
+          </label>
         )}
         {preview.warnings.map((warning) => (
           <div key={warning} className="rounded-lg bg-surface-2 p-2.5 text-xs text-slate-500">{warning}</div>
@@ -1286,7 +1325,17 @@ function PreviewCard({
         ) : (
           <div className="flex gap-2 justify-end">
             <button disabled={busy} type="button" onClick={onCancel} className="px-3 py-1.5 rounded-lg border border-border text-xs font-bold text-slate-500 disabled:opacity-50">Hủy</button>
-            <button disabled={busy || !canConfirm} type="button" onClick={onConfirm} className="px-3 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-bold disabled:opacity-50">Xác nhận</button>
+            <button
+              disabled={busy || !canConfirm}
+              type="button"
+              onClick={onConfirm}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-white text-xs font-bold disabled:opacity-50",
+                preview.strongConfirmation ? "bg-warn hover:brightness-95" : "bg-primary-600"
+              )}
+            >
+              {preview.strongConfirmation ? "Xác nhận mạnh" : "Xác nhận"}
+            </button>
           </div>
         )}
       </div>
