@@ -102,6 +102,7 @@ export function storeAiWorkflowDraft(preview: AiActionPreview) {
       action: preview.action,
       fields: preview.fields,
       lines: preview.lines,
+      warnings: preview.warnings,
       createdAt: Date.now(),
     }));
   } catch {

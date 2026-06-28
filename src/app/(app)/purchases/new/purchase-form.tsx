@@ -29,8 +29,60 @@ type Line = {
 type AiWorkflowDraft = {
   intent?: string;
   action?: { payload?: Record<string, unknown> };
-  lines?: { label?: string }[];
+  lines?: { label?: string; value?: string; meta?: string }[];
+  warnings?: string[];
 };
+
+type AiPendingLine = {
+  key: string;
+  label: string;
+  sku?: string;
+  meta?: string;
+};
+
+function uniquePendingLines(lines: AiPendingLine[]) {
+  const seen = new Set<string>();
+  return lines.filter((line) => {
+    const key = `${line.sku ?? ""}:${line.label}`.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function skuFromText(value: string) {
+  return value.match(/\b[A-Z]{1,6}\d[A-Z0-9._-]{2,}\b/i)?.[0]?.toUpperCase();
+}
+
+function pendingLinesFromAiDraft(draft: AiWorkflowDraft) {
+  const fromLines = (draft.lines ?? [])
+    .filter((line) => line.value === "Cần chọn lại")
+    .map((line, index) => {
+      const meta = typeof line.meta === "string" ? line.meta : "";
+      const label = typeof line.label === "string" && line.label.trim() ? line.label.trim() : `Dòng ${index + 1}`;
+      return {
+        key: `line-${index}`,
+        label,
+        sku: skuFromText(meta),
+        meta,
+      };
+    });
+  const fromWarnings = (draft.warnings ?? [])
+    .flatMap((warning, index) => {
+      const match = warning.match(/Cần kiểm tra dòng:\s*(.+)$/i);
+      if (!match) return [];
+      const raw = match[1].trim();
+      const parts = raw.split("·").map((part) => part.trim()).filter(Boolean);
+      const sku = skuFromText(parts[0] ?? raw);
+      return [{
+        key: `warning-${index}`,
+        label: parts.slice(sku ? 1 : 0).join(" · ") || raw,
+        sku,
+        meta: raw,
+      }];
+    });
+  return uniquePendingLines([...fromLines, ...fromWarnings]);
+}
 
 export type PurchaseFormInitialValues = {
   supplierId: string;
@@ -109,6 +161,7 @@ export function PurchaseForm({
   const [note, setNote] = useState(initialValues?.note ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [aiPendingLines, setAiPendingLines] = useState<AiPendingLine[]>([]);
 
   useEffect(() => {
     if (mode !== "create" || !aiPreview) return;
@@ -121,6 +174,8 @@ export function PurchaseForm({
       if (draft.intent !== "create_inventory_inbound" && draft.intent !== "create_draft_purchase_order" && draft.intent !== "create_draft_purchase_order_from_restocking") return;
       const payload = draft.action?.payload ?? {};
       const itemRows = Array.isArray(payload.items) ? payload.items.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item))) : [];
+      const pendingLines = pendingLinesFromAiDraft(draft);
+      setAiPendingLines(pendingLines);
       const productIds = [
         typeof payload.productId === "string" ? payload.productId : "",
         ...itemRows.map((item) => typeof item.productId === "string" ? item.productId : ""),
@@ -154,6 +209,7 @@ export function PurchaseForm({
       if (supplierIdDraft && options.suppliers.some((supplier) => supplier.id === supplierIdDraft)) setSupplierId(supplierIdDraft);
       if (warehouseIdDraft && options.warehouses.some((warehouse) => warehouse.id === warehouseIdDraft)) setWarehouseId(warehouseIdDraft);
       if (nextLines.length) setLines(nextLines);
+      else if (pendingLines[0]) setSearch(pendingLines[0].sku ?? pendingLines[0].label);
       if (typeof payload.discount === "number") setDiscount(payload.discount);
       if (typeof payload.vatRate === "number") setVatRate(payload.vatRate);
       if (typeof payload.invoiceNumber === "string") setInvoiceNumber(payload.invoiceNumber);
@@ -192,6 +248,7 @@ export function PurchaseForm({
 
   function addProduct(p: PurchaseProductRow) {
     setLines((ls) => [...ls, productToLine(p)]);
+    setAiPendingLines((rows) => rows.filter((row) => row.sku !== p.sku && row.label !== p.name));
     setSearch("");
   }
   function patch(id: string, p: Partial<Line>) {
@@ -274,6 +331,26 @@ export function PurchaseForm({
               </div>
             )}
           </div>
+          {aiPendingLines.length > 0 && (
+            <div className="mb-3 rounded-card border border-warn/25 bg-warn-soft p-3 text-warn">
+              <div className="text-xs font-bold">Dòng AI cần chọn sản phẩm</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {aiPendingLines.map((line) => (
+                  <button
+                    key={line.key}
+                    type="button"
+                    onClick={() => setSearch(line.sku ?? line.label)}
+                    className="max-w-full rounded-full border border-warn/30 bg-surface px-3 py-1.5 text-left text-xs font-semibold text-warn hover:bg-warn-soft"
+                    title={line.meta ?? line.label}
+                  >
+                    <span className="block max-w-[360px] truncate">
+                      {line.sku ? `${line.sku} · ` : ""}{line.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 min-h-[280px] overflow-auto bg-surface border border-border rounded-card">
             {lines.length === 0 ? (
