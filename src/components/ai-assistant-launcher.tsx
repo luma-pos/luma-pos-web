@@ -45,11 +45,17 @@ type AssistantResponse = {
 
 type ComposerAttachment = {
   id: string;
+  localId?: string;
   name: string;
   mimeType: string;
   size: number;
   kind: "image" | "document";
   previewUrl?: string;
+  bucket?: string;
+  path?: string;
+  signedUrl?: string;
+  status?: "uploading" | "uploaded" | "failed";
+  error?: string;
 };
 
 const MAX_ATTACHMENTS = 4;
@@ -60,7 +66,6 @@ const ACCEPTED_ATTACHMENT_TYPES = new Set([
   "image/webp",
   "application/pdf",
   "text/csv",
-  "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ]);
 
@@ -86,6 +91,21 @@ async function postJson(path: string, body: unknown) {
     throw new Error(json?.error ?? `http.${res.status}`);
   }
   return json?.data ?? json;
+}
+
+async function uploadAiAttachment(file: File): Promise<ComposerAttachment> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("surface", "web");
+  const res = await fetch("/api/mobile/ai/attachments", {
+    method: "POST",
+    body: form,
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || json?.ok === false) {
+    throw new Error(json?.error ?? `http.${res.status}`);
+  }
+  return json.data as ComposerAttachment;
 }
 
 function useAssistantState(surface: AssistantSurface) {
@@ -130,14 +150,29 @@ function useAssistantState(surface: AssistantSurface) {
         setAttachmentError(`${file.name} chưa được hỗ trợ. Hỗ trợ PNG, JPG, WebP, PDF, CSV, XLSX.`);
         continue;
       }
-      next.push({
-        id: `${Date.now()}-${crypto.randomUUID()}`,
+      const localId = `${Date.now()}-${crypto.randomUUID()}`;
+      const localAttachment: ComposerAttachment = {
+        id: localId,
+        localId,
         name: file.name || (kind === "image" ? "clipboard-image.png" : "attachment"),
         mimeType: file.type,
         size: file.size,
         kind,
         previewUrl: kind === "image" ? URL.createObjectURL(file) : undefined,
-      });
+        status: "uploading",
+      };
+      next.push(localAttachment);
+      void uploadAiAttachment(file)
+        .then((uploaded) => {
+          setAttachments((current) => current.map((item) => item.localId === localId
+            ? { ...item, ...uploaded, localId, previewUrl: item.previewUrl, status: "uploaded" }
+            : item));
+        })
+        .catch((error) => {
+          setAttachments((current) => current.map((item) => item.localId === localId
+            ? { ...item, status: "failed", error: error instanceof Error ? error.message : "Upload failed" }
+            : item));
+        });
     }
     if (next.length) setAttachments((current) => [...current, ...next]);
   }
@@ -160,6 +195,14 @@ function useAssistantState(surface: AssistantSurface) {
   async function send(text: string) {
     const q = text.trim();
     if ((!q && attachments.length === 0) || busy) return;
+    if (attachments.some((item) => item.status === "uploading")) {
+      setAttachmentError("File vẫn đang upload, chờ thêm một chút rồi gửi lại.");
+      return;
+    }
+    if (attachments.some((item) => item.status === "failed")) {
+      setAttachmentError("Có file upload lỗi. Hãy xóa file lỗi hoặc thử attach lại.");
+      return;
+    }
     const outgoingAttachments = attachments;
     const prompt = outgoingAttachments.length
       ? `${q || "Phân tích file đính kèm"}\n\n[${outgoingAttachments.length} attachment(s): ${outgoingAttachments.map((item) => item.name).join(", ")}]`
@@ -171,12 +214,15 @@ function useAssistantState(surface: AssistantSurface) {
     try {
       const data = await postJson("/api/mobile/ai/assistant", {
         prompt,
-        attachments: outgoingAttachments.map(({ id, name, mimeType, size, kind }) => ({
+        attachments: outgoingAttachments.map(({ id, bucket, path, name, mimeType, size, kind, signedUrl }) => ({
           id,
+          bucket,
+          path,
           name,
           mimeType,
           size,
           kind,
+          signedUrl,
         })),
       }) as AssistantResponse;
       setMsgs((m) => [
@@ -502,7 +548,7 @@ function AssistantChatSurface({
           <input
             ref={fileRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            accept="image/png,image/jpeg,image/webp,application/pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             multiple
             className="hidden"
             onChange={(e) => {
@@ -560,7 +606,18 @@ function AttachmentPill({
       )}
       <div className="min-w-0">
         <div className="max-w-40 truncate font-semibold">{attachment.name}</div>
-        {!compact && <div className="text-[10px] opacity-70">{fileSizeText(attachment.size)}</div>}
+        {!compact && (
+          <div className={cn(
+            "text-[10px] opacity-70",
+            attachment.status === "failed" && "text-er opacity-100",
+          )}>
+            {attachment.status === "uploading"
+              ? "Đang upload..."
+              : attachment.status === "failed"
+                ? attachment.error ?? "Upload lỗi"
+                : fileSizeText(attachment.size)}
+          </div>
+        )}
       </div>
       {onRemove && (
         <button
