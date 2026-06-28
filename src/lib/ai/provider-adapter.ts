@@ -89,8 +89,7 @@ function providerBaseUrl(provider: AiProviderId) {
   return process.env.OPENAI_BASE_URL || PROVIDER_DEFAULTS.openai.baseUrl;
 }
 
-export async function loadAiProviderConfig(): Promise<AiProviderConfig> {
-  const prefs = await getAiProviderSettings();
+export function buildAiProviderConfig(prefs: StorePrefs["ai"]): AiProviderConfig {
   const provider = coerceProvider(prefs.provider || process.env.AI_PROVIDER || process.env.AI_ATTACHMENT_PROVIDER);
   const defaults = PROVIDER_DEFAULTS[provider];
   const envTextModel = provider === "deepseek"
@@ -109,6 +108,11 @@ export async function loadAiProviderConfig(): Promise<AiProviderConfig> {
     baseUrl: providerBaseUrl(provider).replace(/\/$/, ""),
     capabilities: defaults.capabilities,
   };
+}
+
+export async function loadAiProviderConfig(): Promise<AiProviderConfig> {
+  const prefs = await getAiProviderSettings();
+  return buildAiProviderConfig(prefs);
 }
 
 export function outputText(response: unknown) {

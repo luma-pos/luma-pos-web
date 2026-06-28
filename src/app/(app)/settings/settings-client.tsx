@@ -7,7 +7,7 @@ import { Check, Printer, Loader2 } from "lucide-react";
 import { SearchableSelect } from "@/components/combobox";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
-import { updateAiSettings, updateStoreSettings, updateStaffRole, setStaffActive, updateStorePrefs } from "@/lib/actions/settings";
+import { testAiProvider, updateAiSettings, updateStoreSettings, updateStaffRole, setStaffActive, updateStorePrefs } from "@/lib/actions/settings";
 import type { StoreSettings, StaffRow } from "@/lib/data/settings";
 import {
   AI_ATTACHMENT_BUCKETS,
@@ -110,6 +110,24 @@ type AiUsageStatus = {
   totalTokens: number;
   estimatedCostUsd: number;
 };
+type AiProviderTestKind = "text" | "vision";
+type AiProviderTestResult = {
+  kind: AiProviderTestKind;
+  provider: string;
+  textModel: string;
+  visionModel: string;
+  keyConfigured: boolean;
+  textPlanning: boolean;
+  visionOcr: boolean;
+  ok: boolean;
+  message: string;
+  testedAt: string;
+  tokenUsage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
+};
 function coerceAiProvider(value: string): AiProvider {
   return AI_PROVIDERS.includes(value as AiProvider) ? value as AiProvider : "openai";
 }
@@ -130,6 +148,14 @@ function defaultVisionModelForProvider(provider: AiProvider): AiVisionModel {
 }
 function coerceAiAttachmentBucket(value: string): AiAttachmentBucket {
   return AI_ATTACHMENT_BUCKETS.includes(value as AiAttachmentBucket) ? value as AiAttachmentBucket : "ai-attachments";
+}
+function formatAiTestMessage(message: string, L: boolean) {
+  const map: Record<string, [string, string]> = {
+    missing_api_key: ["Missing API key.", "Thiếu API key."],
+    unsupported_vision: ["This provider does not support vision/OCR.", "Provider này không hỗ trợ vision/OCR."],
+    unsupported_text_planning: ["This provider does not support text planning.", "Provider này không hỗ trợ lập kế hoạch text."],
+  };
+  return map[message] ? (L ? map[message][1] : map[message][0]) : message;
 }
 
 type SectionId = "store" | "staff" | "hardware" | "payments" | "print" | "tax" | "notifications" | "ai" | "migration";
@@ -609,10 +635,25 @@ function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [testResult, setTestResult] = useState<AiProviderTestResult | null>(null);
+  const [testError, setTestError] = useState("");
+  const [testing, setTesting] = useState<AiProviderTestKind | null>(null);
   const [pending, start] = useTransition();
-  const mark = () => { setDirty(true); setSaved(false); setError(""); };
+  const mark = () => { setDirty(true); setSaved(false); setError(""); setTestResult(null); setTestError(""); };
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => { setForm((p) => ({ ...p, [key]: value })); mark(); };
   const toggleClearKey = (value: boolean) => { setClearOpenaiApiKey(value); mark(); };
+  async function runProviderTest(kind: AiProviderTestKind) {
+    setTesting(kind);
+    setTestError("");
+    const res = await testAiProvider({ ...form, clearOpenaiApiKey }, kind).catch(() => null);
+    if (res?.ok) {
+      setTestResult(res.data);
+    } else {
+      setTestResult(null);
+      setTestError(res?.error ?? "errors.serverError");
+    }
+    setTesting(null);
+  }
   function save() {
     start(async () => {
       const res = await updateAiSettings({ ...form, clearOpenaiApiKey });
@@ -632,6 +673,14 @@ function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs
   const displayRemaining = Math.max(0, displayLimit - usage.used);
   const displayExhausted = displayRemaining <= 0;
   const limitPreviewChanged = displayLimit !== usage.limit;
+  const diagnosticsRows: Array<[string, string, boolean]> = [
+    [L ? "Provider" : "Provider", AI_PROVIDER_OPTIONS.find((item) => item.value === form.provider)?.label ?? form.provider, true],
+    [L ? "Text model" : "Text model", form.textModel, true],
+    [L ? "Vision model" : "Vision model", form.visionModel, form.provider !== "deepseek"],
+    [L ? "API key" : "API key", configured ? (L ? "Đã cấu hình" : "Configured") : (L ? "Chưa có" : "Missing"), configured],
+    [L ? "Text planning" : "Text planning", L ? "Hỗ trợ" : "Supported", true],
+    [L ? "Vision/OCR" : "Vision/OCR", form.provider === "deepseek" ? (L ? "Không hỗ trợ" : "Unsupported") : (L ? "Hỗ trợ" : "Supported"), form.provider !== "deepseek"],
+  ];
   return (
     <>
       <Card title={L ? "Nhà cung cấp AI" : "AI Provider"} vi={L ? "OCR và lập kế hoạch cho trợ lý AI" : "OCR and planning for AI Assistant"}>
@@ -768,6 +817,54 @@ function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs
               ? `API key không hiển thị lại sau khi lưu và không được ghi raw vào audit log. Usage được tính theo tháng ${usage.period}; mỗi lần hỏi AI tốn 1 lượt, mỗi file đính kèm được xử lý (tối đa 4 file/lần) tốn thêm 1 lượt. Giới hạn/còn lại hiển thị theo giá trị đang nhập${limitPreviewChanged ? ", có hiệu lực sau khi lưu" : ""}. Token/chi phí là ước tính từ provider/model trả về, không phải hóa đơn chính thức.`
               : `The API key is never shown again after saving and is not written raw into audit logs. Usage is tracked for ${usage.period}; each AI request costs 1 unit, and each processed attachment (up to 4 files per request) adds 1 unit. Limit/remaining values follow the current input${limitPreviewChanged ? " and take effect after saving" : ""}. Token/cost totals are provider/model estimates, not official billing.`}
           </div>
+        </div>
+      </Card>
+      <Card title={L ? "Chẩn đoán provider" : "Provider diagnostics"} vi={L ? "Kiểm tra key, model text và OCR/ảnh" : "Test key, text model and vision/OCR"}>
+        <div className="p-4.5 flex flex-col gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {diagnosticsRows.map(([label, value, ok]) => (
+              <div key={String(label)} className="rounded-[10px] border border-border bg-canvas px-3 py-2">
+                <div className={FL}>{label}</div>
+                <div className={cn("mt-1 text-xs font-extrabold", ok ? "text-slate-800 dark:text-slate-100" : "text-warn")}>{value}</div>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!canEdit || testing !== null}
+              onClick={() => void runProviderTest("text")}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-semibold disabled:opacity-50"
+            >
+              {testing === "text" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              {L ? "Test text model" : "Test text model"}
+            </button>
+            <button
+              type="button"
+              disabled={!canEdit || testing !== null || form.provider === "deepseek"}
+              onClick={() => void runProviderTest("vision")}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-semibold hover:bg-surface-2 disabled:opacity-50"
+            >
+              {testing === "vision" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              {L ? "Test vision model" : "Test vision model"}
+            </button>
+          </div>
+          {testResult && (
+            <div className={cn(
+              "rounded-[10px] border px-3.5 py-2.5 text-[11px] leading-relaxed",
+              testResult.ok ? "border-ok/20 bg-ok-soft text-ok" : "border-warn/20 bg-warn-soft text-warn"
+            )}>
+              <div className="font-bold">
+                {testResult.kind === "text" ? "Text" : "Vision"} · {testResult.ok ? (L ? "Kết nối OK" : "Connection OK") : (L ? "Cần kiểm tra lại" : "Needs attention")}
+              </div>
+              <div className="mt-1">
+                {L ? "Kết quả" : "Result"}: {formatAiTestMessage(testResult.message, L)}
+                {testResult.tokenUsage ? ` · tokens ${testResult.tokenUsage.totalTokens}` : ""}
+              </div>
+              <div className="mt-1 text-[10px] opacity-75">{new Date(testResult.testedAt).toLocaleString("vi-VN")}</div>
+            </div>
+          )}
+          {testError && <div className="rounded-[10px] border border-er/20 bg-er-soft px-3.5 py-2.5 text-[11px] font-semibold text-er">{testError}</div>}
         </div>
       </Card>
       {!canEdit && <p className="text-[11px] text-slate-400 italic mt-1">{L ? "Chỉ owner được sửa cấu hình AI." : "Only the owner can edit AI settings."}</p>}
