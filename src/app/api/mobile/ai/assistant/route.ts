@@ -1,10 +1,12 @@
 import { getReports } from "@/lib/data/reports";
 import { getRestockSuggestions } from "@/lib/data/ai-restock";
-import { attachmentPromptBlock, parseAiAttachment, type AiAttachmentMetadata } from "@/lib/ai/attachments";
+import { buildAttachmentNextActionResponse, shouldAskAttachmentNextAction } from "@/lib/ai/attachment-intent";
+import { attachmentPromptBlock, parseAiAttachment, type AiAttachmentMetadata, type ParsedAiAttachment } from "@/lib/ai/attachments";
 import { buildAiAssistantResponse } from "@/lib/ai/actions";
+import { consumeAiUsage, recordAiTokenUsage } from "@/lib/ai/usage";
 import { writeAuditLog } from "@/lib/audit";
 import { requireMobileManager } from "@/lib/mobile/auth";
-import { mobileGate, mobileOk, readJson } from "@/lib/mobile/response";
+import { mobileError, mobileGate, mobileOk, readJson } from "@/lib/mobile/response";
 
 function sanitizeAttachmentPreview<T>(preview: T, prompt: string, attachmentCount: number): T {
   if (!preview || typeof preview !== "object" || attachmentCount === 0) return preview;
@@ -31,6 +33,44 @@ function sanitizeAttachmentPreview<T>(preview: T, prompt: string, attachmentCoun
   } as T;
 }
 
+function attachmentAuditDetails(parsedAttachments: ParsedAiAttachment[]) {
+  return parsedAttachments.map((item) => ({
+    id: item.id,
+    name: item.name,
+    mimeType: item.mimeType,
+    status: item.status,
+    provider: item.provider,
+    confidence: item.confidence,
+    candidateCount: item.candidates.length,
+    warningCount: item.warnings.length,
+  }));
+}
+
+async function writeAttachmentParseAudit(input: {
+  userId: string;
+  prompt: string;
+  parsedAttachments: ParsedAiAttachment[];
+}) {
+  if (input.parsedAttachments.length === 0) return;
+  await writeAuditLog({
+    actorUserId: input.userId,
+    source: "ai",
+    action: "parse_ai_attachment",
+    entityType: "ai_attachment",
+    status: input.parsedAttachments.every((item) => item.status === "succeeded") ? "succeeded" : "failed",
+    prompt: input.prompt,
+    parsedIntent: {
+      attachments: attachmentAuditDetails(input.parsedAttachments),
+    },
+    affectedRecords: input.parsedAttachments.map((item) => ({
+      type: "ai_attachment",
+      id: item.id ?? item.path ?? "attachment",
+      code: item.name ?? "attachment",
+    })),
+    metadata: { surface: "mobile", count: input.parsedAttachments.length, rawContentLogged: false },
+  });
+}
+
 export async function POST(request: Request) {
   const gate = await requireMobileManager();
   const blocked = mobileGate(gate);
@@ -46,6 +86,24 @@ export async function POST(request: Request) {
     body && typeof body === "object" && Array.isArray((body as { attachments?: unknown }).attachments)
       ? ((body as { attachments: unknown[] }).attachments.filter((item): item is AiAttachmentMetadata => Boolean(item && typeof item === "object")))
       : [];
+  const usage = await consumeAiUsage(1 + attachments.slice(0, 4).length);
+  if (!usage.ok) {
+    await writeAuditLog({
+      actorUserId: gate.userId,
+      source: "ai",
+      action: "ai_usage_exhausted",
+      entityType: "ai_usage",
+      status: "failed",
+      prompt,
+      metadata: {
+        required: usage.required,
+        used: usage.usage.used,
+        limit: usage.usage.limit,
+        remaining: usage.usage.remaining,
+      },
+    });
+    return mobileError("ai.usage.exhausted", 402);
+  }
   const parsedAttachments = attachments.length
     ? await Promise.all(attachments.slice(0, 4).map((attachment) => parseAiAttachment({
         attachment,
@@ -53,6 +111,30 @@ export async function POST(request: Request) {
         prompt,
       })))
     : [];
+  for (const item of parsedAttachments) {
+    if (item.tokenUsage) {
+      usage.usage = await recordAiTokenUsage(item.tokenUsage);
+    }
+  }
+  if (shouldAskAttachmentNextAction(prompt, parsedAttachments.length)) {
+    const response = buildAttachmentNextActionResponse({ prompt, attachments: parsedAttachments });
+    await writeAttachmentParseAudit({ userId: gate.userId, prompt, parsedAttachments });
+    await writeAuditLog({
+      actorUserId: gate.userId,
+      source: "ai",
+      action: "ask_attachment_next_action",
+      entityType: "ai_attachment",
+      status: "succeeded",
+      prompt,
+      parsedIntent: {
+        mode: "needs_user_next_action",
+        attachmentCount: parsedAttachments.length,
+        attachments: attachmentAuditDetails(parsedAttachments),
+      },
+      metadata: { surface: "mobile", rawContentLogged: false, usageUnits: usage.charged },
+    });
+    return mobileOk({ ...response, aiUsage: usage.usage });
+  }
   const enrichedPrompt = `${prompt}${attachmentPromptBlock(parsedAttachments)}`;
   const [reports, restock] = await Promise.all([
     getReports(30),
@@ -64,6 +146,7 @@ export async function POST(request: Request) {
     collected: reports.summary.collected,
     restock,
     chartRows: reports.byDay,
+    parsedAttachments,
   });
   if (parsedAttachments.length > 0 && response.actionPreview) {
     response.actionPreview = sanitizeAttachmentPreview(
@@ -72,34 +155,7 @@ export async function POST(request: Request) {
       parsedAttachments.length,
     );
   }
-  if (parsedAttachments.length > 0) {
-    await writeAuditLog({
-      actorUserId: gate.userId,
-      source: "ai",
-      action: "parse_ai_attachment",
-      entityType: "ai_attachment",
-      status: parsedAttachments.every((item) => item.status === "succeeded") ? "succeeded" : "failed",
-      prompt,
-      parsedIntent: {
-        attachments: parsedAttachments.map((item) => ({
-          id: item.id,
-          name: item.name,
-          mimeType: item.mimeType,
-          status: item.status,
-          provider: item.provider,
-          confidence: item.confidence,
-          candidateCount: item.candidates.length,
-          warningCount: item.warnings.length,
-        })),
-      },
-      affectedRecords: parsedAttachments.map((item) => ({
-        type: "ai_attachment",
-        id: item.id ?? item.path ?? "attachment",
-        code: item.name ?? "attachment",
-      })),
-      metadata: { surface: "mobile", count: parsedAttachments.length, rawContentLogged: false },
-    });
-  }
+  await writeAttachmentParseAudit({ userId: gate.userId, prompt, parsedAttachments });
   await writeAuditLog({
     actorUserId: gate.userId,
     source: "ai",
@@ -114,8 +170,8 @@ export async function POST(request: Request) {
       collected: reports.summary.collected,
       restockCount: restock.length,
     },
-    metadata: { surface: "mobile" },
+    metadata: { surface: "mobile", usageUnits: usage.charged },
   });
 
-  return mobileOk(response);
+  return mobileOk({ ...response, aiUsage: usage.usage });
 }

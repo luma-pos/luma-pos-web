@@ -74,6 +74,17 @@ const AI_BUCKET_OPTIONS = AI_ATTACHMENT_BUCKETS.map((value) => ({
 }));
 type AiVisionModel = (typeof AI_VISION_MODELS)[number];
 type AiAttachmentBucket = (typeof AI_ATTACHMENT_BUCKETS)[number];
+type AiUsageStatus = {
+  period: string;
+  used: number;
+  limit: number;
+  remaining: number;
+  exhausted: boolean;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+};
 function coerceAiVisionModel(value: string): AiVisionModel {
   return AI_VISION_MODELS.includes(value as AiVisionModel) ? value as AiVisionModel : "gpt-4.1-mini";
 }
@@ -135,7 +146,19 @@ const ROW = "flex items-center justify-between gap-3 px-3.5 py-2.5 bg-canvas rou
 const btnS = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-semibold hover:bg-surface-2 transition";
 const btnF = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-semibold hover:brightness-110 transition";
 
-export function SettingsClient({ store, staff, canManage, canEditAi }: { store: StoreSettings; staff: StaffRow[]; canManage: boolean; canEditAi: boolean }) {
+export function SettingsClient({
+  store,
+  staff,
+  canManage,
+  canEditAi,
+  aiUsage,
+}: {
+  store: StoreSettings;
+  staff: StaffRow[];
+  canManage: boolean;
+  canEditAi: boolean;
+  aiUsage: AiUsageStatus;
+}) {
   const locale = useLocale();
   const L = locale === "vi";
   const [active, setActive] = useState<SectionId>("store");
@@ -199,7 +222,7 @@ export function SettingsClient({ store, staff, canManage, canEditAi }: { store: 
         {active === "print" && <PrintSection L={L} />}
         {active === "tax" && <TaxSection L={L} prefs={store.prefs.tax} canManage={canManage} />}
         {active === "notifications" && <NotificationsSection L={L} prefs={store.prefs.notifications} canManage={canManage} />}
-        {active === "ai" && <AiSection L={L} prefs={store.prefs.ai} canEdit={canEditAi} />}
+        {active === "ai" && <AiSection L={L} prefs={store.prefs.ai} canEdit={canEditAi} usage={aiUsage} />}
         {active === "migration" && <MigrationSection L={L} />}
       </div>
     </div>
@@ -523,16 +546,18 @@ function NotificationsSection({ L, prefs, canManage }: { L: boolean; prefs: Stor
   );
 }
 
-function AiSection({ L, prefs, canEdit }: { L: boolean; prefs: StorePrefs["ai"]; canEdit: boolean }) {
+function AiSection({ L, prefs, canEdit, usage }: { L: boolean; prefs: StorePrefs["ai"]; canEdit: boolean; usage: AiUsageStatus }) {
   const [openaiApiKeySet, setOpenaiApiKeySet] = useState(prefs.openaiApiKeySet);
   const [form, setForm] = useState<{
     openaiApiKey: string;
     openaiVisionModel: AiVisionModel;
     attachmentsBucket: AiAttachmentBucket;
+    monthlyUsageLimit: number;
   }>({
     openaiApiKey: "",
     openaiVisionModel: coerceAiVisionModel(prefs.openaiVisionModel),
     attachmentsBucket: coerceAiAttachmentBucket(prefs.attachmentsBucket),
+    monthlyUsageLimit: prefs.monthlyUsageLimit,
   });
   const [clearOpenaiApiKey, setClearOpenaiApiKey] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -540,7 +565,7 @@ function AiSection({ L, prefs, canEdit }: { L: boolean; prefs: StorePrefs["ai"];
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const mark = () => { setDirty(true); setSaved(false); setError(""); };
-  const set = (key: keyof typeof form, value: string) => { setForm((p) => ({ ...p, [key]: value })); mark(); };
+  const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => { setForm((p) => ({ ...p, [key]: value })); mark(); };
   const toggleClearKey = (value: boolean) => { setClearOpenaiApiKey(value); mark(); };
   function save() {
     start(async () => {
@@ -610,11 +635,49 @@ function AiSection({ L, prefs, canEdit }: { L: boolean; prefs: StorePrefs["ai"];
                 disabled={!canEdit}
               />
             </div>
+            <div className="flex flex-col gap-1">
+              <span className={FL}>{L ? "Giới hạn AI/tháng" : "Monthly AI limit"}</span>
+              <input
+                className={cn(FI, "font-mono")}
+                type="number"
+                min={0}
+                max={100000}
+                step={1}
+                value={form.monthlyUsageLimit}
+                disabled={!canEdit}
+                onChange={(e) => set("monthlyUsageLimit", Math.max(0, Math.min(100000, Math.trunc(Number(e.target.value) || 0))))}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              [L ? "Đã dùng" : "Used", usage.used],
+              [L ? "Còn lại" : "Remaining", usage.remaining],
+              [L ? "Giới hạn" : "Limit", usage.limit],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="rounded-[10px] border border-border bg-canvas px-3 py-2">
+                <div className={FL}>{label}</div>
+                <div className={cn("mt-1 font-mono text-base font-extrabold", label === (L ? "Còn lại" : "Remaining") && usage.exhausted ? "text-er" : "text-slate-800 dark:text-slate-100")}>{Number(value).toLocaleString("vi-VN")}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+            {[
+              [L ? "Input tokens" : "Input tokens", usage.inputTokens.toLocaleString("vi-VN")],
+              [L ? "Output tokens" : "Output tokens", usage.outputTokens.toLocaleString("vi-VN")],
+              [L ? "Tổng tokens" : "Total tokens", usage.totalTokens.toLocaleString("vi-VN")],
+              [L ? "Chi phí ước tính" : "Estimated cost", `$${usage.estimatedCostUsd.toFixed(4)}`],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="rounded-[10px] border border-border bg-canvas px-3 py-2">
+                <div className={FL}>{label}</div>
+                <div className="mt-1 font-mono text-sm font-extrabold text-slate-800 dark:text-slate-100">{value}</div>
+              </div>
+            ))}
           </div>
           <div className="px-3.5 py-2.5 bg-in-soft border border-in/20 rounded-[10px] text-[11px] text-in leading-relaxed">
             {L
-              ? "API key không hiển thị lại sau khi lưu và không được ghi raw vào audit log. Thay đổi ở đây áp dụng cho OCR/vision khi upload hoặc paste ảnh trong AI Assistant/POS."
-              : "The API key is never shown again after saving and is not written raw into audit logs. These settings apply to OCR/vision for AI Assistant/POS image uploads."}
+              ? `API key không hiển thị lại sau khi lưu và không được ghi raw vào audit log. Usage được tính theo tháng ${usage.period}; mỗi lần hỏi AI tốn 1 lượt, mỗi attachment tốn thêm 1 lượt. Token/cost là ước tính từ response OpenAI.`
+              : `The API key is never shown again after saving and is not written raw into audit logs. Usage is tracked for ${usage.period}; each AI request costs 1 unit, each attachment adds 1 unit. Token/cost totals are estimates from OpenAI responses.`}
           </div>
         </div>
       </Card>

@@ -70,12 +70,14 @@ export async function updateAiSettings(input: AiSettingsInput): Promise<ActionRe
     const nextKey = v.clearOpenaiApiKey
       ? ""
       : (v.openaiApiKey?.trim() || current.ai.openaiApiKey);
+    const requested = input && typeof input === "object" ? input as Record<string, unknown> : {};
     const nextAi = {
       ...current.ai,
       openaiApiKey: nextKey,
       openaiApiKeySet: Boolean(nextKey),
       openaiVisionModel: v.openaiVisionModel,
       attachmentsBucket: v.attachmentsBucket,
+      monthlyUsageLimit: typeof requested.monthlyUsageLimit === "number" ? v.monthlyUsageLimit : current.ai.monthlyUsageLimit,
     };
     const next = { ...current, ai: nextAi };
     await db.insert(storeSettings)
@@ -92,11 +94,13 @@ export async function updateAiSettings(input: AiSettingsInput): Promise<ActionRe
         openaiApiKeySet: Boolean(current.ai.openaiApiKey),
         openaiVisionModel: current.ai.openaiVisionModel,
         attachmentsBucket: current.ai.attachmentsBucket,
+        monthlyUsageLimit: current.ai.monthlyUsageLimit,
       },
       after: {
         openaiApiKeySet: Boolean(nextAi.openaiApiKey),
         openaiVisionModel: nextAi.openaiVisionModel,
         attachmentsBucket: nextAi.attachmentsBucket,
+        monthlyUsageLimit: nextAi.monthlyUsageLimit,
       },
       metadata: { keyChanged: v.clearOpenaiApiKey || Boolean(v.openaiApiKey?.trim()) },
     });

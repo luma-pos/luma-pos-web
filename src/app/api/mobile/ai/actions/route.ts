@@ -36,13 +36,20 @@ function inboundPayload(preview: Record<string, unknown>) {
   const action = objectValue(preview.action);
   const payload = objectValue(action?.payload);
   const items = Array.isArray(payload?.items) ? payload.items : [];
-  const firstItem = objectValue(items[0]);
-  const productId = typeof firstItem?.productId === "string" ? firstItem.productId : null;
-  const quantity = numberValue(firstItem?.quantity);
+  const safeItems = items
+    .map((item) => objectValue(item))
+    .filter((item): item is Record<string, unknown> => Boolean(item))
+    .map((item) => ({
+      productId: stringValue(item.productId),
+      quantity: numberValue(item.quantity),
+      unitCost: numberValue(item.unitCost),
+      discount: numberValue(item.discount),
+    }))
+    .filter((item) => item.productId && item.quantity > 0);
   const supplierId = typeof payload?.supplierId === "string" ? payload.supplierId : null;
   const warehouseId = typeof payload?.warehouseId === "string" ? payload.warehouseId : null;
 
-  if (!productId || quantity <= 0 || !supplierId || !warehouseId) {
+  if (safeItems.length === 0 || !supplierId || !warehouseId) {
     return null;
   }
 
@@ -54,14 +61,12 @@ function inboundPayload(preview: Record<string, unknown>) {
     amountPaid: numberValue(payload?.amountPaid),
     invoiceNumber: typeof payload?.invoiceNumber === "string" ? payload.invoiceNumber : undefined,
     note: typeof payload?.note === "string" ? payload.note : "AI inventory inbound",
-    items: [
-      {
-        productId,
-        quantity,
-        unitCost: numberValue(firstItem?.unitCost),
-        discount: numberValue(firstItem?.discount),
-      },
-    ],
+    items: safeItems.map((item) => ({
+      productId: item.productId as string,
+      quantity: item.quantity,
+      unitCost: item.unitCost,
+      discount: item.discount,
+    })),
   };
 }
 

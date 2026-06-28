@@ -71,6 +71,7 @@ const aiPrefs = z.object({
   openaiApiKeySet: z.boolean().default(false),
   openaiVisionModel: z.string().max(80).default("gpt-4.1-mini"),
   attachmentsBucket: z.string().max(80).default("ai-attachments"),
+  monthlyUsageLimit: z.number().int().min(0).max(100000).default(1000),
 });
 
 export const storePrefsSchema = z.object({
@@ -79,7 +80,7 @@ export const storePrefsSchema = z.object({
   notifications: notificationPrefs.default({ lowStock: true, stagnant: true, shiftClose: true, einvoiceError: true, syncDone: false, channels: { zalo: true, email: true, inApp: true, sms: false } }),
   hardware: hardwarePrefs.default({ paperSize: "K80", autoPrint: false, openDrawer: true, printEinvoiceQr: true }),
   app: appPrefs.default({ biometricAuth: true, offlineMode: true }),
-  ai: aiPrefs.default({ openaiApiKey: "", openaiApiKeySet: false, openaiVisionModel: "gpt-4.1-mini", attachmentsBucket: "ai-attachments" }),
+  ai: aiPrefs.default({ openaiApiKey: "", openaiApiKeySet: false, openaiVisionModel: "gpt-4.1-mini", attachmentsBucket: "ai-attachments", monthlyUsageLimit: 1000 }),
 });
 export type StorePrefs = z.infer<typeof storePrefsSchema>;
 
@@ -97,5 +98,6 @@ export const aiSettingsInputSchema = z.object({
   clearOpenaiApiKey: z.boolean().default(false),
   openaiVisionModel: z.enum(AI_VISION_MODELS).default("gpt-4.1-mini"),
   attachmentsBucket: z.enum(AI_ATTACHMENT_BUCKETS).default("ai-attachments"),
+  monthlyUsageLimit: z.number().int().min(0).max(100000).default(1000),
 });
 export type AiSettingsInput = z.input<typeof aiSettingsInputSchema>;

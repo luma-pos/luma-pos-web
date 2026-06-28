@@ -122,7 +122,19 @@ export async function parseAiAttachment(input: {
 export function attachmentPromptBlock(parsed: ParsedAiAttachment[]) {
   const blocks = parsed.map((item, index) => {
     const candidates = item.candidates.length
-      ? `\nCandidates:\n${item.candidates.map((candidate) => `- ${candidate.quantity ?? ""} ${candidate.text}`.trim()).join("\n")}`
+      ? `\nCandidates:\n${item.candidates.map((candidate) => {
+          const details = [
+            candidate.sku ? `sku=${candidate.sku}` : "",
+            candidate.unitName ? `unit=${candidate.unitName}` : "",
+            candidate.unitCost != null ? `unitCost=${candidate.unitCost}` : "",
+            candidate.grossUnitCost != null ? `grossUnitCost=${candidate.grossUnitCost}` : "",
+            candidate.discount != null ? `discount=${candidate.discount}` : "",
+            candidate.discountRate != null ? `discountRate=${candidate.discountRate}` : "",
+            candidate.lineTotal != null ? `lineTotal=${candidate.lineTotal}` : "",
+            `confidence=${Math.round(candidate.confidence * 100)}%`,
+          ].filter(Boolean).join(" | ");
+          return `- ${candidate.quantity ?? ""} ${candidate.text}${details ? ` | ${details}` : ""}`.trim();
+        }).join("\n")}`
       : "";
     const warnings = item.warnings.length ? `\nWarnings: ${item.warnings.join("; ")}` : "";
     return [

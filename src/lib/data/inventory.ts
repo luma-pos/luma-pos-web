@@ -123,24 +123,66 @@ export async function getPurchases(filters: { q?: string; status?: string; page?
       .select({
         id: purchaseOrders.id,
         code: purchaseOrders.code,
+        supplierId: purchaseOrders.supplierId,
+        warehouseId: purchaseOrders.warehouseId,
         status: purchaseOrders.status,
+        subtotal: purchaseOrders.subtotal,
+        discount: purchaseOrders.discount,
+        vatRate: purchaseOrders.vatRate,
+        tax: purchaseOrders.tax,
         total: purchaseOrders.total,
         amountPaid: purchaseOrders.amountPaid,
+        invoiceNumber: purchaseOrders.invoiceNumber,
         note: purchaseOrders.note,
         createdAt: purchaseOrders.createdAt,
         supplierName: suppliers.name,
+        supplierPhone: suppliers.phone,
         warehouseName: warehouses.name,
+        createdByName: profiles.fullName,
       })
       .from(purchaseOrders)
       .innerJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
       .innerJoin(warehouses, eq(purchaseOrders.warehouseId, warehouses.id))
+      .leftJoin(profiles, eq(purchaseOrders.createdBy, profiles.id))
       .where(where)
       .orderBy(desc(purchaseOrders.createdAt))
       .limit(size)
       .offset((page - 1) * size),
     db.select({ total: count() }).from(purchaseOrders).innerJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id)).where(where),
   ]);
-  return { rows, total, page, pageSize: size, pageCount: Math.max(1, Math.ceil(total / size)) };
+  const ids = rows.map((row) => row.id);
+  const itemRows = ids.length
+    ? await db
+        .select({
+          id: purchaseOrderItems.id,
+          purchaseOrderId: purchaseOrderItems.purchaseOrderId,
+          productId: purchaseOrderItems.productId,
+          quantity: purchaseOrderItems.quantity,
+          unitCost: purchaseOrderItems.unitCost,
+          discount: purchaseOrderItems.discount,
+          total: purchaseOrderItems.total,
+          productName: products.name,
+          sku: products.sku,
+          baseUnit: products.baseUnit,
+        })
+        .from(purchaseOrderItems)
+        .innerJoin(products, eq(purchaseOrderItems.productId, products.id))
+        .where(inArray(purchaseOrderItems.purchaseOrderId, ids))
+        .orderBy(asc(products.name))
+    : [];
+  const itemsByPurchase = new Map<string, typeof itemRows>();
+  for (const item of itemRows) {
+    const current = itemsByPurchase.get(item.purchaseOrderId) ?? [];
+    current.push(item);
+    itemsByPurchase.set(item.purchaseOrderId, current);
+  }
+  return {
+    rows: rows.map((row) => ({ ...row, items: itemsByPurchase.get(row.id) ?? [] })),
+    total,
+    page,
+    pageSize: size,
+    pageCount: Math.max(1, Math.ceil(total / size)),
+  };
 }
 
 /** Chi tiết phiếu nhập (cho trang in). */

@@ -1,8 +1,16 @@
 import { getAiProviderSettings } from "@/lib/data/settings";
+import type { AiTokenUsage } from "@/lib/ai/usage";
 
 export type AiAttachmentCandidate = {
   text: string;
+  sku?: string | null;
+  unitName?: string | null;
   quantity?: number | null;
+  unitCost?: number | null;
+  grossUnitCost?: number | null;
+  discount?: number | null;
+  discountRate?: number | null;
+  lineTotal?: number | null;
   confidence: number;
 };
 
@@ -14,6 +22,7 @@ export type AiAttachmentParseResult = {
   confidence: number;
   unresolvedItems: string[];
   warnings: string[];
+  tokenUsage?: AiTokenUsage;
   raw?: unknown;
 };
 
@@ -79,9 +88,34 @@ function outputText(response: unknown) {
     .join("\n");
 }
 
-function normalizeProviderResult(raw: unknown): AiAttachmentParseResult {
+function optionalNumber(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function tokenUsageFromResponse(raw: unknown, model: string): AiTokenUsage | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const usage = (raw as { usage?: unknown }).usage;
+  if (!usage || typeof usage !== "object") return undefined;
+  const root = usage as Record<string, unknown>;
+  const inputTokens = Number(root.input_tokens ?? root.prompt_tokens ?? 0);
+  const outputTokens = Number(root.output_tokens ?? root.completion_tokens ?? 0);
+  const totalTokens = Number(root.total_tokens ?? inputTokens + outputTokens);
+  if (!Number.isFinite(inputTokens) && !Number.isFinite(outputTokens) && !Number.isFinite(totalTokens)) {
+    return undefined;
+  }
+  return {
+    model,
+    inputTokens: Number.isFinite(inputTokens) ? inputTokens : 0,
+    outputTokens: Number.isFinite(outputTokens) ? outputTokens : 0,
+    totalTokens: Number.isFinite(totalTokens) ? totalTokens : 0,
+  };
+}
+
+function normalizeProviderResult(raw: unknown, model: string): AiAttachmentParseResult {
   const text = outputText(raw);
   const parsed = parseJsonText(text);
+  const tokenUsage = tokenUsageFromResponse(raw, model);
   if (!parsed) {
     return {
       provider: "openai",
@@ -91,6 +125,7 @@ function normalizeProviderResult(raw: unknown): AiAttachmentParseResult {
       confidence: text ? 0.5 : 0,
       unresolvedItems: [],
       warnings: text ? [] : ["Provider returned an empty response."],
+      tokenUsage,
       raw,
     };
   }
@@ -101,9 +136,16 @@ function normalizeProviderResult(raw: unknown): AiAttachmentParseResult {
     candidates: Array.isArray(parsed.candidates)
       ? parsed.candidates.map((candidate) => ({
           text: String((candidate as { text?: unknown }).text ?? ""),
+          sku: typeof (candidate as { sku?: unknown }).sku === "string" ? String((candidate as { sku?: unknown }).sku).trim() : null,
+          unitName: typeof (candidate as { unitName?: unknown }).unitName === "string" ? String((candidate as { unitName?: unknown }).unitName).trim() : null,
           quantity: Number.isFinite(Number((candidate as { quantity?: unknown }).quantity))
             ? Number((candidate as { quantity?: unknown }).quantity)
             : null,
+          unitCost: optionalNumber((candidate as { unitCost?: unknown }).unitCost),
+          grossUnitCost: optionalNumber((candidate as { grossUnitCost?: unknown }).grossUnitCost),
+          discount: optionalNumber((candidate as { discount?: unknown }).discount),
+          discountRate: optionalNumber((candidate as { discountRate?: unknown }).discountRate),
+          lineTotal: optionalNumber((candidate as { lineTotal?: unknown }).lineTotal),
           confidence: Number.isFinite(Number((candidate as { confidence?: unknown }).confidence))
             ? Number((candidate as { confidence?: unknown }).confidence)
             : 0.5,
@@ -112,6 +154,7 @@ function normalizeProviderResult(raw: unknown): AiAttachmentParseResult {
     confidence: Number.isFinite(Number(parsed.confidence)) ? Number(parsed.confidence) : 0.5,
     unresolvedItems: Array.isArray(parsed.unresolvedItems) ? parsed.unresolvedItems.map(String) : [],
     warnings: Array.isArray(parsed.warnings) ? parsed.warnings.map(String) : [],
+    tokenUsage,
     raw,
   };
 }
@@ -149,16 +192,19 @@ export async function parseAiAttachmentWithProvider(
           {
             type: "input_text",
             text:
-              "Extract POS order text from this image. Return compact JSON only with keys: " +
-              "extractedText:string, candidates:[{text:string,quantity:number|null,confidence:number}], " +
+              "Extract text from this Vietnamese business document image. Return compact JSON only with keys: " +
+              "extractedText:string, candidates:[{text:string,sku:string|null,unitName:string|null,quantity:number|null,unitCost:number|null,grossUnitCost:number|null,discount:number|null,discountRate:number|null,lineTotal:number|null,confidence:number}], " +
               "confidence:number, unresolvedItems:string[], warnings:string[]. " +
-              "Do not invent products. Keep Vietnamese product names as seen. " +
+              "Do not choose an inventory, sales, pricing, or accounting action. " +
+              "For candidates, return one item per invoice/table product row. Use the product code under 'Mã Hàng' as sku. " +
+              "Use net unit price after discount as unitCost when a 'Giá bán' column exists; keep grossUnitCost for 'Đơn giá'. " +
+              "Do not invent products. Keep Vietnamese product names, document labels, quantities, units, prices, discounts, totals, supplier/header text, and codes as seen. " +
               (input.prompt ? `User prompt: ${input.prompt}` : ""),
           },
           {
             type: "input_image",
             image_url: imageUrl,
-            detail: "low",
+            detail: "high",
           },
         ],
       },
@@ -187,7 +233,7 @@ export async function parseAiAttachmentWithProvider(
         raw: json,
       };
     }
-    return normalizeProviderResult(json);
+    return normalizeProviderResult(json, config.model);
   } catch (error) {
     return {
       provider: "openai",

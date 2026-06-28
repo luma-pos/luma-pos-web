@@ -672,6 +672,19 @@ export const storeSettings = pgTable("store_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// ============= AI Usage (monthly quota) =============
+
+export const aiUsageCounters = pgTable("ai_usage_counters", {
+  period: varchar("period", { length: 7 }).primaryKey(), // YYYY-MM
+  usedUnits: integer("used_units").notNull().default(0),
+  limitUnits: integer("limit_units").notNull().default(1000),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  totalTokens: integer("total_tokens").notNull().default(0),
+  estimatedCostMicrousd: integer("estimated_cost_microusd").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // ============= Internal-Use Issue (Xuất dùng nội bộ — Part 8.1) =============
 // Phiếu xuất hàng dùng nội bộ (không bán): trừ kho theo giá vốn → COGS, không doanh thu.
 

@@ -42,6 +42,19 @@ type AssistantResponse = {
   text: string;
   state?: AiAssistantState;
   actionPreview?: AiActionPreview;
+  aiUsage?: AiUsageStatus;
+};
+
+type AiUsageStatus = {
+  period: string;
+  used: number;
+  limit: number;
+  remaining: number;
+  exhausted: boolean;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
 };
 
 type FabPosition = {
@@ -113,13 +126,20 @@ function saveFabPosition(key: string, position: FabPosition) {
   window.localStorage.setItem(key, JSON.stringify(position));
 }
 
+function sanitizeAttachmentForStorage(attachment: ComposerAttachment): ComposerAttachment {
+  const sanitized = { ...attachment };
+  delete sanitized.previewUrl;
+  delete sanitized.localId;
+  return {
+    ...sanitized,
+    status: attachment.status === "uploading" ? "uploaded" : attachment.status,
+  };
+}
+
 function sanitizeMessagesForStorage(messages: Msg[]): Msg[] {
   return messages.slice(-CHAT_HISTORY_LIMIT).map((message) => ({
     ...message,
-    attachments: message.attachments?.map(({ previewUrl: _previewUrl, localId: _localId, ...attachment }) => ({
-      ...attachment,
-      status: attachment.status === "uploading" ? "uploaded" : attachment.status,
-    })),
+    attachments: message.attachments?.map(sanitizeAttachmentForStorage),
   }));
 }
 
@@ -162,6 +182,15 @@ async function postJson(path: string, body: unknown) {
   return json?.data ?? json;
 }
 
+async function getJson(path: string) {
+  const res = await fetch(path);
+  const json = await res.json().catch(() => null);
+  if (!res.ok || json?.ok === false) {
+    throw new Error(json?.error ?? `http.${res.status}`);
+  }
+  return json?.data ?? json;
+}
+
 async function uploadAiAttachment(file: File): Promise<ComposerAttachment> {
   const form = new FormData();
   form.append("file", file);
@@ -184,12 +213,21 @@ function useAssistantState(surface: AssistantSurface) {
   const [msgs, setMsgs] = useState<Msg[]>(() => readChatHistory(chatHistoryKey));
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [usage, setUsage] = useState<AiUsageStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     window.localStorage.setItem(chatHistoryKey, JSON.stringify(sanitizeMessagesForStorage(msgs)));
   }, [chatHistoryKey, msgs]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getJson("/api/mobile/ai/usage")
+      .then((data) => { if (!cancelled) setUsage(data as AiUsageStatus); })
+      .catch(() => { if (!cancelled) setUsage(null); });
+    return () => { cancelled = true; };
+  }, []);
 
   const suggestions = surface === "pos"
     ? [
@@ -299,6 +337,7 @@ function useAssistantState(surface: AssistantSurface) {
           signedUrl,
         })),
       }) as AssistantResponse;
+      if (data.aiUsage) setUsage(data.aiUsage);
       setMsgs((m) => [
         ...m,
         {
@@ -370,6 +409,7 @@ function useAssistantState(surface: AssistantSurface) {
     handlePaste,
     msgs,
     busy,
+    usage,
     suggestions,
     send,
     resolvePreview,
@@ -382,7 +422,7 @@ export function AssistantWorkspace() {
   const assistant = useAssistantState("web");
 
   return (
-    <div className="w-full flex min-h-[calc(100dvh-9.5rem)] flex-col">
+    <div className="w-full flex h-[calc(100dvh-9.5rem)] min-h-0 flex-col overflow-hidden">
       <div className="flex items-start gap-2 mb-4 px-3.5 py-2.5 bg-in-soft border border-in/20 rounded-card text-[12px] text-in">
         <Info className="w-4 h-4 shrink-0 mt-px" />
         <span>{t("ai.actionNotice")}</span>
@@ -608,6 +648,7 @@ function AssistantChatSurface({
     handlePaste,
     msgs,
     busy,
+    usage,
     suggestions,
     send,
     resolvePreview,
@@ -616,18 +657,26 @@ function AssistantChatSurface({
   const compact = mode === "launcher";
   const hasUploadingAttachment = attachments.some((item) => item.status === "uploading");
   const hasFailedAttachment = attachments.some((item) => item.status === "failed");
-  const sendDisabled = busy || hasUploadingAttachment || hasFailedAttachment;
+  const sendDisabled = busy || hasUploadingAttachment || hasFailedAttachment || Boolean(usage?.exhausted);
 
   return (
     <div className={cn(
-      "bg-surface border border-border rounded-card shadow-e1 flex flex-col min-h-0",
-      compact ? "border-0 rounded-none shadow-none flex-1" : "flex-1 min-h-[520px]"
+      "bg-surface border border-border rounded-card shadow-e1 flex flex-col min-h-0 overflow-hidden",
+      compact ? "border-0 rounded-none shadow-none flex-1" : "flex-1 h-full"
     )}>
       {msgs.length > 0 && (
         <div className={cn(
-          "shrink-0 flex justify-end border-b border-border-soft bg-surface",
+          "shrink-0 flex items-center justify-between gap-3 border-b border-border-soft bg-surface",
           compact ? "px-3 py-2" : "px-4 py-2"
         )}>
+          {usage ? (
+            <div className={cn(
+              "text-[11px] font-semibold",
+              usage.exhausted ? "text-er" : usage.remaining <= Math.max(5, usage.limit * 0.1) ? "text-warn" : "text-slate-400"
+            )}>
+              AI còn {usage.remaining}/{usage.limit} · {usage.totalTokens.toLocaleString("vi-VN")} tokens
+            </div>
+          ) : <span />}
           <button
             type="button"
             onClick={clearMessages}
@@ -638,8 +687,17 @@ function AssistantChatSurface({
           </button>
         </div>
       )}
+      {msgs.length === 0 && usage && (
+        <div className={cn(
+          "shrink-0 border-b border-border-soft bg-surface text-[11px] font-semibold",
+          compact ? "px-3 py-2" : "px-4 py-2",
+          usage.exhausted ? "text-er" : "text-slate-400"
+        )}>
+          AI còn {usage.remaining}/{usage.limit} lượt trong tháng {usage.period} · {usage.totalTokens.toLocaleString("vi-VN")} tokens · ~${usage.estimatedCostUsd.toFixed(4)}
+        </div>
+      )}
       <div className={cn(
-        "flex-1 overflow-y-auto flex flex-col gap-3 bg-canvas/50",
+        "min-h-0 flex-1 overflow-y-auto flex flex-col gap-3 bg-canvas/50",
         compact ? "p-3" : "p-4"
       )}>
         {msgs.length === 0 ? (
@@ -684,82 +742,89 @@ function AssistantChatSurface({
         {busy && <div className="self-start text-xs text-slate-400 px-3 py-2">Đang xử lý...</div>}
       </div>
 
-      {hasUploadingAttachment && (
-        <div className={cn("shrink-0 px-3 pt-2 text-[11px] font-semibold text-slate-400", !compact && "px-4")}>
-          Đang upload file, chờ xong rồi gửi.
-        </div>
-      )}
+      <div className="shrink-0 bg-surface">
+        {hasUploadingAttachment && (
+          <div className={cn("px-3 pt-2 text-[11px] font-semibold text-slate-400", !compact && "px-4")}>
+            Đang upload file, chờ xong rồi gửi.
+          </div>
+        )}
+        {usage?.exhausted && (
+          <div className={cn("px-3 pt-2 text-[11px] font-semibold text-er", !compact && "px-4")}>
+            Đã hết lượt AI tháng này. Owner có thể tăng giới hạn trong Settings &gt; AI.
+          </div>
+        )}
 
-      <div className={cn("px-3 pt-2 flex gap-1.5 overflow-x-auto", compact ? "shrink-0" : "flex-wrap")}>
-        {suggestions.map((s) => (
-          <button
-            key={s}
-            type="button"
-            disabled={sendDisabled}
-            onClick={() => send(s)}
-            className="shrink-0 px-2.5 py-1 rounded-full border border-border text-xs text-slate-600 dark:text-slate-300 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {s}
-          </button>
-        ))}
+        <div className={cn("px-3 pt-2 flex gap-1.5 overflow-x-auto", compact ? "shrink-0" : "flex-wrap")}>
+          {suggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              disabled={sendDisabled}
+              onClick={() => send(s)}
+              className="shrink-0 px-2.5 py-1 rounded-full border border-border text-xs text-slate-600 dark:text-slate-300 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="p-3 border-t border-border mt-2">
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {attachments.map((attachment) => (
+                <AttachmentPill
+                  key={attachment.id}
+                  attachment={attachment}
+                  onRemove={() => removeAttachment(attachment.id)}
+                />
+              ))}
+            </div>
+          )}
+          {attachmentError && (
+            <div className="mb-2 rounded-lg bg-er-soft px-3 py-2 text-xs font-semibold text-er">
+              {attachmentError}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,application/pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                addFiles(e.target.files ?? []);
+                e.currentTarget.value = "";
+              }}
+            />
+            <button
+              disabled={busy}
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="w-9 h-9 grid place-items-center rounded-full border border-border bg-surface text-slate-600 hover:bg-surface-2 shrink-0 disabled:opacity-50"
+              title="Đính kèm file hoặc ảnh"
+              aria-label="Attach file"
+            >
+              <Paperclip className="w-4 h-4" />
+            </button>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onPaste={handlePaste}
+              placeholder={attachments.length ? "Nhập yêu cầu cho file đính kèm..." : placeholder}
+              className="flex-1 min-w-0 px-3 py-2 text-sm rounded-full border border-border bg-canvas focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <button
+              disabled={sendDisabled}
+              type="submit"
+              className="w-9 h-9 grid place-items-center rounded-full bg-primary-600 text-white shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
+              title={hasUploadingAttachment ? "Đang upload file" : "Send"}
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        </form>
       </div>
-
-      <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="p-3 border-t border-border mt-2 shrink-0">
-        {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {attachments.map((attachment) => (
-              <AttachmentPill
-                key={attachment.id}
-                attachment={attachment}
-                onRemove={() => removeAttachment(attachment.id)}
-              />
-            ))}
-          </div>
-        )}
-        {attachmentError && (
-          <div className="mb-2 rounded-lg bg-er-soft px-3 py-2 text-xs font-semibold text-er">
-            {attachmentError}
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,application/pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              addFiles(e.target.files ?? []);
-              e.currentTarget.value = "";
-            }}
-          />
-          <button
-            disabled={busy}
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="w-9 h-9 grid place-items-center rounded-full border border-border bg-surface text-slate-600 hover:bg-surface-2 shrink-0 disabled:opacity-50"
-            title="Đính kèm file hoặc ảnh"
-            aria-label="Attach file"
-          >
-            <Paperclip className="w-4 h-4" />
-          </button>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onPaste={handlePaste}
-            placeholder={attachments.length ? "Nhập yêu cầu cho file đính kèm..." : placeholder}
-            className="flex-1 min-w-0 px-3 py-2 text-sm rounded-full border border-border bg-canvas focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-          <button
-            disabled={sendDisabled}
-            type="submit"
-            className="w-9 h-9 grid place-items-center rounded-full bg-primary-600 text-white shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
-            title={hasUploadingAttachment ? "Đang upload file" : "Send"}
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </div>
-      </form>
     </div>
   );
 }

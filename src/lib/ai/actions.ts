@@ -3,6 +3,7 @@ import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { brands, categories, customers, orders, priceBooks, productPrices, products, suppliers, warehouses } from "@/db/schema";
 import type { RestockRow } from "@/lib/data/ai-restock";
+import type { ParsedAiAttachment } from "@/lib/ai/attachments";
 
 export type AiAssistantState =
   | "idle"
@@ -90,12 +91,6 @@ type PriceBookOption = {
   id: string;
   name: string;
   isDefault: boolean;
-};
-
-type ProductCommandOption = PriceProductOption & {
-  categoryId: string | null;
-  brandId: string | null;
-  minStock: unknown;
 };
 
 type CustomerOption = {
@@ -237,6 +232,267 @@ function matchNamed<T extends { name: string; sku?: string; code?: string | null
 
 function defaultCost(product: InboundProductOption | null) {
   return Number(product?.lastPurchasePrice ?? product?.costPrice ?? 0);
+}
+
+type InboundAttachmentRow = {
+  text: string;
+  sku?: string | null;
+  unitName?: string | null;
+  quantity?: number | null;
+  unitCost?: number | null;
+  grossUnitCost?: number | null;
+  discount?: number | null;
+  discountRate?: number | null;
+  lineTotal?: number | null;
+  confidence: number;
+};
+
+function positiveNumber(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function parseMoneyToken(raw: string) {
+  const compact = raw.replace(/[^\d]/g, "");
+  const value = Number(compact);
+  return Number.isFinite(value) ? value : null;
+}
+
+function parseInvoiceNumber(text: string) {
+  const match = text.match(/(?:số|so)\s*[:#-]?\s*([A-Z]{1,6}\d{3,}[\w-]*)/i);
+  return match?.[1] ?? "";
+}
+
+function attachmentText(parsedAttachments: ParsedAiAttachment[]) {
+  return parsedAttachments.map((item) => item.extractedText).filter(Boolean).join("\n");
+}
+
+function supplierHintsFromAttachment(text: string) {
+  const lines = text
+    .split(/\n+/)
+    .map((line) => cleanName(line))
+    .filter(Boolean);
+  const hints: string[] = [];
+  for (const line of lines.slice(0, 12)) {
+    const q = normalize(line);
+    if (
+      q.includes("hoa don") ||
+      q.includes("khach hang") ||
+      q.includes("dia chi") ||
+      q.includes("sdt") ||
+      q.includes("stk") ||
+      q.includes("ma so thue") ||
+      q.includes("chuyen:")
+    ) {
+      continue;
+    }
+    if (q.includes("npp") || q.includes("nha phan phoi") || q.includes("cong ty")) {
+      hints.push(line);
+      continue;
+    }
+    const letters = line.replace(/[^A-Za-zÀ-ỹĐđ]/g, "");
+    const uppercase = letters.replace(/[a-zà-ỹđ]/g, "");
+    if (letters.length >= 6 && uppercase.length / letters.length > 0.65) {
+      hints.push(line);
+    }
+  }
+  return [...new Set(hints)].slice(0, 3);
+}
+
+function rowsFromAttachmentCandidates(parsedAttachments: ParsedAiAttachment[]) {
+  return parsedAttachments.flatMap((attachment) =>
+    attachment.candidates.map((candidate) => ({
+      text: candidate.text,
+      sku: candidate.sku,
+      unitName: candidate.unitName,
+      quantity: positiveNumber(candidate.quantity),
+      unitCost: positiveNumber(candidate.unitCost),
+      grossUnitCost: positiveNumber(candidate.grossUnitCost),
+      discount: Number.isFinite(Number(candidate.discount)) ? Number(candidate.discount) : null,
+      discountRate: positiveNumber(candidate.discountRate),
+      lineTotal: positiveNumber(candidate.lineTotal),
+      confidence: candidate.confidence,
+    })).filter((row) => row.text || row.sku)
+  );
+}
+
+function rowFromTextLine(line: string): InboundAttachmentRow | null {
+  const skuMatch = line.match(/\b(SP\d{3,})\b/i);
+  if (!skuMatch?.[1]) return null;
+  const sku = skuMatch[1].toUpperCase();
+  const afterSku = cleanName(line.slice((skuMatch.index ?? 0) + skuMatch[0].length));
+  const moneyMatches = [...afterSku.matchAll(/\b\d{1,3}(?:[.,]\d{3})+\b/g)];
+  const moneyValues = moneyMatches.map((match) => parseMoneyToken(match[0])).filter((value): value is number => value != null);
+  const firstMoneyIndex = moneyMatches[0]?.index ?? afterSku.length;
+  const beforeMoney = cleanName(afterSku.slice(0, firstMoneyIndex));
+  const percent = afterSku.match(/(\d+(?:[.,]\d+)?)\s*%/);
+  const discountRate = percent ? Number(percent[1].replace(",", ".")) : null;
+  const lineTotal = moneyValues.at(-1) ?? null;
+  const unitCost = moneyValues.length >= 2 ? moneyValues.at(-2) ?? null : moneyValues.at(-1) ?? null;
+  const grossUnitCost = moneyValues.length >= 3 ? moneyValues[0] : null;
+  const qtyFromTotal = lineTotal && unitCost ? lineTotal / unitCost : null;
+  const trailingQty = beforeMoney.match(/\b(\d+(?:[.,]\d+)?)\s*$/)?.[1];
+  const quantity = positiveNumber(trailingQty?.replace(",", ".")) ?? (
+    qtyFromTotal && Math.abs(qtyFromTotal - Math.round(qtyFromTotal)) < 0.01 ? Math.round(qtyFromTotal) : null
+  );
+  const unitName = beforeMoney
+    .replace(/\b\d+(?:[.,]\d+)?\s*$/g, "")
+    .split(/\s+/)
+    .at(-1) ?? null;
+  const text = cleanName(
+    beforeMoney
+      .replace(/\b\d+(?:[.,]\d+)?\s*$/g, "")
+      .replace(unitName ? new RegExp(`${escapeRegExp(unitName)}$`, "i") : /$/g, "")
+  ) || afterSku;
+
+  return {
+    text,
+    sku,
+    unitName,
+    quantity,
+    unitCost,
+    grossUnitCost,
+    discountRate,
+    lineTotal,
+    confidence: 0.78,
+  };
+}
+
+function rowsFromAttachmentText(text: string) {
+  return text
+    .split(/\n+/)
+    .map((line) => rowFromTextLine(line))
+    .filter((row): row is InboundAttachmentRow => Boolean(row));
+}
+
+function inboundRowsFromAttachments(parsedAttachments: ParsedAiAttachment[]) {
+  const fromCandidates = rowsFromAttachmentCandidates(parsedAttachments);
+  if (fromCandidates.length > 0) return fromCandidates;
+  return rowsFromAttachmentText(attachmentText(parsedAttachments));
+}
+
+function matchProductForInboundRow(row: InboundAttachmentRow, productOptions: InboundProductOption[]) {
+  if (row.sku) {
+    const bySku = productOptions.find((product) => normalize(product.sku) === normalize(row.sku ?? ""));
+    if (bySku) return { product: bySku, confidence: Math.max(row.confidence, 0.95), ambiguous: [] as InboundProductOption[] };
+    return { product: null, confidence: row.confidence, ambiguous: [] as InboundProductOption[] };
+  }
+  const match = matchNamed(row.text, productOptions);
+  return { product: match.match, confidence: Math.min(row.confidence, match.confidence), ambiguous: match.ambiguous };
+}
+
+async function inboundPreviewFromAttachments(
+  prompt: string,
+  context: InboundContext,
+  parsedAttachments: ParsedAiAttachment[],
+): Promise<AiActionPreview | null> {
+  const rows = inboundRowsFromAttachments(parsedAttachments);
+  if (rows.length === 0) return null;
+
+  const text = attachmentText(parsedAttachments);
+  const supplierHints = supplierHintsFromAttachment(text);
+  const supplierMatch = supplierHints.length ? matchNamed(supplierHints.join(" "), context.suppliers) : { match: null, ambiguous: [], confidence: 0 };
+  const warehouseMatch = matchNamed(prompt, context.warehouses);
+  const warehouse = warehouseMatch.match ?? context.warehouses.find((item) => item.isDefault) ?? context.warehouses[0] ?? null;
+  const supplier = supplierMatch.match;
+  const invoiceNumber = parseInvoiceNumber(text);
+
+  const matchedRows = rows.map((row) => {
+    const match = matchProductForInboundRow(row, context.products);
+    const product = match.product;
+    const quantity = row.quantity ?? (row.lineTotal && row.unitCost ? row.lineTotal / row.unitCost : null);
+    const usesNetUnitCost = row.unitCost != null;
+    const unitCost = row.unitCost ?? row.grossUnitCost ?? defaultCost(product);
+    const discount = usesNetUnitCost ? 0 : Math.max(0, row.discount ?? 0);
+    return {
+      row,
+      product,
+      quantity,
+      unitCost,
+      discount,
+      confidence: match.confidence,
+      ambiguous: match.ambiguous,
+    };
+  });
+
+  const actionRows = matchedRows.filter((row) => row.product && row.quantity && row.quantity > 0);
+  const unresolvedRows = matchedRows.filter((row) => !row.product || !row.quantity || row.quantity <= 0 || row.ambiguous.length > 0);
+  const subtotal = actionRows.reduce((sum, row) => sum + Math.max(0, Number(row.quantity) * row.unitCost - row.discount), 0);
+  const missingFields = [
+    ...(supplier ? [] : ["supplier"]),
+    ...(warehouse ? [] : ["warehouse"]),
+    ...(actionRows.length > 0 ? [] : ["items"]),
+    ...(unresolvedRows.length === 0 ? [] : ["unresolved_items"]),
+  ];
+  const canPreview = missingFields.length === 0;
+  const supplierHint = supplierHints[0] ?? "";
+
+  return {
+    id: randomUUID(),
+    intent: "create_inventory_inbound",
+    title: "Xem trước phiếu nhập",
+    description: canPreview
+      ? `Tôi đọc được ${actionRows.length} dòng hàng từ ảnh phiếu nhập. Hãy kiểm tra trước khi xác nhận.`
+      : "Tôi đã đọc ảnh phiếu nhập nhưng còn dòng hàng hoặc nhà cung cấp chưa match chắc chắn.",
+    confidence: canPreview ? 0.86 : 0.58,
+    state: canPreview ? "preview" : unresolvedRows.length > 0 ? "needs_selection" : "needs_input",
+    confirmationRequired: true,
+    strongConfirmation: true,
+    entityType: "purchase_order",
+    requiredFields: ["supplier", "warehouse", "items"],
+    missingFields,
+    fields: [
+      { label: "Nhà cung cấp", value: supplier ? supplier.name : supplierHint ? `${supplierHint} (chưa match NCC)` : "Cần chọn", tone: supplier ? "success" : "warning" },
+      { label: "Kho", value: warehouse ? warehouse.name : "Cần chọn", tone: warehouse ? (warehouseMatch.match ? "success" : "default") : "warning" },
+      { label: "Số dòng hàng", value: `${actionRows.length}/${rows.length}`, tone: unresolvedRows.length ? "warning" : "success" },
+      { label: "Tổng tạm tính", value: moneyText(subtotal), tone: subtotal > 0 ? "success" : "warning" },
+      ...(invoiceNumber ? [{ label: "Số chứng từ", value: invoiceNumber }] : []),
+    ],
+    lines: matchedRows.map((row) => {
+      const product = row.product;
+      const quantity = row.quantity;
+      const total = product && quantity ? Math.max(0, quantity * row.unitCost - row.discount) : 0;
+      return {
+        label: product?.name ?? row.row.text,
+        value: product && quantity ? `+${quantity} ${product.baseUnit}` : "Cần chọn lại",
+        meta: product
+          ? `${product.sku} · ${moneyText(row.unitCost)} · ${moneyText(total)}`
+          : [row.row.sku, row.row.unitName, row.row.lineTotal ? moneyText(row.row.lineTotal) : ""].filter(Boolean).join(" · "),
+        tone: product && quantity && row.ambiguous.length === 0 ? "success" : "warning",
+      };
+    }),
+    warnings: [
+      "Nhập hàng thật sẽ tăng tồn kho và có thể cập nhật giá vốn.",
+      ...(supplier ? [] : [`NCC đọc từ ảnh${supplierHint ? ` (${supplierHint})` : ""} chưa match được với danh sách nhà cung cấp.`]),
+      ...unresolvedRows.map((row) => `Cần kiểm tra dòng: ${row.row.sku ? `${row.row.sku} · ` : ""}${row.row.text}`),
+    ],
+    action: {
+      type: "create_inventory_inbound",
+      target: "inventoryInbound",
+      payload: {
+        prompt,
+        source: "attachment_ocr",
+        supplierId: supplier?.id ?? null,
+        supplierName: supplier?.name ?? (supplierHint || null),
+        warehouseId: warehouse?.id ?? null,
+        warehouseName: warehouse?.name ?? null,
+        items: actionRows.map((row) => ({
+          productId: row.product!.id,
+          productName: row.product!.name,
+          sku: row.product!.sku,
+          quantity: row.quantity,
+          unitCost: row.unitCost,
+          discount: row.discount,
+          confidence: row.confidence,
+        })),
+        discount: 0,
+        vatRate: 0,
+        amountPaid: 0,
+        invoiceNumber: invoiceNumber || undefined,
+        note: `AI inbound OCR${invoiceNumber ? ` ${invoiceNumber}` : ""}${supplierHint ? ` · ${supplierHint}` : ""}`,
+      },
+    },
+  };
 }
 
 async function getPriceContext() {
@@ -539,8 +795,13 @@ function restockPreview(prompt: string, restock: RestockRow[]): AiActionPreview 
   };
 }
 
-async function inboundPreview(prompt: string): Promise<AiActionPreview> {
+async function inboundPreview(prompt: string, parsedAttachments: ParsedAiAttachment[] = []): Promise<AiActionPreview> {
   const context = await getInboundContext();
+  const attachmentPreview = parsedAttachments.length
+    ? await inboundPreviewFromAttachments(prompt, context, parsedAttachments)
+    : null;
+  if (attachmentPreview) return attachmentPreview;
+
   const quantity = parseQuantity(prompt);
   const productMatch = matchNamed(prompt, context.products);
   const warehouseMatch = matchNamed(prompt, context.warehouses);
@@ -1156,6 +1417,7 @@ export async function buildAiAssistantResponse(input: {
   collected: unknown;
   restock: RestockRow[];
   chartRows: unknown[];
+  parsedAttachments?: ParsedAiAttachment[];
 }): Promise<AiAssistantResponse> {
   const prompt = input.prompt.trim();
   const q = normalize(prompt);
@@ -1228,7 +1490,7 @@ export async function buildAiAssistantResponse(input: {
   const actionPreview = asksRestock
     ? restockPreview(prompt, input.restock)
     : asksInbound
-      ? await inboundPreview(prompt)
+      ? await inboundPreview(prompt, input.parsedAttachments ?? [])
     : asksFormula
         ? formulaPreview(prompt, (await getPriceContext()).priceBooks)
     : asksProductCommand
