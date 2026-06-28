@@ -17,6 +17,7 @@ function asString(value: unknown, fallback = "") {
 
 function normalizeSurface(value: unknown) {
   const surface = asString(value, "web");
+  if (surface === "mobile") return "mobile";
   return surface === "pos" ? "pos" : "web";
 }
 

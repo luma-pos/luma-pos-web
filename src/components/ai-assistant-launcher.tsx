@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
+  Eraser,
   FileText,
   ImageIcon,
   Info,
@@ -17,6 +18,7 @@ import {
   Plus,
   Send,
   Sparkles,
+  Trash2,
   X,
   XCircle,
 } from "lucide-react";
@@ -88,6 +90,15 @@ function strongConfirmationText(preview: AiActionPreview) {
   }
   if (preview.intent === "record_invoice_payment") {
     return "Thao tác này ghi nhận dòng tiền và trạng thái thanh toán hóa đơn. Sau khi xác nhận cần đối soát sổ quỹ.";
+  }
+  if (preview.intent === "cancel_invoice") {
+    return "Thao tác này có thể hủy chứng từ, hoàn tồn kho, đảo công nợ và ảnh hưởng báo cáo doanh thu.";
+  }
+  if (preview.intent === "create_return_refund") {
+    return "Thao tác này có thể tạo trả hàng/hoàn tiền, thay đổi tồn kho và ghi nhận dòng tiền.";
+  }
+  if (preview.intent === "send_einvoice") {
+    return "Thao tác này có thể gửi dữ liệu hóa đơn điện tử ra nhà cung cấp và phát sinh trạng thái pháp lý.";
   }
   if (preview.intent === "create_cashbook_entry") {
     return "Thao tác này tạo giao dịch sổ quỹ. Hãy kiểm tra số tiền, loại thu/chi và ghi chú.";
@@ -595,13 +606,34 @@ function useAssistantState(surface: AssistantSurface) {
     }
   }
 
-  function clearMessages() {
+  function clearLocalMessages() {
     setMsgs([]);
     if (typeof window !== "undefined") window.localStorage.removeItem(chatHistoryKey);
+  }
+
+  async function clearMessages() {
+    clearLocalMessages();
     if (sessionId) {
-      void deleteJson(`/api/mobile/ai/sessions?sessionId=${sessionId}`).catch(() => {});
+      await putJson("/api/mobile/ai/sessions", {
+        sessionId,
+        surface,
+        title: sessions.find((item) => item.id === sessionId)?.title ?? "AI Assistant",
+        messages: [],
+      }).catch(() => {});
+      setSessions((current) => current.map((item) => item.id === sessionId ? { ...item, messageCount: 0 } : item));
+    }
+  }
+
+  async function deleteSession() {
+    if (!sessionId || busy) return;
+    const currentId = sessionId;
+    const ok = typeof window === "undefined" ? true : window.confirm("Xóa cuộc chat AI này?");
+    if (!ok) return;
+    clearLocalMessages();
+    if (sessionId) {
+      await deleteJson(`/api/mobile/ai/sessions?sessionId=${sessionId}`).catch(() => {});
       setSessionId(null);
-      setSessions((current) => current.filter((item) => item.id !== sessionId));
+      setSessions((current) => current.filter((item) => item.id !== currentId));
     }
   }
 
@@ -655,6 +687,7 @@ function useAssistantState(surface: AssistantSurface) {
     newSession,
     switchSession,
     renameSession,
+    deleteSession,
     resolvePreview,
     clearMessages,
   };
@@ -902,6 +935,7 @@ function AssistantChatSurface({
     newSession,
     switchSession,
     renameSession,
+    deleteSession,
     resolvePreview,
     clearMessages,
   } = assistant;
@@ -954,6 +988,26 @@ function AssistantChatSurface({
           >
             <Pencil className="h-4 w-4" />
           </button>
+          <button
+            type="button"
+            onClick={() => void clearMessages()}
+            disabled={busy || !sessionId}
+            className="h-8 w-8 grid place-items-center rounded-lg border border-border text-slate-500 hover:bg-surface-2 disabled:opacity-50"
+            title="Xóa tin nhắn trong cuộc chat"
+            aria-label="Xóa tin nhắn trong cuộc chat"
+          >
+            <Eraser className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => void deleteSession()}
+            disabled={busy || !sessionId}
+            className="h-8 w-8 grid place-items-center rounded-lg border border-border text-slate-500 hover:bg-er-soft hover:text-er disabled:opacity-50"
+            title="Xóa cuộc chat"
+            aria-label="Xóa cuộc chat"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
       )}
       {msgs.length > 0 && (
@@ -971,11 +1025,11 @@ function AssistantChatSurface({
           ) : <span />}
           <button
             type="button"
-            onClick={clearMessages}
+            onClick={() => void clearMessages()}
             disabled={busy}
             className="text-[11px] font-semibold text-slate-400 hover:text-er disabled:opacity-50"
           >
-            Xóa lịch sử
+            Xóa tin nhắn
           </button>
         </div>
       )}

@@ -69,6 +69,16 @@ function rulePlanner(prompt: string): EvalOutput {
     if (normalized.includes("san pham nay")) missingFields.push("product");
   } else if (normalized.includes("nhap") && normalized.includes("kho")) {
     intent = "create_inventory_inbound";
+  } else if (
+    normalized.includes("huy hoa don") ||
+    normalized.includes("huy don") ||
+    normalized.includes("hoa don dien tu") ||
+    normalized.includes("e-invoice") ||
+    normalized.includes("einvoice") ||
+    normalized.includes("hoan tien") ||
+    normalized.includes("tra hang")
+  ) {
+    intent = "order_action";
   }
 
   const previewType = INTENT_TO_PREVIEW[intent] ?? "none";

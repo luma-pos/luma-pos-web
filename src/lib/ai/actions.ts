@@ -1246,7 +1246,66 @@ export async function orderActionPreview(prompt: string): Promise<AiActionPrevie
   const context = await getSalesContext();
   const isPayment = q.includes("thanh toan") || q.includes("da tra") || q.includes("tra tien");
   const isConvert = q.includes("chuyen") && (q.includes("bao gia") || q.includes("quote"));
+  const isCancel = q.includes("huy hoa don") || q.includes("huy don") || q.includes("cancel invoice") || q.includes("cancel order");
+  const isReturn = q.includes("tra hang") || q.includes("hoan hang") || q.includes("hoan tien") || q.includes("refund") || q.includes("return");
+  const isEinvoice = q.includes("hoa don dien tu") || q.includes("e invoice") || q.includes("einvoice") || q.includes("e-invoice");
   const orderCode = prompt.match(/\b(?:HD|DH|BG)[A-Z0-9-]+\b/i)?.[0] ?? "";
+
+  if (isCancel || isReturn || isEinvoice) {
+    const order = orderCode
+      ? context.orders.find((item) => normalize(item.code) === normalize(orderCode)) ?? null
+      : matchNamed(prompt, context.orders as OrderOption[]).match;
+    const missingFields = order ? [] : ["order"];
+    const intent = isCancel ? "cancel_invoice" : isReturn ? "create_return_refund" : "send_einvoice";
+    const title = isCancel
+      ? "Hủy hóa đơn/đơn hàng"
+      : isReturn
+        ? "Hoàn trả/hoàn tiền"
+        : "Phát hành/gửi hóa đơn điện tử";
+    return {
+      id: randomUUID(),
+      intent,
+      title,
+      description: order
+        ? "Tôi đã tìm thấy chứng từ liên quan. Đây là thao tác nhạy cảm, hãy kiểm tra kỹ trước khi tiếp tục."
+        : "Cần chọn đúng hóa đơn/đơn hàng trước khi tạo preview thao tác nhạy cảm.",
+      confidence: order ? 0.76 : 0.48,
+      state: order ? "preview" : "needs_input",
+      confirmationRequired: true,
+      strongConfirmation: true,
+      entityType: isEinvoice ? "einvoice" : isReturn ? "return" : "order",
+      entityId: order?.id ?? null,
+      requiredFields: ["order"],
+      missingFields,
+      fields: [
+        { label: "Chứng từ", value: order?.code ?? "Cần mã hóa đơn/đơn", tone: order ? "success" : "warning" },
+        { label: "Khách", value: order?.customerName ?? "Khách lẻ" },
+        { label: "Trạng thái", value: order?.status ?? "—" },
+        { label: "Thanh toán", value: order?.paymentStatus ?? "—" },
+        { label: "Tổng", value: order ? moneyText(order.total) : "—" },
+      ],
+      lines: order
+        ? [{ label: order.code, value: moneyText(order.total), meta: order.customerName ?? "Khách lẻ", tone: "warning" }]
+        : [],
+      warnings: [
+        isCancel
+          ? "Hủy hóa đơn/đơn hàng có thể hoàn tồn kho, đảo công nợ và ảnh hưởng báo cáo."
+          : isReturn
+            ? "Hoàn trả/hoàn tiền có thể tạo chứng từ trả hàng, ghi sổ quỹ và ảnh hưởng tồn kho."
+            : "Hóa đơn điện tử có thể gửi dữ liệu ra nhà cung cấp hóa đơn và phát sinh trạng thái pháp lý.",
+        "AI chỉ tạo preview và audit; thao tác thật phải đi qua API nghiệp vụ và quyền hiện có.",
+      ],
+      action: {
+        type: intent,
+        target: isEinvoice ? "einvoices" : "orders",
+        payload: {
+          prompt,
+          orderId: order?.id ?? null,
+          orderCode: order?.code ?? (orderCode || null),
+        },
+      },
+    };
+  }
 
   if (isPayment) {
     const amount = parseMoneyAmount(prompt);
@@ -1580,7 +1639,16 @@ export async function buildAiAssistantResponse(input: {
       q.includes("bao gia") ||
       q.includes("báo giá") ||
       q.includes("thanh toan") ||
-      q.includes("thanh toán"));
+      q.includes("thanh toán") ||
+      q.includes("huy don") ||
+      q.includes("huy hoa don") ||
+      q.includes("tra hang") ||
+      q.includes("hoan tien") ||
+      q.includes("refund") ||
+      q.includes("return") ||
+      q.includes("hoa don dien tu") ||
+      q.includes("e-invoice") ||
+      q.includes("einvoice"));
 
   const previewTool =
     asksRestock ? "buildRestockPoPreview"
