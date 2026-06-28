@@ -91,6 +91,43 @@ function normalize(value: string) {
     .replace(/đ/g, "d");
 }
 
+export function isAiReportSummaryPrompt(prompt: string) {
+  const q = normalize(prompt);
+  return (
+    q.includes("bao cao") ||
+    q.includes("report") ||
+    q.includes("doanh thu") ||
+    q.includes("da thu") ||
+    q.includes("hom nay") ||
+    q.includes("thang nay") ||
+    q.includes("30 ngay") ||
+    q.includes("ban duoc") ||
+    q.includes("ban chay") ||
+    q.includes("top seller") ||
+    q.includes("top san pham") ||
+    q.includes("ton kho") ||
+    q.includes("mat hang")
+  );
+}
+
+export function buildGeneralAssistantResponse(input: {
+  prompt: string;
+  suggestedNextQuestion?: string;
+  toolTrace?: AiToolTrace[];
+}): AiAssistantResponse {
+  const nextQuestion = input.suggestedNextQuestion?.trim();
+  return {
+    text:
+      "Đúng, đây là AI Assistant của LumaPOS. " +
+      "Mình có thể hỗ trợ xem báo cáo bán hàng, tồn kho, gợi ý nhập hàng, hoặc tạo preview cho đơn hàng, phiếu nhập, giá bán, khách hàng và sổ quỹ. " +
+      (nextQuestion || "Bạn muốn mình hỗ trợ tác vụ nào?"),
+    state: "succeeded",
+    prompt: input.prompt,
+    actions: [],
+    toolTrace: input.toolTrace ?? [],
+  };
+}
+
 function moneyText(value: unknown) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "—";
@@ -1735,6 +1772,16 @@ export async function buildAiAssistantResponse(input: {
       chart: { type: "revenueByDay", rows: input.chartRows },
       toolTrace,
     };
+  }
+
+  const shouldShowReportSummary =
+    plannerIntent === "report_summary" || (!plannerPlan && isAiReportSummaryPrompt(prompt));
+  if (!shouldShowReportSummary) {
+    return buildGeneralAssistantResponse({
+      prompt,
+      suggestedNextQuestion: planner.ok ? planner.plan.suggestedNextQuestion : undefined,
+      toolTrace,
+    });
   }
 
   return {
