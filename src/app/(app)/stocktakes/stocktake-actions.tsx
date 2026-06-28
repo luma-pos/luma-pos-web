@@ -4,31 +4,45 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
+import { useConfirmDialog } from "@/components/confirm-dialog-provider";
 import { balanceStocktake, cancelStocktake } from "@/lib/actions/stocktakes";
 
 export function StocktakeRowActions({ id, status }: { id: string; status: string }) {
   const t = useTranslations();
   const router = useRouter();
+  const dialog = useConfirmDialog();
   const [busy, setBusy] = useState(false);
 
   if (status !== "draft") return null;
 
   async function balance() {
-    if (!confirm(t("stocktakes.balanceConfirm")) || busy) return;
+    if (busy) return;
+    const ok = await dialog.confirm({
+      description: t("stocktakes.balanceConfirm"),
+      confirmLabel: t("stocktakes.balance"),
+      variant: "warning",
+    });
+    if (!ok) return;
     setBusy(true);
     const res = await balanceStocktake(id);
     setBusy(false);
     if (res.ok) router.refresh();
-    else alert(t(res.error as never));
+    else await dialog.alert({ description: t(res.error as never), variant: "destructive" });
   }
 
   async function cancel() {
-    if (!confirm(t("stocktakes.cancelConfirm")) || busy) return;
+    if (busy) return;
+    const ok = await dialog.confirm({
+      description: t("stocktakes.cancelConfirm"),
+      confirmLabel: t("common.cancel"),
+      variant: "destructive",
+    });
+    if (!ok) return;
     setBusy(true);
     const res = await cancelStocktake(id);
     setBusy(false);
     if (res.ok) router.refresh();
-    else alert(t(res.error as never));
+    else await dialog.alert({ description: t(res.error as never), variant: "destructive" });
   }
 
   return (

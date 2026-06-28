@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, Check, Loader2, Save, Search, Trash2 } from "lucide-react";
+import { useConfirmDialog } from "@/components/confirm-dialog-provider";
 import { Routes } from "@/lib/routes";
 import { cn, formatCurrency, formatNumber } from "@/lib/utils";
 import { createStocktake } from "@/lib/actions/stocktakes";
@@ -20,6 +21,7 @@ interface Line {
 export function StocktakeForm({ activeWarehouseId, warehouses, products }: { activeWarehouseId: string; warehouses: { id: string; name: string }[]; products: ProductOption[] }) {
   const t = useTranslations();
   const router = useRouter();
+  const dialog = useConfirmDialog();
 
   // tồn hệ thống hiển thị được load theo kho này — đổi kho sẽ reload trang
   const warehouseId = activeWarehouseId;
@@ -64,7 +66,14 @@ export function StocktakeForm({ activeWarehouseId, warehouses, products }: { act
 
   async function submit(balanceNow: boolean) {
     if (lines.length === 0 || busy) return;
-    if (balanceNow && !confirm(t("stocktakes.balanceConfirm"))) return;
+    if (balanceNow) {
+      const ok = await dialog.confirm({
+        description: t("stocktakes.balanceConfirm"),
+        confirmLabel: t("stocktakes.balance"),
+        variant: "warning",
+      });
+      if (!ok) return;
+    }
     setBusy(balanceNow ? "balance" : "draft");
     setError("");
     const res = await createStocktake({

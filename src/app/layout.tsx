@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { getTheme, getMode } from "@/lib/theme/cookie";
 import { ServiceWorkerRegister } from "@/components/sw-register";
+import { ConfirmDialogProvider } from "@/components/confirm-dialog-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -44,7 +45,7 @@ export default async function RootLayout({
         <Script id="mode-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: MODE_INIT }} />
         <ServiceWorkerRegister />
         <NextIntlClientProvider messages={messages}>
-          {children}
+          <ConfirmDialogProvider>{children}</ConfirmDialogProvider>
         </NextIntlClientProvider>
       </body>
     </html>

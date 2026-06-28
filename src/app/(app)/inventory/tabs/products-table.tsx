@@ -17,6 +17,7 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
+import { useConfirmDialog } from "@/components/confirm-dialog-provider";
 import { Routes } from "@/lib/routes";
 import { deleteProduct, setProductActive } from "@/lib/actions/products";
 import { cn, formatCurrency, formatDate, formatNumber } from "@/lib/utils";
@@ -801,6 +802,7 @@ function ProductActionBar({ product }: { product: ProductRow }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const dialog = useConfirmDialog();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const effectiveActive = product.isVariantParent
@@ -819,8 +821,14 @@ function ProductActionBar({ product }: { product: ProductRow }) {
     router.refresh();
   }
 
-  function removeProduct() {
-    if (pending || !window.confirm(t("products.confirm.delete"))) return;
+  async function removeProduct() {
+    if (pending) return;
+    const ok = await dialog.confirm({
+      description: t("products.confirm.delete"),
+      confirmLabel: t("common.delete"),
+      variant: "destructive",
+    });
+    if (!ok) return;
     setError("");
     startTransition(async () => {
       const res = await deleteProduct(product.id);
@@ -829,11 +837,21 @@ function ProductActionBar({ product }: { product: ProductRow }) {
     });
   }
 
-  function toggleActive() {
+  async function toggleActive() {
     const confirmKey = nextActive
       ? "products.confirm.resumeSelling"
       : "products.confirm.stopSelling";
-    if (pending || !window.confirm(t(confirmKey as never))) return;
+    if (pending) return;
+    const ok = await dialog.confirm({
+      description: t(confirmKey as never),
+      confirmLabel: t(
+        (nextActive
+          ? "products.actions.resumeSelling"
+          : "products.actions.stopSelling") as never,
+      ),
+      variant: "warning",
+    });
+    if (!ok) return;
     setError("");
     startTransition(async () => {
       const res = await setProductActive({

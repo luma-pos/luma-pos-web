@@ -5,30 +5,43 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
+import { useConfirmDialog } from "@/components/confirm-dialog-provider";
 import { Routes } from "@/lib/routes";
 import { convertQuoteToOrder, cancelQuote } from "@/lib/actions/orders";
 
 export function QuoteActions({ quoteId }: { quoteId: string }) {
   const t = useTranslations();
   const router = useRouter();
+  const dialog = useConfirmDialog();
   const [busy, setBusy] = useState(false);
 
   async function convert() {
-    if (!confirm(t("quotes.convertConfirm")) || busy) return;
+    if (busy) return;
+    const ok = await dialog.confirm({
+      description: t("quotes.convertConfirm"),
+      confirmLabel: t("quotes.convert"),
+    });
+    if (!ok) return;
     setBusy(true);
     const res = await convertQuoteToOrder(quoteId);
     setBusy(false);
     if (res.ok) router.push(Routes.order(quoteId));
-    else alert(t(res.error as never));
+    else await dialog.alert({ description: t(res.error as never), variant: "destructive" });
   }
 
   async function cancel() {
-    if (!confirm(t("quotes.cancelConfirm")) || busy) return;
+    if (busy) return;
+    const ok = await dialog.confirm({
+      description: t("quotes.cancelConfirm"),
+      confirmLabel: t("common.cancel"),
+      variant: "destructive",
+    });
+    if (!ok) return;
     setBusy(true);
     const res = await cancelQuote(quoteId);
     setBusy(false);
     if (res.ok) router.refresh();
-    else alert(t(res.error as never));
+    else await dialog.alert({ description: t(res.error as never), variant: "destructive" });
   }
 
   return (

@@ -5,21 +5,29 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2, XCircle } from "lucide-react";
 import { addPayment, cancelOrder } from "@/lib/actions/orders";
+import { useConfirmDialog } from "@/components/confirm-dialog-provider";
 import { MoneyInput } from "@/components/ui/money-input";
 import { formatCurrency, cn } from "@/lib/utils";
 
 export function OrderActions({ orderId }: { orderId: string }) {
   const t = useTranslations();
   const router = useRouter();
+  const dialog = useConfirmDialog();
   const [busy, setBusy] = useState(false);
 
   async function onCancel() {
-    if (!confirm(t("orders.detail.cancelConfirm"))) return;
+    if (busy) return;
+    const ok = await dialog.confirm({
+      description: t("orders.detail.cancelConfirm"),
+      confirmLabel: t("orders.detail.cancel"),
+      variant: "destructive",
+    });
+    if (!ok) return;
     setBusy(true);
     const res = await cancelOrder(orderId);
     setBusy(false);
     if (res.ok) router.refresh();
-    else alert(t(res.error as never));
+    else await dialog.alert({ description: t(res.error as never), variant: "destructive" });
   }
 
   return (
