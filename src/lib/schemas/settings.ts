@@ -20,6 +20,8 @@ export const PAYMENT_METHODS = ["cash", "qr", "momo", "zalopay", "vnpay", "card"
 export const NOTIF_TYPES = ["lowStock", "stagnant", "shiftClose", "einvoiceError", "syncDone"] as const;
 export const NOTIF_CHANNELS = ["zalo", "email", "inApp", "sms"] as const;
 export const PAPER_SIZES = ["K80", "K57", "A5", "A4"] as const;
+export const AI_VISION_MODELS = ["gpt-4.1-mini", "gpt-4.1", "gpt-4.1-nano"] as const;
+export const AI_ATTACHMENT_BUCKETS = ["ai-attachments", "ai-pos-attachments", "luma-ai-attachments"] as const;
 
 const taxPrefs = z.object({
   defaultRate: z.number().min(0).max(100).default(8),
@@ -93,7 +95,7 @@ export function parseStorePrefs(raw: unknown): StorePrefs {
 export const aiSettingsInputSchema = z.object({
   openaiApiKey: z.string().max(500).optional(),
   clearOpenaiApiKey: z.boolean().default(false),
-  openaiVisionModel: z.string().trim().min(1).max(80).default("gpt-4.1-mini"),
-  attachmentsBucket: z.string().trim().min(1).max(80).default("ai-attachments"),
+  openaiVisionModel: z.enum(AI_VISION_MODELS).default("gpt-4.1-mini"),
+  attachmentsBucket: z.enum(AI_ATTACHMENT_BUCKETS).default("ai-attachments"),
 });
 export type AiSettingsInput = z.input<typeof aiSettingsInputSchema>;

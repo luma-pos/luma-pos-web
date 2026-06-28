@@ -9,7 +9,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import { updateAiSettings, updateStoreSettings, updateStaffRole, setStaffActive, updateStorePrefs } from "@/lib/actions/settings";
 import type { StoreSettings, StaffRow } from "@/lib/data/settings";
-import { STAFF_ROLES, PAPER_SIZES, type StaffRole, type StorePrefs } from "@/lib/schemas/settings";
+import { AI_ATTACHMENT_BUCKETS, AI_VISION_MODELS, STAFF_ROLES, PAPER_SIZES, type StaffRole, type StorePrefs } from "@/lib/schemas/settings";
 
 /* ── sample data (design preview — chưa nối backend) ── */
 const ROLE_LABELS: Record<string, [string, string]> = {
@@ -54,6 +54,32 @@ const MIGRATION = [
   { ico: "🟣", name: "POS365", color: "#7C3AED", desc: "Products, stock, invoices · .xlsx" },
   { ico: "⬛", name: "Excel / CSV", color: "#374151", desc: "Universal import w/ column mapping" },
 ];
+const AI_MODEL_OPTIONS = AI_VISION_MODELS.map((value) => ({
+  value,
+  label: value,
+  hint: value === "gpt-4.1-mini"
+    ? "Recommended"
+    : value === "gpt-4.1"
+      ? "Higher accuracy"
+      : "Fastest / lowest cost",
+}));
+const AI_BUCKET_OPTIONS = AI_ATTACHMENT_BUCKETS.map((value) => ({
+  value,
+  label: value,
+  hint: value === "ai-attachments"
+    ? "Default"
+    : value === "ai-pos-attachments"
+      ? "POS only"
+      : "Shared AI bucket",
+}));
+type AiVisionModel = (typeof AI_VISION_MODELS)[number];
+type AiAttachmentBucket = (typeof AI_ATTACHMENT_BUCKETS)[number];
+function coerceAiVisionModel(value: string): AiVisionModel {
+  return AI_VISION_MODELS.includes(value as AiVisionModel) ? value as AiVisionModel : "gpt-4.1-mini";
+}
+function coerceAiAttachmentBucket(value: string): AiAttachmentBucket {
+  return AI_ATTACHMENT_BUCKETS.includes(value as AiAttachmentBucket) ? value as AiAttachmentBucket : "ai-attachments";
+}
 
 type SectionId = "store" | "staff" | "hardware" | "payments" | "print" | "tax" | "notifications" | "ai" | "migration";
 
@@ -499,10 +525,14 @@ function NotificationsSection({ L, prefs, canManage }: { L: boolean; prefs: Stor
 
 function AiSection({ L, prefs, canEdit }: { L: boolean; prefs: StorePrefs["ai"]; canEdit: boolean }) {
   const [openaiApiKeySet, setOpenaiApiKeySet] = useState(prefs.openaiApiKeySet);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    openaiApiKey: string;
+    openaiVisionModel: AiVisionModel;
+    attachmentsBucket: AiAttachmentBucket;
+  }>({
     openaiApiKey: "",
-    openaiVisionModel: prefs.openaiVisionModel,
-    attachmentsBucket: prefs.attachmentsBucket,
+    openaiVisionModel: coerceAiVisionModel(prefs.openaiVisionModel),
+    attachmentsBucket: coerceAiAttachmentBucket(prefs.attachmentsBucket),
   });
   const [clearOpenaiApiKey, setClearOpenaiApiKey] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -558,13 +588,27 @@ function AiSection({ L, prefs, canEdit }: { L: boolean; prefs: StorePrefs["ai"];
             </div>
             <div className="flex flex-col gap-1">
               <span className={FL}>{L ? "Vision model" : "Vision model"}</span>
-              <input className={cn(FI, "font-mono")} value={form.openaiVisionModel} disabled={!canEdit} onChange={(e) => set("openaiVisionModel", e.target.value)} />
+              <SearchableSelect
+                options={AI_MODEL_OPTIONS}
+                value={form.openaiVisionModel}
+                onChange={(value) => set("openaiVisionModel", coerceAiVisionModel(value))}
+                allowClear={false}
+                showSearch={false}
+                disabled={!canEdit}
+              />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <span className={FL}>{L ? "Bucket lưu attachment" : "Attachment bucket"}</span>
-              <input className={cn(FI, "font-mono")} value={form.attachmentsBucket} disabled={!canEdit} onChange={(e) => set("attachmentsBucket", e.target.value)} />
+              <SearchableSelect
+                options={AI_BUCKET_OPTIONS}
+                value={form.attachmentsBucket}
+                onChange={(value) => set("attachmentsBucket", coerceAiAttachmentBucket(value))}
+                allowClear={false}
+                showSearch={false}
+                disabled={!canEdit}
+              />
             </div>
           </div>
           <div className="px-3.5 py-2.5 bg-in-soft border border-in/20 rounded-[10px] text-[11px] text-in leading-relaxed">
