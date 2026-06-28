@@ -56,9 +56,26 @@ export type AiAssistantResponse = {
   actionPreview?: AiActionPreview;
   actions: Array<{ type: string; target: string; label: string }>;
   chart?: { type: string; rows: unknown[] };
+  toolTrace?: AiToolTrace[];
 };
 
 const PLANNER_CONFIDENCE_THRESHOLD = 0.55;
+const AI_TOOL_LOOP_MAX_DEPTH = 2;
+
+export type AiToolTrace = {
+  depth: number;
+  tool: string;
+  mutation: false;
+  status: "succeeded" | "failed";
+  durationMs: number;
+  result: {
+    state?: AiAssistantState;
+    intent?: string;
+    entityType?: string;
+    lineCount?: number;
+    warningCount?: number;
+  };
+};
 
 function normalize(value: string) {
   return value
@@ -1526,27 +1543,71 @@ export async function buildAiAssistantResponse(input: {
       q.includes("thanh toan") ||
       q.includes("thanh toán"));
 
-  const actionPreview = asksRestock
-    ? restockPreview(prompt, input.restock)
-    : asksInbound
-      ? await inboundPreview(prompt, input.parsedAttachments ?? [])
-    : asksFormula
-        ? formulaPreview(prompt, (await getPriceContext()).priceBooks)
-    : asksProductCommand
-        ? await productCommandPreview(prompt)
-    : asksCustomer
-        ? await customerPreview(prompt)
-    : asksCashbook
-        ? cashbookPreview(prompt)
-    : asksPosVoice
-        ? await posCartPreview(prompt, "voice")
-    : asksPosImage
-        ? await posCartPreview(prompt, "image")
-    : asksOrderAction
-        ? await orderActionPreview(prompt)
-    : asksPrice
-        ? await pricePreview(prompt)
-        : undefined;
+  const previewTool =
+    asksRestock ? "buildRestockPoPreview"
+    : asksInbound ? "buildInboundPreview"
+    : asksFormula ? "buildPriceFormulaPreview"
+    : asksProductCommand ? "buildProductPreview"
+    : asksCustomer ? "buildCustomerPreview"
+    : asksCashbook ? "buildCashbookPreview"
+    : asksPosVoice ? "buildPosCartPreview:voice"
+    : asksPosImage ? "buildPosCartPreview:image"
+    : asksOrderAction ? "buildOrderPreview"
+    : asksPrice ? "buildPriceUpdatePreview"
+    : null;
+  const toolTrace: AiToolTrace[] = [];
+  let actionPreview: AiActionPreview | undefined;
+  if (previewTool && toolTrace.length < AI_TOOL_LOOP_MAX_DEPTH) {
+    const startedAt = Date.now();
+    try {
+      actionPreview =
+        previewTool === "buildRestockPoPreview"
+          ? restockPreview(prompt, input.restock)
+        : previewTool === "buildInboundPreview"
+          ? await inboundPreview(prompt, input.parsedAttachments ?? [])
+        : previewTool === "buildPriceFormulaPreview"
+          ? formulaPreview(prompt, (await getPriceContext()).priceBooks)
+        : previewTool === "buildProductPreview"
+          ? await productCommandPreview(prompt)
+        : previewTool === "buildCustomerPreview"
+          ? await customerPreview(prompt)
+        : previewTool === "buildCashbookPreview"
+          ? cashbookPreview(prompt)
+        : previewTool === "buildPosCartPreview:voice"
+          ? await posCartPreview(prompt, "voice")
+        : previewTool === "buildPosCartPreview:image"
+          ? await posCartPreview(prompt, "image")
+        : previewTool === "buildOrderPreview"
+          ? await orderActionPreview(prompt)
+        : previewTool === "buildPriceUpdatePreview"
+          ? await pricePreview(prompt)
+          : undefined;
+      toolTrace.push({
+        depth: 1,
+        tool: previewTool,
+        mutation: false,
+        status: "succeeded",
+        durationMs: Date.now() - startedAt,
+        result: {
+          state: actionPreview?.state,
+          intent: actionPreview?.intent,
+          entityType: actionPreview?.entityType,
+          lineCount: actionPreview?.lines.length,
+          warningCount: actionPreview?.warnings.length,
+        },
+      });
+    } catch (error) {
+      toolTrace.push({
+        depth: 1,
+        tool: previewTool,
+        mutation: false,
+        status: "failed",
+        durationMs: Date.now() - startedAt,
+        result: { warningCount: 1 },
+      });
+      throw error;
+    }
+  }
 
   if (actionPreview) {
     return {
@@ -1558,6 +1619,7 @@ export async function buildAiAssistantResponse(input: {
         { type: "open", target: actionPreview.action.target, label: "Open related screen" },
       ],
       chart: { type: "revenueByDay", rows: input.chartRows },
+      toolTrace,
     };
   }
 
@@ -1576,5 +1638,6 @@ export async function buildAiAssistantResponse(input: {
       type: "revenueByDay",
       rows: input.chartRows,
     },
+    toolTrace,
   };
 }

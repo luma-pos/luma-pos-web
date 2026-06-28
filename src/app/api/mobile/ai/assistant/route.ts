@@ -170,7 +170,7 @@ export async function POST(request: Request) {
       collected: reports.summary.collected,
       restockCount: restock.length,
     },
-    metadata: { surface: "mobile", usageUnits: usage.charged },
+    metadata: { surface: "mobile", usageUnits: usage.charged, toolTrace: response.toolTrace ?? [] },
   });
 
   return mobileOk({ ...response, aiUsage: usage.usage });
