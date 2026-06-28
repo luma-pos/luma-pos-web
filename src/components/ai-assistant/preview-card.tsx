@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, ExternalLink, XCircle } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AiActionPreview } from "@/lib/ai/actions";
@@ -33,18 +32,6 @@ function recordLinkText(record: NonNullable<Msg["record"]>, t: Translator) {
   return t("ai.preview.openRecord", { code: record.code });
 }
 
-function strongConfirmationText(preview: AiActionPreview, t: Translator) {
-  if (preview.intent === "apply_price_formula") return t("ai.preview.strong.applyPriceFormula");
-  if (preview.intent === "record_invoice_payment") return t("ai.preview.strong.recordInvoicePayment");
-  if (preview.intent === "cancel_invoice") return t("ai.preview.strong.cancelInvoice");
-  if (preview.intent === "create_return_refund") return t("ai.preview.strong.createReturnRefund");
-  if (preview.intent === "send_einvoice") return t("ai.preview.strong.sendEinvoice");
-  if (preview.intent === "create_cashbook_entry") return t("ai.preview.strong.createCashbookEntry");
-  if (preview.intent === "convert_quote_to_order") return t("ai.preview.strong.convertQuoteToOrder");
-  if (preview.intent === "create_order") return t("ai.preview.strong.createOrder");
-  return t("ai.preview.strong.default");
-}
-
 function stateText(state: PreviewResolutionState | undefined, t: Translator) {
   if (state === "confirmed") return t("ai.preview.states.confirmed");
   if (state === "succeeded") return t("ai.preview.states.succeeded");
@@ -60,8 +47,6 @@ export function PreviewCard({
   record,
   busy,
   compact,
-  onConfirm,
-  onCancel,
   onSelectChoice,
 }: {
   preview: AiActionPreview;
@@ -70,23 +55,10 @@ export function PreviewCard({
   record?: Msg["record"];
   busy: boolean;
   compact?: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
   onSelectChoice: (type: string, candidate: { label: string; code?: string; confidence?: number }) => void;
 }) {
   const t = useTranslations();
-  const [strongConfirmation, setStrongConfirmation] = useState<{
-    previewId: string;
-    state?: PreviewResolutionState;
-    checked: boolean;
-  }>({ previewId: "", checked: false });
-  const strongConfirmed = strongConfirmation.previewId === preview.id && strongConfirmation.state === state
-    ? strongConfirmation.checked
-    : false;
-  const isConfirmed = state === "confirmed";
-  const succeeded = state === "succeeded";
-  const done = isConfirmed || succeeded || state === "cancelled";
-  const canConfirm = preview.state === "preview" && preview.missingFields.length === 0 && (!preview.strongConfirmation || strongConfirmed);
+  const done = state === "confirmed" || state === "succeeded" || state === "cancelled";
 
   return (
     <div className={cn("w-full bg-surface border border-border rounded-card shadow-e1 overflow-hidden", compact ? "max-w-full" : "max-w-2xl")}>
@@ -130,22 +102,6 @@ export function PreviewCard({
           <div className="rounded-lg bg-warn-soft text-warn p-2.5 text-xs font-semibold">
             {t("ai.preview.missingFields", { fields: preview.missingFields.join(", ") })}
           </div>
-        )}
-        {preview.strongConfirmation && !done && (
-          <label className="block rounded-lg border border-warn/25 bg-warn-soft p-2.5 text-xs text-warn">
-            <div className="font-bold">{t("ai.preview.strongTitle")}</div>
-            <div className="mt-1 leading-relaxed">{strongConfirmationText(preview, t)}</div>
-            <div className="mt-2 flex items-start gap-2 font-semibold">
-              <input
-                type="checkbox"
-                checked={strongConfirmed}
-                onChange={(event) => setStrongConfirmation({ previewId: preview.id, state, checked: event.target.checked })}
-                disabled={busy}
-                className="mt-0.5"
-              />
-              <span>{t("ai.preview.strongAcknowledgement")}</span>
-            </div>
-          </label>
         )}
         {preview.warnings.map((warning) => (
           <div key={warning} className="rounded-lg bg-surface-2 p-2.5 text-xs text-slate-500">{warning}</div>
@@ -203,27 +159,7 @@ export function PreviewCard({
             </a>
           )}
         </div>
-        {done ? (
-          <span className={cn("inline-flex items-center gap-1 text-xs font-bold", isConfirmed || succeeded ? "text-ok" : "text-slate-500")}>
-            {isConfirmed || succeeded ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-            {stateText(state, t)}
-          </span>
-        ) : (
-          <div className="flex gap-2 justify-end">
-            <Button disabled={busy} type="button" variant="outline" size="sm" onClick={onCancel} className="text-xs font-bold text-slate-500">
-              {t("common.cancel")}
-            </Button>
-            <Button
-              disabled={busy || !canConfirm}
-              type="button"
-              size="sm"
-              onClick={onConfirm}
-              className={cn("text-xs font-bold", preview.strongConfirmation && "bg-warn hover:brightness-95")}
-            >
-              {preview.strongConfirmation ? t("ai.preview.strongConfirm") : t("common.confirm")}
-            </Button>
-          </div>
-        )}
+        {done && <span className="text-xs font-bold text-slate-500">{stateText(state, t)}</span>}
       </div>
     </div>
   );

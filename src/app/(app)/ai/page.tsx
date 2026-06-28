@@ -1,11 +1,22 @@
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
+import { getRole, requireUser } from "@/lib/actions/common";
+import { getStoreSettings } from "@/lib/data/settings";
 import { Text } from "@/components/ui/text";
 import { Assistant } from "./assistant";
 
 export const dynamic = "force-dynamic";
 
 export default async function AiPage() {
-  const t = await getTranslations();
+  const [t, user, store] = await Promise.all([
+    getTranslations(),
+    requireUser(),
+    getStoreSettings(),
+  ]);
+  if (!store.prefs.ai.openaiApiKeySet) {
+    const role = await getRole(user.id);
+    redirect(role === "owner" ? "/settings?tab=ai" : "/dashboard");
+  }
 
   return (
     <div className="flex h-dvh min-h-0 flex-col overflow-hidden p-4 sm:p-6">

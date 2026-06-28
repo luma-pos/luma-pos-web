@@ -1,5 +1,6 @@
 import { getReports } from "@/lib/data/reports";
 import { getRestockSuggestions } from "@/lib/data/ai-restock";
+import { requireAiProviderConfigured } from "@/lib/ai/config";
 import { buildAttachmentNextActionResponse, shouldAskAttachmentNextAction } from "@/lib/ai/attachment-intent";
 import { attachmentPromptBlock, parseAiAttachment, type AiAttachmentMetadata, type ParsedAiAttachment } from "@/lib/ai/attachments";
 import { buildAiAssistantResponse, withAiPreviewReviewAction, type AiAssistantResponse } from "@/lib/ai/actions";
@@ -95,6 +96,8 @@ export async function POST(request: Request) {
   const blocked = mobileGate(gate);
   if (blocked) return blocked;
   if (!gate.ok) return mobileGate(gate)!;
+  const aiBlocked = await requireAiProviderConfigured();
+  if (aiBlocked) return aiBlocked;
 
   const body = await readJson(request);
   const prompt =

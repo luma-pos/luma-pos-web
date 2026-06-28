@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AiAssistantLauncher } from "@/components/ai-assistant-launcher";
 import { requireUser } from "@/lib/actions/common";
+import { getStoreSettings } from "@/lib/data/settings";
 import { Routes } from "@/lib/routes";
 
 /**
@@ -13,11 +14,12 @@ export default async function PosLayout({ children }: { children: React.ReactNod
   } catch {
     redirect(Routes.Login);
   }
+  const store = await getStoreSettings();
 
   return (
     <div className="h-dvh overflow-hidden bg-canvas">
       {children}
-      <AiAssistantLauncher surface="pos" />
+      {store.prefs.ai.openaiApiKeySet && <AiAssistantLauncher surface="pos" />}
     </div>
   );
 }

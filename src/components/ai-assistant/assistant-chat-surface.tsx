@@ -5,7 +5,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { Eraser, MessageSquare, Mic, Paperclip, Pencil, Plus, Send, Sparkles, Trash2, X } from "lucide-react";
 import { Button, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { ActionPresetButtons } from "./action-preset-buttons";
 import { AttachmentPill } from "./attachment-pill";
 import { PreviewCard } from "./preview-card";
 import type { AssistantController } from "./types";
@@ -47,16 +46,13 @@ export function AssistantChatSurface({
     surface,
     usage,
     activePreset,
-    actionPresets,
     suggestionGroups,
     send,
     startVoiceInput,
     newSession,
-    startActionSession,
     switchSession,
     renameSession,
     deleteSession,
-    resolvePreview,
     clearMessages,
   } = assistant;
   const t = useTranslations();
@@ -324,15 +320,6 @@ export function AssistantChatSurface({
               <Sparkles className="w-10 h-10 mx-auto mb-3 opacity-60" />
             )}
             <p className="text-sm font-medium">{panelEmptyText}</p>
-            {!compact && actionPresets.length > 0 && (
-              <ActionPresetButtons
-                presets={actionPresets}
-                activePreset={activePreset}
-                busy={busy}
-                onSelect={(preset) => void startActionSession(preset)}
-                variant="grid"
-              />
-            )}
           </div>
         ) : msgs.map((m, i) => (
           <div key={`${m.role}-${i}`} className={cn("flex flex-col gap-2", m.role === "user" ? "items-end" : "items-start")}>
@@ -358,8 +345,6 @@ export function AssistantChatSurface({
                 record={m.record}
                 busy={busy}
                 compact={compact}
-                onConfirm={() => resolvePreview(i, "confirmed")}
-                onCancel={() => resolvePreview(i, "cancelled")}
                 onSelectChoice={(type, candidate) => {
                   const sourcePrompt = String(m.preview?.action.payload.prompt ?? m.text);
                   const selected = candidate.code
@@ -383,18 +368,6 @@ export function AssistantChatSurface({
         {usage?.exhausted && (
           <div className={cn("px-3 pt-2 text-[11px] font-semibold text-er", !compact && "px-4")}>
             {t("ai.session.exhaustedNotice")}
-          </div>
-        )}
-
-        {actionPresets.length > 0 && (compact || msgs.length > 0) && (
-          <div className={cn("px-3 pt-2", !compact && "px-4")}>
-            <ActionPresetButtons
-              presets={actionPresets}
-              activePreset={activePreset}
-              busy={busy}
-              onSelect={(preset) => void startActionSession(preset)}
-              variant="strip"
-            />
           </div>
         )}
 

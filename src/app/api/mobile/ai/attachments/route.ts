@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/audit";
+import { requireAiProviderConfigured } from "@/lib/ai/config";
 import { getAiAttachmentsBucket } from "@/lib/data/settings";
 import { requireMobileManager } from "@/lib/mobile/auth";
 import { mobileError, mobileGate, mobileOk } from "@/lib/mobile/response";
@@ -62,6 +63,8 @@ export async function POST(request: Request) {
   const blocked = mobileGate(gate);
   if (blocked) return blocked;
   if (!gate.ok) return mobileError("errors.unauthorized", 401);
+  const aiBlocked = await requireAiProviderConfigured();
+  if (aiBlocked) return aiBlocked;
 
   let form: FormData;
   try {

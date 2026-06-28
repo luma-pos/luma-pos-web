@@ -49,7 +49,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Text as="p" variant="muted" truncate className="text-[11px]" text={user.email} />
           </div>
         </div>
-        <AppNav industry={store.industry} notificationCount={notificationCount} />
+        <AppNav
+          industry={store.industry}
+          notificationCount={notificationCount}
+          aiConfigured={store.prefs.ai.openaiApiKeySet}
+        />
         <div className="p-3 border-t border-border space-y-2">
           <ModeSwitcher current={mode} />
           <ThemeSwitcher current={theme} />
@@ -61,7 +65,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <main className="flex-1 min-w-0 overflow-auto overflow-x-hidden">
         <div className="pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
         <MobileTabBar />
-        <AiAssistantLauncher />
+        {store.prefs.ai.openaiApiKeySet && <AiAssistantLauncher />}
       </main>
     </div>
   );

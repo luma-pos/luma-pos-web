@@ -43,15 +43,26 @@ const GROUPS: Group[] = [
 ];
 
 /** Sidebar điều hướng có chữ — dùng cho cả desktop (cố định) và drawer mobile. */
-export function AppNav({ industry, notificationCount = 0 }: { industry?: string; notificationCount?: number }) {
+export function AppNav({
+  industry,
+  notificationCount = 0,
+  aiConfigured = false,
+}: {
+  industry?: string;
+  notificationCount?: number;
+  aiConfigured?: boolean;
+}) {
   const t = useTranslations();
   const pathname = usePathname();
   const isFnb = industry === "restaurant" || industry === "cafe";
+  const groupsBase = GROUPS.map((group) => group.labelKey === "nav.groups.system"
+    ? { ...group, items: group.items.filter((item) => aiConfigured || item.href !== "/ai") }
+    : group);
   const groups = isFnb
-    ? GROUPS.map((g) => g.labelKey === "nav.groups.manage"
+    ? groupsBase.map((g) => g.labelKey === "nav.groups.manage"
         ? { ...g, items: [...g.items, { href: "/tables", icon: Utensils, key: "nav.tables" } as Item, { href: "/kds", icon: ChefHat, key: "nav.kds" } as Item] }
         : g)
-    : GROUPS;
+    : groupsBase;
 
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-2 text-sm">

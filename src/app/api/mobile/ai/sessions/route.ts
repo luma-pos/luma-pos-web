@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { aiChatMessages, aiChatSessions } from "@/db/schema";
+import { requireAiProviderConfigured } from "@/lib/ai/config";
 import { requireMobileUser } from "@/lib/mobile/auth";
 import { mobileError, mobileGate, mobileOk, readJson } from "@/lib/mobile/response";
 
@@ -53,6 +54,8 @@ export async function GET(request: Request) {
   const blocked = mobileGate(gate);
   if (blocked) return blocked;
   if (!gate.ok) return mobileGate(gate)!;
+  const aiBlocked = await requireAiProviderConfigured();
+  if (aiBlocked) return aiBlocked;
 
   const url = new URL(request.url);
   const sessionId = url.searchParams.get("sessionId");
@@ -95,6 +98,8 @@ export async function POST(request: Request) {
   const blocked = mobileGate(gate);
   if (blocked) return blocked;
   if (!gate.ok) return mobileGate(gate)!;
+  const aiBlocked = await requireAiProviderConfigured();
+  if (aiBlocked) return aiBlocked;
 
   const body = asObject(await readJson(request));
   const surface = normalizeSurface(body.surface);
@@ -111,6 +116,8 @@ export async function PUT(request: Request) {
   const blocked = mobileGate(gate);
   if (blocked) return blocked;
   if (!gate.ok) return mobileGate(gate)!;
+  const aiBlocked = await requireAiProviderConfigured();
+  if (aiBlocked) return aiBlocked;
 
   const body = asObject(await readJson(request));
   const surface = normalizeSurface(body.surface);
@@ -141,6 +148,8 @@ export async function DELETE(request: Request) {
   const blocked = mobileGate(gate);
   if (blocked) return blocked;
   if (!gate.ok) return mobileGate(gate)!;
+  const aiBlocked = await requireAiProviderConfigured();
+  if (aiBlocked) return aiBlocked;
 
   const url = new URL(request.url);
   const sessionId = url.searchParams.get("sessionId");
