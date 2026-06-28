@@ -182,6 +182,28 @@ async function postJson(path: string, body: unknown) {
   return json?.data ?? json;
 }
 
+async function putJson(path: string, body: unknown) {
+  const res = await fetch(path, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || json?.ok === false) {
+    throw new Error(json?.error ?? `http.${res.status}`);
+  }
+  return json?.data ?? json;
+}
+
+async function deleteJson(path: string) {
+  const res = await fetch(path, { method: "DELETE" });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || json?.ok === false) {
+    throw new Error(json?.error ?? `http.${res.status}`);
+  }
+  return json?.data ?? json;
+}
+
 async function getJson(path: string) {
   const res = await fetch(path);
   const json = await res.json().catch(() => null);
@@ -189,6 +211,21 @@ async function getJson(path: string) {
     throw new Error(json?.error ?? `http.${res.status}`);
   }
   return json?.data ?? json;
+}
+
+function serverMessagesToChat(messages: unknown[]): Msg[] {
+  return messages.map((item) => {
+    const msg = item && typeof item === "object" ? item as Record<string, unknown> : {};
+    return {
+      role: msg.role === "assistant" ? "assistant" : "user",
+      text: typeof msg.content === "string" ? msg.content : "",
+      attachments: Array.isArray(msg.attachments) ? msg.attachments as ComposerAttachment[] : undefined,
+      state: typeof msg.state === "string" ? msg.state as PreviewResolutionState : undefined,
+      preview: msg.preview && typeof msg.preview === "object" ? msg.preview as AiActionPreview : undefined,
+      result: typeof msg.result === "string" ? msg.result : undefined,
+      record: msg.record && typeof msg.record === "object" ? msg.record as Msg["record"] : undefined,
+    } satisfies Msg;
+  }).filter((msg) => msg.text);
 }
 
 async function uploadAiAttachment(file: File): Promise<ComposerAttachment> {
@@ -211,15 +248,64 @@ function useAssistantState(surface: AssistantSurface) {
   const chatHistoryKey = `luma-ai-chat-history:${surface}`;
   const [input, setInput] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>(() => readChatHistory(chatHistoryKey));
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [serverHydrated, setServerHydrated] = useState(false);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [usage, setUsage] = useState<AiUsageStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     window.localStorage.setItem(chatHistoryKey, JSON.stringify(sanitizeMessagesForStorage(msgs)));
   }, [chatHistoryKey, msgs]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getJson(`/api/mobile/ai/sessions?surface=${surface}`)
+      .then(async (data) => {
+        if (cancelled) return;
+        const sessions = Array.isArray((data as { sessions?: unknown }).sessions)
+          ? (data as { sessions: Array<{ id?: unknown }> }).sessions
+          : [];
+        const firstId = typeof sessions[0]?.id === "string" ? sessions[0].id : null;
+        if (!firstId) {
+          setServerHydrated(true);
+          return;
+        }
+        const loaded = await getJson(`/api/mobile/ai/sessions?sessionId=${firstId}`);
+        if (cancelled) return;
+        const messages = Array.isArray((loaded as { messages?: unknown }).messages)
+          ? (loaded as { messages: unknown[] }).messages
+          : [];
+        setSessionId(firstId);
+        setMsgs(serverMessagesToChat(messages));
+        setServerHydrated(true);
+      })
+      .catch(() => { if (!cancelled) setServerHydrated(true); });
+    return () => { cancelled = true; };
+  }, [surface]);
+
+  useEffect(() => {
+    if (!serverHydrated) return;
+    if (msgs.length === 0) return;
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      void putJson("/api/mobile/ai/sessions", {
+        sessionId,
+        surface,
+        title: msgs.find((msg) => msg.role === "user")?.text.slice(0, 80) || "AI Assistant",
+        messages: sanitizeMessagesForStorage(msgs),
+      }).then((data) => {
+        const id = (data as { session?: { id?: unknown } }).session?.id;
+        if (typeof id === "string") setSessionId(id);
+      }).catch(() => {});
+    }, 500);
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
+  }, [msgs, serverHydrated, sessionId, surface]);
 
   useEffect(() => {
     let cancelled = false;
@@ -396,6 +482,10 @@ function useAssistantState(surface: AssistantSurface) {
   function clearMessages() {
     setMsgs([]);
     if (typeof window !== "undefined") window.localStorage.removeItem(chatHistoryKey);
+    if (sessionId) {
+      void deleteJson(`/api/mobile/ai/sessions?sessionId=${sessionId}`).catch(() => {});
+      setSessionId(null);
+    }
   }
 
   return {

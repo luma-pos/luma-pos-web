@@ -71,6 +71,38 @@ export const auditLogs = pgTable("audit_logs", {
   index("audit_logs_source_status_idx").on(t.source, t.status),
 ]);
 
+// ============= AI Chat Sessions =============
+
+export const aiChatSessions = pgTable("ai_chat_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ownerId: uuid("owner_id").references(() => profiles.id),
+  surface: text("surface").notNull().default("web"),
+  title: text("title").notNull().default("AI Assistant"),
+  metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+}, (t) => [
+  index("ai_chat_sessions_owner_idx").on(t.ownerId, t.updatedAt),
+  index("ai_chat_sessions_surface_idx").on(t.surface, t.updatedAt),
+]);
+
+export const aiChatMessages = pgTable("ai_chat_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: uuid("session_id").notNull().references(() => aiChatSessions.id, { onDelete: "cascade" }),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  state: text("state"),
+  attachments: jsonb("attachments").$type<Record<string, unknown>[] | null>(),
+  preview: jsonb("preview").$type<Record<string, unknown> | null>(),
+  result: text("result"),
+  record: jsonb("record").$type<Record<string, unknown> | null>(),
+  metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index("ai_chat_messages_session_idx").on(t.sessionId, t.createdAt),
+]);
+
 // ============= Categories =============
 
 export const categories = pgTable("categories", {
