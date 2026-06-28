@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { Bot, CheckCircle2, Clock, ExternalLink, ShieldAlert, UserRound, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { DataTableShell, stopRowToggle, type DataTableColumn } from "@/components/data-table";
 import { cn, formatDate } from "@/lib/utils";
 import type { AuditSource, AuditStatus, getAuditLogs } from "@/lib/audit";
@@ -152,6 +155,10 @@ function ExpandedAudit({ row }: { row: AuditRow }) {
   const records = arrayValue(row.affectedRecords).map(objectValue).filter(Boolean) as Record<string, unknown>[];
   return (
     <div className="space-y-3 bg-surface px-4 py-4 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-xs font-bold uppercase tracking-wide text-slate-400">Chi tiết thông báo</div>
+        <AcknowledgeNotificationButton id={row.id} />
+      </div>
       {records.length > 0 && (
         <div>
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Bản ghi liên quan</div>
@@ -180,5 +187,33 @@ function ExpandedAudit({ row }: { row: AuditRow }) {
         }), null, 2)}
       </pre>
     </div>
+  );
+}
+
+function AcknowledgeNotificationButton({ id }: { id: string }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      disabled={pending}
+      onClick={(event) => {
+        stopRowToggle(event);
+        startTransition(async () => {
+          await fetch(`/api/mobile/notifications/${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ read: true, dismissed: true }),
+          });
+          router.refresh();
+        });
+      }}
+      className="h-8 rounded-full text-xs font-bold text-slate-600"
+    >
+      {pending ? "Đang xử lý..." : "Đã xử lý"}
+    </Button>
   );
 }

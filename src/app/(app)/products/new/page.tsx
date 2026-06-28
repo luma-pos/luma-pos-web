@@ -14,6 +14,7 @@ export default async function NewProductPage({ searchParams }: Props) {
   const sp = await searchParams;
   const copyFrom = typeof sp.copyFrom === "string" ? sp.copyFrom : undefined;
   const sameTypeAs = typeof sp.sameTypeAs === "string" ? sp.sameTypeAs : undefined;
+  const aiPreview = sp.source === "ai-preview";
   const seedId = copyFrom ?? sameTypeAs;
   if (seedId && !UUID_RE.test(seedId)) notFound();
 
@@ -35,6 +36,7 @@ export default async function NewProductPage({ searchParams }: Props) {
       suppliers={options.suppliers}
       priceBooks={priceBooks}
       initialValues={seedProduct ? productToFormInitialValues(seedProduct, copyFrom ? "copy" : "sameType", priceBookPrices) : undefined}
+      aiPreview={aiPreview}
     />
   );
 }

@@ -77,6 +77,22 @@ function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function previewProductIds(preview: AiActionPreview) {
+  const items = Array.isArray(preview.action.payload.items) ? preview.action.payload.items : [];
+  return [...new Set(items.flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const id = stringValue((item as Record<string, unknown>).productId);
+    return id ? [id] : [];
+  }))];
+}
+
+function posAiDraftHref(preview: AiActionPreview) {
+  const ids = previewProductIds(preview);
+  const params = new URLSearchParams({ aiDraft: "1", source: "ai-preview" });
+  if (ids.length) params.set("aiProducts", ids.join(","));
+  return `/pos?${params.toString()}`;
+}
+
 function previewReviewAction(preview: AiActionPreview): AiActionPreview["reviewAction"] {
   const payload = preview.action.payload;
   const orderId = stringValue(payload.orderId) ?? stringValue(preview.entityId);
@@ -89,10 +105,10 @@ function previewReviewAction(preview: AiActionPreview): AiActionPreview["reviewA
     return { type: "open", href: "/purchases/new?mode=draft&source=ai-preview", label: "Mở trang tạo PO nháp", target: "purchase_new" };
   }
   if (preview.intent === "create_order" && preview.entityType === "quote") {
-    return { type: "open", href: "/sales?tab=quotes&source=ai-preview", label: "Mở luồng báo giá", target: "quotes" };
+    return { type: "open", href: posAiDraftHref(preview), label: "Mở POS tạo báo giá", target: "quotes" };
   }
   if (preview.intent === "create_order") {
-    return { type: "open", href: "/pos?source=ai-preview", label: "Mở POS kiểm tra hóa đơn", target: "pos" };
+    return { type: "open", href: posAiDraftHref(preview), label: "Mở POS kiểm tra hóa đơn", target: "pos" };
   }
   if (preview.intent === "pos_voice_cart_draft" || preview.intent === "pos_image_cart_draft") {
     return { type: "open", href: "/pos?aiDraft=1", label: "Mở POS kiểm tra giỏ nháp", target: "pos" };
@@ -115,7 +131,10 @@ function previewReviewAction(preview: AiActionPreview): AiActionPreview["reviewA
   if (preview.intent === "create_product_category" || preview.intent === "create_product_brand") {
     return { type: "open", href: "/inventory?tab=products&source=ai-preview", label: "Mở màn sản phẩm", target: "products" };
   }
-  if (preview.intent === "create_customer" || preview.intent === "update_customer") {
+  if (preview.intent === "create_customer") {
+    return { type: "open", href: "/customers/new?source=ai-preview", label: "Mở form khách hàng", target: "customers" };
+  }
+  if (preview.intent === "update_customer") {
     return { type: "open", href: "/partners?tab=customers&source=ai-preview", label: "Mở khách hàng", target: "customers" };
   }
   if (preview.intent === "create_cashbook_entry") {

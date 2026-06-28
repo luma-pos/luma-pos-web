@@ -50,6 +50,7 @@ import {
 import { Combobox } from "@/components/combobox";
 import type { ProductFormOptions } from "@/lib/data/products";
 import type { PriceBookRow } from "@/lib/data/price-books";
+import { AI_WORKFLOW_DRAFT_STORAGE_KEY } from "@/components/ai-assistant/utils";
 
 type Tab = "info" | "description" | "variants";
 
@@ -60,6 +61,11 @@ const EMPTY_VARIANT_CHILDREN: NonNullable<
 > = [];
 const EMPTY_IMAGE_URLS: string[] = [];
 const PRODUCT_ORDER_NOTE_SPEC_KEY = "__orderNote";
+
+type AiWorkflowDraft = {
+  intent?: string;
+  action?: { payload?: Record<string, unknown> };
+};
 
 function specsWithOrderNote(
   specs: Record<string, string[]> | null,
@@ -84,6 +90,7 @@ export interface NewProductFormProps {
   initialValues?: Partial<CreateProductInput>;
   layout?: "page" | "modal";
   closeHref?: string;
+  aiPreview?: boolean;
 }
 
 export function NewProductForm({
@@ -97,6 +104,7 @@ export function NewProductForm({
   initialValues,
   layout = "page",
   closeHref,
+  aiPreview = false,
 }: NewProductFormProps) {
   const t = useTranslations();
   const router = useRouter();
@@ -135,6 +143,38 @@ export function NewProductForm({
       ...initialValues,
     },
   });
+
+  useEffect(() => {
+    if (!aiPreview) return;
+    try {
+      const raw = window.localStorage.getItem(AI_WORKFLOW_DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as AiWorkflowDraft;
+      const payload = draft.action?.payload ?? {};
+      if (isEdit) {
+        const draftProductId = typeof payload.productId === "string" ? payload.productId : null;
+        if (draft.intent === "update_product_min_stock" && draftProductId === productId && typeof payload.minStock === "number") {
+          form.setValue("minLevel", payload.minStock, { shouldDirty: true });
+        }
+        return;
+      }
+      if (draft.intent !== "create_product") return;
+      const categoryId = typeof payload.categoryId === "string" && categories.some((category) => category.id === payload.categoryId)
+        ? payload.categoryId
+        : form.getValues("categoryId");
+      form.reset({
+        ...form.getValues(),
+        name: typeof payload.name === "string" ? payload.name : form.getValues("name"),
+        sku: typeof payload.sku === "string" ? payload.sku : form.getValues("sku"),
+        categoryId,
+        costPrice: typeof payload.costPrice === "number" ? payload.costPrice : form.getValues("costPrice"),
+        retailPrice: typeof payload.retailPrice === "number" ? payload.retailPrice : form.getValues("retailPrice"),
+        baseUnit: typeof payload.baseUnit === "string" ? payload.baseUnit : form.getValues("baseUnit"),
+      });
+    } catch {
+      // Ignore stale or malformed AI drafts; the form remains usable.
+    }
+  }, [aiPreview, categories, form, isEdit, productId]);
 
   async function onSubmit(values: CreateProductOutput) {
     if (isEdit && productId) {

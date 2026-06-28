@@ -14,6 +14,7 @@ export default async function NewPurchasePage({ searchParams }: Props) {
   const sp = await searchParams;
   const productId = typeof sp.productId === "string" && UUID_RE.test(sp.productId) ? sp.productId : null;
   const copyFrom = typeof sp.copyFrom === "string" && UUID_RE.test(sp.copyFrom) ? sp.copyFrom : null;
+  const aiPreview = sp.source === "ai-preview";
   const source = copyFrom ? await getPurchase(copyFrom).catch(() => null) : null;
   if (copyFrom && (!source || source.status === "cancelled" || source.status === "returned")) notFound();
 
@@ -49,5 +50,5 @@ export default async function NewPurchasePage({ searchParams }: Props) {
     );
   }
 
-  return <PurchaseForm options={options} initialProducts={initialProducts} />;
+  return <PurchaseForm options={options} initialProducts={initialProducts} aiPreview={aiPreview} />;
 }

@@ -75,6 +75,7 @@ export type AuditLogFilters = {
   action?: string;
   entityType?: string;
   actorId?: string;
+  notificationUserId?: string;
   dateFrom?: Date;
   dateTo?: Date;
   limit?: number;
@@ -87,6 +88,15 @@ export async function getAuditLogs(filters: AuditLogFilters = {}) {
   if (filters.action) where.push(eq(auditLogs.action, filters.action));
   if (filters.entityType) where.push(eq(auditLogs.entityType, filters.entityType));
   if (filters.actorId) where.push(eq(auditLogs.actorId, filters.actorId));
+  if (filters.notificationUserId) {
+    where.push(sql`not exists (
+      select 1
+      from mobile_notification_states state
+      where state.user_id = ${filters.notificationUserId}
+        and state.notification_id = ${auditLogs.id}::text
+        and state.dismissed = true
+    )`);
+  }
   if (filters.dateFrom) where.push(gte(auditLogs.createdAt, filters.dateFrom));
   if (filters.dateTo) where.push(lte(auditLogs.createdAt, filters.dateTo));
 
@@ -115,21 +125,30 @@ export async function getAuditLogs(filters: AuditLogFilters = {}) {
     .limit(limit);
 }
 
-export async function getAttentionNotificationCount() {
+export async function getAttentionNotificationCount(userId?: string | null) {
   const [row] = await db
     .select({ value: sql<number>`count(*)::int` })
     .from(auditLogs)
     .where(sql`
-      ${auditLogs.status} in ('failed', 'unauthorized')
-      or (
-        ${auditLogs.status} = 'previewed'
-        and coalesce(${auditLogs.parsedIntent}->>'id', '') <> ''
-        and not exists (
-          select 1
-          from audit_logs followup
-          where followup.created_at >= ${auditLogs.createdAt}
-            and followup.status in ('confirmed', 'succeeded', 'cancelled')
-            and followup.parsed_intent->>'id' = ${auditLogs.parsedIntent}->>'id'
+      ${userId ? sql`not exists (
+        select 1
+        from mobile_notification_states state
+        where state.user_id = ${userId}
+          and state.notification_id = ${auditLogs.id}::text
+          and state.dismissed = true
+      )` : sql`true`}
+      and (
+        ${auditLogs.status} in ('failed', 'unauthorized')
+        or (
+          ${auditLogs.status} = 'previewed'
+          and coalesce(${auditLogs.parsedIntent}->>'id', '') <> ''
+          and not exists (
+            select 1
+            from audit_logs followup
+            where followup.created_at >= ${auditLogs.createdAt}
+              and followup.status in ('confirmed', 'succeeded', 'cancelled')
+              and followup.parsed_intent->>'id' = ${auditLogs.parsedIntent}->>'id'
+          )
         )
       )
     `);

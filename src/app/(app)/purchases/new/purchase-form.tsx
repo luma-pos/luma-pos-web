@@ -13,8 +13,9 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Text } from "@/components/ui/text";
 import { createPurchase, updatePurchase } from "@/lib/actions/purchases";
-import { searchPurchaseProducts } from "@/lib/actions/purchase-search";
+import { getPurchaseProductsByIds, searchPurchaseProducts } from "@/lib/actions/purchase-search";
 import type { PurchaseFormOptions, PurchaseProductRow } from "@/lib/data/inventory";
+import { AI_WORKFLOW_DRAFT_STORAGE_KEY } from "@/components/ai-assistant/utils";
 
 type PUnit = { unitName: string; multiplier: number };
 type Line = {
@@ -23,6 +24,12 @@ type Line = {
   unitName: string; multiplier: number; // đơn vị đang chọn
   quantity: number; unitCost: number;   // theo đơn vị đang chọn
   discInput: number; discMode: "vnd" | "pct"; // giảm giá dòng
+};
+
+type AiWorkflowDraft = {
+  intent?: string;
+  action?: { payload?: Record<string, unknown> };
+  lines?: { label?: string }[];
 };
 
 export type PurchaseFormInitialValues = {
@@ -70,6 +77,7 @@ export function PurchaseForm({
   mode = "create",
   purchaseId,
   purchaseCode,
+  aiPreview = false,
 }: {
   options: PurchaseFormOptions;
   initialProducts?: PurchaseProductRow[];
@@ -77,6 +85,7 @@ export function PurchaseForm({
   mode?: "create" | "copy" | "edit";
   purchaseId?: string;
   purchaseCode?: string;
+  aiPreview?: boolean;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -100,6 +109,61 @@ export function PurchaseForm({
   const [note, setNote] = useState(initialValues?.note ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (mode !== "create" || !aiPreview) return;
+    let cancelled = false;
+
+    async function hydrateAiDraft() {
+      const raw = window.localStorage.getItem(AI_WORKFLOW_DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as AiWorkflowDraft;
+      if (draft.intent !== "create_inventory_inbound" && draft.intent !== "create_draft_purchase_order" && draft.intent !== "create_draft_purchase_order_from_restocking") return;
+      const payload = draft.action?.payload ?? {};
+      const itemRows = Array.isArray(payload.items) ? payload.items.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item))) : [];
+      const productIds = [
+        typeof payload.productId === "string" ? payload.productId : "",
+        ...itemRows.map((item) => typeof item.productId === "string" ? item.productId : ""),
+      ].filter(Boolean);
+      const products = await getPurchaseProductsByIds(productIds);
+      if (cancelled) return;
+      const productById = new Map(products.map((product) => [product.id, product]));
+      const seedByProductId = new Map(itemRows.map((item, index) => [
+        typeof item.productId === "string" ? item.productId : `line-${index}`,
+        {
+          productId: typeof item.productId === "string" ? item.productId : "",
+          quantity: Number(item.quantity) || 1,
+          unitCost: Number(item.unitCost) || Number(payload.unitCost) || 0,
+          discount: Number(item.discount) || 0,
+        },
+      ]));
+      const nextLines = itemRows.flatMap((item) => {
+        const productId = typeof item.productId === "string" ? item.productId : "";
+        const product = productById.get(productId);
+        if (!product) return [];
+        return [productToLine(product, seedByProductId.get(productId) ?? {
+          productId,
+          quantity: Number(item.quantity) || 1,
+          unitCost: Number(item.unitCost) || 0,
+          discount: Number(item.discount) || 0,
+        })];
+      });
+
+      const supplierIdDraft = typeof payload.supplierId === "string" ? payload.supplierId : "";
+      const warehouseIdDraft = typeof payload.warehouseId === "string" ? payload.warehouseId : "";
+      if (supplierIdDraft && options.suppliers.some((supplier) => supplier.id === supplierIdDraft)) setSupplierId(supplierIdDraft);
+      if (warehouseIdDraft && options.warehouses.some((warehouse) => warehouse.id === warehouseIdDraft)) setWarehouseId(warehouseIdDraft);
+      if (nextLines.length) setLines(nextLines);
+      if (typeof payload.discount === "number") setDiscount(payload.discount);
+      if (typeof payload.vatRate === "number") setVatRate(payload.vatRate);
+      if (typeof payload.invoiceNumber === "string") setInvoiceNumber(payload.invoiceNumber);
+      if (typeof payload.amountPaid === "number") setAmountPaid(payload.amountPaid);
+      if (typeof payload.note === "string") setNote(payload.note);
+    }
+
+    hydrateAiDraft().catch(() => {});
+    return () => { cancelled = true; };
+  }, [aiPreview, mode, options.suppliers, options.warehouses]);
 
   // tìm SP query thẳng DB (bỏ dấu, quét toàn bộ) — giống POS/Sản phẩm
   const [results, setResults] = useState<PurchaseProductRow[]>([]);

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Bell, Filter } from "lucide-react";
 import { NotificationsTable } from "./notifications-table";
 import { getAuditLogs, type AuditSource, type AuditStatus } from "@/lib/audit";
+import { requireUser } from "@/lib/actions/common";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export default async function NotificationsPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  const user = await requireUser();
   const params = await searchParams;
   const source = validSource(params.source);
   const status = validStatus(params.status);
@@ -39,6 +41,7 @@ export default async function NotificationsPage({
     status,
     action: params.action,
     entityType: params.entityType,
+    notificationUserId: user.id,
     limit: 100,
   });
 

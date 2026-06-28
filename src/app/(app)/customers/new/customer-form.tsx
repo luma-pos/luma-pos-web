@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,8 +10,14 @@ import { Form, FormField, Input, NumberInput, Select, Button, Textarea, Heading 
 import { Routes } from "@/lib/routes";
 import { createCustomer } from "@/lib/actions/partners";
 import { createCustomerSchema, type CreateCustomerInput, type CreateCustomerOutput } from "@/lib/schemas/order";
+import { AI_WORKFLOW_DRAFT_STORAGE_KEY } from "@/components/ai-assistant/utils";
 
-export function CustomerForm() {
+type AiWorkflowDraft = {
+  intent?: string;
+  action?: { payload?: Record<string, unknown> };
+};
+
+export function CustomerForm({ aiPreview = false }: { aiPreview?: boolean }) {
   const t = useTranslations();
   const router = useRouter();
 
@@ -18,6 +25,29 @@ export function CustomerForm() {
     resolver: zodResolver(createCustomerSchema),
     defaultValues: { name: "", phone: "", address: "", type: "retail", taxCode: "", debtLimit: 0, note: "" },
   });
+
+  useEffect(() => {
+    if (!aiPreview) return;
+    try {
+      const raw = window.localStorage.getItem(AI_WORKFLOW_DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as AiWorkflowDraft;
+      if (draft.intent !== "create_customer") return;
+      const payload = draft.action?.payload ?? {};
+      const type = payload.type === "wholesale" || payload.type === "contractor" || payload.type === "agent" ? payload.type : "retail";
+      form.reset({
+        name: typeof payload.name === "string" ? payload.name : "",
+        phone: typeof payload.phone === "string" ? payload.phone : "",
+        address: typeof payload.address === "string" ? payload.address : "",
+        type,
+        taxCode: typeof payload.taxCode === "string" ? payload.taxCode : "",
+        debtLimit: typeof payload.debtLimit === "number" ? payload.debtLimit : 0,
+        note: typeof payload.note === "string" ? payload.note : "",
+      });
+    } catch {
+      // Ignore stale or malformed AI drafts; the form remains usable.
+    }
+  }, [aiPreview, form]);
 
   async function onSubmit(values: CreateCustomerOutput) {
     const res = await createCustomer(values);

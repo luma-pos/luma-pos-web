@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AiActionPreview } from "@/lib/ai/actions";
 import type { Msg, PreviewResolutionState } from "./types";
-import { isPosCartPreview } from "./utils";
+import { isPosCartPreview, storeAiWorkflowDraft, storePosDraft } from "./utils";
 
 type Translator = ReturnType<typeof useTranslations>;
 
@@ -155,6 +155,10 @@ export function PreviewCard({
             href={preview.reviewAction.href}
             target="_blank"
             rel="noreferrer"
+            onClick={() => {
+              storeAiWorkflowDraft(preview);
+              if (isPosCartPreview(preview) || preview.intent === "create_order") storePosDraft(preview);
+            }}
             className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-xs font-bold text-primary-700 transition hover:bg-primary-100"
           >
             <ExternalLink className="h-3.5 w-3.5" />

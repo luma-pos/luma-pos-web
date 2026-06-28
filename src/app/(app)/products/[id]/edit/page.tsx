@@ -6,10 +6,12 @@ import { productToFormInitialValues } from "../../product-form-values";
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function EditProductPage({ params }: Props) {
+export default async function EditProductPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const sp = await searchParams;
   const [product, options, priceBooks, priceOverridesByBook] = await Promise.all([
     getProduct(id),
     getProductFormOptions(),
@@ -32,6 +34,7 @@ export default async function EditProductPage({ params }: Props) {
       brands={options.brands}
       suppliers={options.suppliers}
       priceBooks={priceBooks}
+      aiPreview={sp.source === "ai-preview"}
     />
   );
 }

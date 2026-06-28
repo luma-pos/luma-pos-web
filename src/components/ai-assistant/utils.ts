@@ -5,6 +5,7 @@ export const MAX_ATTACHMENTS = 4;
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const CHAT_HISTORY_LIMIT = 80;
 export const POS_AI_DRAFT_STORAGE_KEY = "luma-pos-ai-cart-draft";
+export const AI_WORKFLOW_DRAFT_STORAGE_KEY = "luma-ai-workflow-draft";
 export const FAB_MARGIN = 12;
 export const FAB_MOVE_THRESHOLD = 10;
 
@@ -88,6 +89,23 @@ export function storePosDraft(preview: AiActionPreview) {
     }));
   } catch {
     // Ignore quota/private-mode failures; the query link still carries product ids.
+  }
+}
+
+export function storeAiWorkflowDraft(preview: AiActionPreview) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(AI_WORKFLOW_DRAFT_STORAGE_KEY, JSON.stringify({
+      previewId: preview.id,
+      intent: preview.intent,
+      entityType: preview.entityType,
+      action: preview.action,
+      fields: preview.fields,
+      lines: preview.lines,
+      createdAt: Date.now(),
+    }));
+  } catch {
+    // Ignore quota/private-mode failures; the review link still opens the workflow.
   }
 }
 

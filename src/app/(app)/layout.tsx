@@ -27,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const [store, notificationCount] = await Promise.all([
     getStoreSettings(),
-    getAttentionNotificationCount(),
+    getAttentionNotificationCount(user.id),
   ]);
   if (!store.onboarded) redirect("/onboarding");
 
