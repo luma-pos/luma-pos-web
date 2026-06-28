@@ -458,6 +458,7 @@ function useAssistantState(surface: AssistantSurface) {
     try {
       const data = await postJson("/api/mobile/ai/assistant", {
         prompt,
+        surface,
         attachments: outgoingAttachments.map(({ id, bucket, path, name, mimeType, size, kind, signedUrl }) => ({
           id,
           bucket,

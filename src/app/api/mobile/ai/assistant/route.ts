@@ -82,6 +82,10 @@ export async function POST(request: Request) {
     body && typeof body === "object" && "prompt" in body
       ? String((body as { prompt?: unknown }).prompt ?? "")
       : "";
+  const surface =
+    body && typeof body === "object" && (body as { surface?: unknown }).surface === "pos"
+      ? "pos"
+      : "mobile";
   const attachments =
     body && typeof body === "object" && Array.isArray((body as { attachments?: unknown }).attachments)
       ? ((body as { attachments: unknown[] }).attachments.filter((item): item is AiAttachmentMetadata => Boolean(item && typeof item === "object")))
@@ -116,7 +120,8 @@ export async function POST(request: Request) {
       usage.usage = await recordAiTokenUsage(item.tokenUsage);
     }
   }
-  if (shouldAskAttachmentNextAction(prompt, parsedAttachments.length)) {
+  const shouldBuildPosImageCart = surface === "pos" && parsedAttachments.length > 0;
+  if (!shouldBuildPosImageCart && shouldAskAttachmentNextAction(prompt, parsedAttachments.length)) {
     const response = buildAttachmentNextActionResponse({ prompt, attachments: parsedAttachments });
     await writeAttachmentParseAudit({ userId: gate.userId, prompt, parsedAttachments });
     await writeAuditLog({
@@ -131,11 +136,14 @@ export async function POST(request: Request) {
         attachmentCount: parsedAttachments.length,
         attachments: attachmentAuditDetails(parsedAttachments),
       },
-      metadata: { surface: "mobile", rawContentLogged: false, usageUnits: usage.charged },
+      metadata: { surface, rawContentLogged: false, usageUnits: usage.charged },
     });
     return mobileOk({ ...response, aiUsage: usage.usage });
   }
-  const enrichedPrompt = `${prompt}${attachmentPromptBlock(parsedAttachments)}`;
+  const basePrompt = shouldBuildPosImageCart
+    ? `Tạo giỏ POS từ ảnh. ${prompt || "Đọc sản phẩm và số lượng từ file đính kèm."}`
+    : prompt;
+  const enrichedPrompt = `${basePrompt}${attachmentPromptBlock(parsedAttachments)}`;
   const [reports, restock] = await Promise.all([
     getReports(30),
     getRestockSuggestions(30),
@@ -170,7 +178,7 @@ export async function POST(request: Request) {
       collected: reports.summary.collected,
       restockCount: restock.length,
     },
-    metadata: { surface: "mobile", usageUnits: usage.charged, toolTrace: response.toolTrace ?? [] },
+    metadata: { surface, usageUnits: usage.charged, toolTrace: response.toolTrace ?? [] },
   });
 
   return mobileOk({ ...response, aiUsage: usage.usage });
