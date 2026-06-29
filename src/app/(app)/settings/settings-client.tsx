@@ -289,8 +289,6 @@ export function SettingsClient({
     if (saved && SEC_META[saved]) setActive(saved);
   }, []);
   const pick = (id: SectionId) => { setActive(id); localStorage.setItem("lp-settings-active", id); };
-  const sec = SEC_META[active];
-
   return (
     <div className="flex h-dvh overflow-hidden">
       {/* settings nav */}
@@ -330,11 +328,6 @@ export function SettingsClient({
             {NAV.flatMap((g) => g.items).map((it) => <option key={it.id} value={it.id}>{L ? it.vi : it.en}</option>)}
           </select>
         </div>
-
-        <div className="text-[10px] font-bold uppercase tracking-[0.07em] text-primary-600 mb-1.5">SETTINGS · {active.toUpperCase()}</div>
-        <h1 className="text-xl font-extrabold tracking-tight">{L ? sec.vi : sec.en}</h1>
-        <div className="text-xs italic text-slate-400 mt-0.5">{L ? sec.subVi : sec.subEn}</div>
-        <div className="w-9 h-0.75 bg-primary-600 rounded mt-3 mb-5" />
 
         {active === "store" && <StoreSection L={L} locale={locale} store={store} canManage={canManage} />}
         {active === "staff" && <StaffSection L={L} staff={staff} canManage={canManage} />}
