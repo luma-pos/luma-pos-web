@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { profiles, storeSettings } from "@/db/schema";
+import { paymentBankAccounts, profiles, storeSettings } from "@/db/schema";
 import { parseStorePrefs, type StorePrefs } from "@/lib/schemas/settings";
 
 export type StoreSettings = {
@@ -60,3 +60,16 @@ export async function getStaff() {
     .orderBy(asc(profiles.fullName));
 }
 export type StaffRow = Awaited<ReturnType<typeof getStaff>>[number];
+
+export async function getPaymentBankAccounts() {
+  const rows = await db
+    .select()
+    .from(paymentBankAccounts)
+    .orderBy(asc(paymentBankAccounts.provider), asc(paymentBankAccounts.bankCode), asc(paymentBankAccounts.accountNumber));
+  return rows.map(({ webhookSecret, apiKey, ...row }) => ({
+    ...row,
+    webhookSecretSet: Boolean(webhookSecret),
+    apiKeySet: Boolean(apiKey),
+  }));
+}
+export type PaymentBankAccountRow = Awaited<ReturnType<typeof getPaymentBankAccounts>>[number];

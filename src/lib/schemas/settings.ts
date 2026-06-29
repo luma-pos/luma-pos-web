@@ -126,3 +126,20 @@ export const aiSettingsInputSchema = z.object({
   monthlyUsageLimit: z.number().int().min(0).max(100000).default(1000),
 });
 export type AiSettingsInput = z.input<typeof aiSettingsInputSchema>;
+
+export const paymentBankAccountInputSchema = z.object({
+  id: z.string().uuid().optional(),
+  provider: z.literal("sepay").default("sepay"),
+  bankCode: z.string().trim().min(1).max(40),
+  gateway: z.string().trim().max(80).optional(),
+  accountNumber: z.string().trim().min(1).max(80),
+  subAccount: z.string().trim().max(80).optional(),
+  accountName: z.string().trim().min(1).max(200),
+  isDefault: z.boolean().default(false),
+  enabled: z.boolean().default(true),
+  webhookEnabled: z.boolean().default(true),
+  webhookSecret: z.string().trim().max(500).optional(),
+  apiKey: z.string().trim().max(500).optional(),
+  note: z.string().trim().max(500).optional(),
+});
+export type PaymentBankAccountInput = z.input<typeof paymentBankAccountInputSchema>;

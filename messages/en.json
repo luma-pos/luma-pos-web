@@ -1621,7 +1621,50 @@
     "previewHint": "Actual printing reflows per selected A4/A5/K80 size."
   },
   "settings": {
-    "moreSoon": "More settings (staff, permissions, e-invoice…) coming with the roadmap."
+    "moreSoon": "More settings (staff, permissions, e-invoice…) coming with the roadmap.",
+    "payments": {
+      "sepay": {
+        "title": "SePay / VietQR bank accounts",
+        "accounts": "Receiving accounts",
+        "help": "Configure one or more bank accounts for dynamic VietQR collection. Secrets stay on the server.",
+        "newAccount": "New account",
+        "empty": "No bank accounts configured yet.",
+        "default": "Default",
+        "disabled": "Disabled",
+        "webhookOn": "Webhook on",
+        "webhookOff": "Webhook off",
+        "secretSet": "Secret set",
+        "secretMissing": "No secret",
+        "apiKeySet": "API key set",
+        "apiKeyMissing": "No API key",
+        "edit": "Edit",
+        "setDefault": "Set default",
+        "disable": "Disable",
+        "enable": "Enable",
+        "editAccount": "Edit account",
+        "addAccount": "Add account",
+        "bankCode": "Bank code",
+        "gateway": "Gateway name",
+        "accountNumber": "Account number",
+        "subAccount": "Sub-account / VA",
+        "accountName": "Account name",
+        "note": "Note",
+        "webhookSecret": "Webhook secret",
+        "apiKey": "SePay API key",
+        "optional": "Optional",
+        "secretPlaceholder": "Leave blank to keep current value",
+        "enabled": "Enabled",
+        "enabledHint": "Use this account for checkout",
+        "webhookEnabled": "Webhook",
+        "webhookHint": "Accept SePay callbacks",
+        "makeDefault": "Default",
+        "defaultHint": "Prefer for new VietQR payments",
+        "cancel": "Cancel",
+        "save": "Save account",
+        "saved": "Saved",
+        "saveError": "Could not save account"
+      }
+    }
   },
   "quotes": {
     "title": "Quotes",

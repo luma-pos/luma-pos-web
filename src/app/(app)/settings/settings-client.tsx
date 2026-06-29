@@ -2,13 +2,23 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { useLocale } from "next-intl";
-import { Check, Printer, Loader2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { Check, KeyRound, Loader2, Pencil, Plus, Power, Printer, Save, Star } from "lucide-react";
 import { SearchableSelect } from "@/components/combobox";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
-import { testAiProvider, updateAiSettings, updateStoreSettings, updateStaffRole, setStaffActive, updateStorePrefs } from "@/lib/actions/settings";
-import type { StoreSettings, StaffRow } from "@/lib/data/settings";
+import {
+  savePaymentBankAccount,
+  setDefaultPaymentBankAccount,
+  setPaymentBankAccountEnabled,
+  testAiProvider,
+  updateAiSettings,
+  updateStoreSettings,
+  updateStaffRole,
+  setStaffActive,
+  updateStorePrefs,
+} from "@/lib/actions/settings";
+import type { PaymentBankAccountRow, StoreSettings, StaffRow } from "@/lib/data/settings";
 import {
   AI_ATTACHMENT_BUCKETS,
   AI_PROVIDERS,
@@ -17,6 +27,7 @@ import {
   STAFF_ROLES,
   PAPER_SIZES,
   type StaffRole,
+  type PaymentBankAccountInput,
   type StorePrefs,
 } from "@/lib/schemas/settings";
 
@@ -231,12 +242,14 @@ export function SettingsClient({
   canManage,
   canEditAi,
   aiUsage,
+  bankAccounts,
 }: {
   store: StoreSettings;
   staff: StaffRow[];
   canManage: boolean;
   canEditAi: boolean;
   aiUsage: AiUsageStatus;
+  bankAccounts: PaymentBankAccountRow[];
 }) {
   const locale = useLocale();
   const L = locale === "vi";
@@ -297,7 +310,7 @@ export function SettingsClient({
         {active === "store" && <StoreSection L={L} locale={locale} store={store} canManage={canManage} />}
         {active === "staff" && <StaffSection L={L} staff={staff} canManage={canManage} />}
         {active === "hardware" && <HardwareSection L={L} prefs={store.prefs.hardware} canManage={canManage} />}
-        {active === "payments" && <PaymentsSection L={L} prefs={store.prefs.payments} canManage={canManage} />}
+        {active === "payments" && <PaymentsSection L={L} prefs={store.prefs.payments} canManage={canManage} bankAccounts={bankAccounts} />}
         {active === "print" && <PrintSection L={L} />}
         {active === "tax" && <TaxSection L={L} prefs={store.prefs.tax} canManage={canManage} />}
         {active === "notifications" && <NotificationsSection L={L} prefs={store.prefs.notifications} canManage={canManage} />}
@@ -496,7 +509,32 @@ function HardwareSection({ L, prefs, canManage }: { L: boolean; prefs: StorePref
   );
 }
 
-function PaymentsSection({ L, prefs, canManage }: { L: boolean; prefs: StorePrefs["payments"]; canManage: boolean }) {
+const EMPTY_BANK_ACCOUNT: PaymentBankAccountInput = {
+  provider: "sepay",
+  bankCode: "",
+  gateway: "",
+  accountNumber: "",
+  subAccount: "",
+  accountName: "",
+  isDefault: false,
+  enabled: true,
+  webhookEnabled: true,
+  webhookSecret: "",
+  apiKey: "",
+  note: "",
+};
+
+function PaymentsSection({
+  L,
+  prefs,
+  canManage,
+  bankAccounts,
+}: {
+  L: boolean;
+  prefs: StorePrefs["payments"];
+  canManage: boolean;
+  bankAccounts: PaymentBankAccountRow[];
+}) {
   const [pm, setPm] = useState(prefs);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -520,7 +558,150 @@ function PaymentsSection({ L, prefs, canManage }: { L: boolean; prefs: StorePref
         </div>
         <div className="px-4.5 pb-4"><SaveBar L={L} dirty={dirty} saved={saved} pending={pending} canManage={canManage} onSave={save} /></div>
       </Card>
+      <SePayAccountsSection L={L} accounts={bankAccounts} canManage={canManage} />
     </>
+  );
+}
+
+function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts: PaymentBankAccountRow[]; canManage: boolean }) {
+  const t = useTranslations("settings.payments.sepay");
+  const [form, setForm] = useState<PaymentBankAccountInput>(EMPTY_BANK_ACCOUNT);
+  const [message, setMessage] = useState("");
+  const [pending, start] = useTransition();
+  const isEditing = Boolean(form.id);
+  const set = <K extends keyof PaymentBankAccountInput>(key: K, value: PaymentBankAccountInput[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setMessage("");
+  };
+  const reset = () => {
+    setForm(EMPTY_BANK_ACCOUNT);
+    setMessage("");
+  };
+  const edit = (account: PaymentBankAccountRow) => {
+    setForm({
+      id: account.id,
+      provider: "sepay",
+      bankCode: account.bankCode,
+      gateway: account.gateway ?? "",
+      accountNumber: account.accountNumber,
+      subAccount: account.subAccount ?? "",
+      accountName: account.accountName,
+      isDefault: account.isDefault,
+      enabled: account.enabled,
+      webhookEnabled: account.webhookEnabled,
+      webhookSecret: "",
+      apiKey: "",
+      note: account.note ?? "",
+    });
+    setMessage("");
+  };
+  const saveAccount = () => {
+    start(async () => {
+      const res = await savePaymentBankAccount(form);
+      if (res.ok) {
+        setMessage(t("saved"));
+        reset();
+      } else {
+        setMessage(t("saveError"));
+      }
+    });
+  };
+  const toggleEnabled = (id: string, enabled: boolean) => {
+    start(async () => {
+      const res = await setPaymentBankAccountEnabled(id, enabled);
+      setMessage(res.ok ? t("saved") : t("saveError"));
+    });
+  };
+  const makeDefault = (id: string) => {
+    start(async () => {
+      const res = await setDefaultPaymentBankAccount(id);
+      setMessage(res.ok ? t("saved") : t("saveError"));
+    });
+  };
+  return (
+    <Card title={t("title")} vi={L ? "Tài khoản ngân hàng nhận VietQR" : "Bank accounts for VietQR collection"}>
+      <div className="p-4 flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-bold">{t("accounts")}</div>
+            <div className="text-[11px] text-slate-500 mt-0.5">{t("help")}</div>
+          </div>
+          {canManage && (
+            <button type="button" onClick={reset} className={btnS}>
+              <Plus className="w-3.5 h-3.5" />{t("newAccount")}
+            </button>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          {accounts.length === 0 && (
+            <div className="px-3.5 py-3 rounded-[10px] bg-canvas border border-border text-[12px] text-slate-500">{t("empty")}</div>
+          )}
+          {accounts.map((account) => (
+            <div key={account.id} className={cn(ROW, "items-start")}>
+              <div className="w-9 h-9 rounded-[10px] bg-primary-50 dark:bg-primary-950/40 grid place-items-center text-primary-700 dark:text-primary-300 shrink-0">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="text-xs font-bold truncate">{account.accountName}</div>
+                  {account.isDefault && <span className="rounded-full px-2 py-0.5 text-[9px] font-bold bg-primary-50 text-primary-700 dark:bg-primary-950/40 dark:text-primary-300">{t("default")}</span>}
+                  {!account.enabled && <span className="rounded-full px-2 py-0.5 text-[9px] font-bold bg-slate-100 text-slate-500 dark:bg-slate-800">{t("disabled")}</span>}
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5 font-mono">
+                  {account.bankCode} · {account.accountNumber}{account.subAccount ? ` · ${account.subAccount}` : ""}
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-semibold text-slate-500">{account.webhookEnabled ? t("webhookOn") : t("webhookOff")}</span>
+                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-semibold text-slate-500">{account.webhookSecretSet ? t("secretSet") : t("secretMissing")}</span>
+                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-semibold text-slate-500">{account.apiKeySet ? t("apiKeySet") : t("apiKeyMissing")}</span>
+                </div>
+              </div>
+              {canManage && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button type="button" onClick={() => edit(account)} className={btnS} aria-label={t("edit")}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button type="button" disabled={account.isDefault || pending} onClick={() => makeDefault(account.id)} className={btnS} aria-label={t("setDefault")}>
+                    <Star className="w-3.5 h-3.5" />
+                  </button>
+                  <button type="button" disabled={pending} onClick={() => toggleEnabled(account.id, !account.enabled)} className={btnS} aria-label={account.enabled ? t("disable") : t("enable")}>
+                    <Power className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {canManage && (
+          <div className="border-t border-border pt-4 flex flex-col gap-3">
+            <div className="text-xs font-bold">{isEditing ? t("editAccount") : t("addAccount")}</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1"><span className={FL}>{t("bankCode")}</span><input className={FI} value={form.bankCode} onChange={(e) => set("bankCode", e.target.value)} placeholder="VCB" /></div>
+              <div className="flex flex-col gap-1"><span className={FL}>{t("gateway")}</span><input className={FI} value={form.gateway ?? ""} onChange={(e) => set("gateway", e.target.value)} placeholder="Vietcombank" /></div>
+              <div className="flex flex-col gap-1"><span className={FL}>{t("accountNumber")}</span><input className={cn(FI, "font-mono")} value={form.accountNumber} onChange={(e) => set("accountNumber", e.target.value)} /></div>
+              <div className="flex flex-col gap-1"><span className={FL}>{t("subAccount")}</span><input className={cn(FI, "font-mono")} value={form.subAccount ?? ""} onChange={(e) => set("subAccount", e.target.value)} placeholder={t("optional")} /></div>
+              <div className="flex flex-col gap-1"><span className={FL}>{t("accountName")}</span><input className={FI} value={form.accountName} onChange={(e) => set("accountName", e.target.value)} /></div>
+              <div className="flex flex-col gap-1"><span className={FL}>{t("note")}</span><input className={FI} value={form.note ?? ""} onChange={(e) => set("note", e.target.value)} placeholder={t("optional")} /></div>
+              <div className="flex flex-col gap-1"><span className={FL}>{t("webhookSecret")}</span><input className={FI} value={form.webhookSecret ?? ""} onChange={(e) => set("webhookSecret", e.target.value)} placeholder={isEditing ? t("secretPlaceholder") : ""} /></div>
+              <div className="flex flex-col gap-1"><span className={FL}>{t("apiKey")}</span><input className={FI} value={form.apiKey ?? ""} onChange={(e) => set("apiKey", e.target.value)} placeholder={isEditing ? t("secretPlaceholder") : ""} /></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <CtrlRow title={t("enabled")} desc={t("enabledHint")} checked={Boolean(form.enabled)} onChange={(v) => set("enabled", v)} />
+              <CtrlRow title={t("webhookEnabled")} desc={t("webhookHint")} checked={Boolean(form.webhookEnabled)} onChange={(v) => set("webhookEnabled", v)} />
+              <CtrlRow title={t("makeDefault")} desc={t("defaultHint")} checked={Boolean(form.isDefault)} onChange={(v) => set("isDefault", v)} />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 text-[11px] text-slate-500">{message}</div>
+              {isEditing && <button type="button" onClick={reset} className={btnS}>{t("cancel")}</button>}
+              <button type="button" disabled={pending || !form.bankCode || !form.accountNumber || !form.accountName} onClick={saveAccount} className={cn(btnF, "disabled:opacity-50")}>
+                {pending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}{t("save")}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 

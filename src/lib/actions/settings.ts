@@ -3,14 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { profiles, storeSettings } from "@/db/schema";
+import { paymentBankAccounts, profiles, storeSettings } from "@/db/schema";
 import {
   aiSettingsInputSchema,
+  paymentBankAccountInputSchema,
   storeSettingsSchema,
   storePrefsPatchSchema,
   parseStorePrefs,
   STAFF_ROLES,
   type AiSettingsInput,
+  type PaymentBankAccountInput,
   type StoreSettingsInput,
   type StaffRole,
   type StorePrefsPatch,
@@ -50,6 +52,11 @@ function safeAiTestError(error: unknown) {
     .replace(/AIza[A-Za-z0-9_-]+/g, "[redacted]")
     .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "Bearer [redacted]")
     .slice(0, 220);
+}
+
+function blankToNull(value?: string) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }
 
 export async function updateStoreSettings(input: StoreSettingsInput): Promise<ActionResult> {
@@ -276,6 +283,110 @@ export async function setStaffActive(id: string, active: boolean): Promise<Actio
     return { ok: true, data: undefined };
   } catch (e) {
     console.error("setStaffActive failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
+}
+
+export async function savePaymentBankAccount(input: PaymentBankAccountInput): Promise<ActionResult> {
+  const gate = await requireManager();
+  if (!gate.ok) return gate;
+  const parsed = paymentBankAccountInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "errors.invalidData" };
+  const v = parsed.data;
+  try {
+    await db.transaction(async (tx) => {
+      if (v.isDefault) {
+        await tx
+          .update(paymentBankAccounts)
+          .set({ isDefault: false, updatedAt: sql`now()` })
+          .where(eq(paymentBankAccounts.provider, v.provider));
+      }
+      if (v.id) {
+        const [current] = await tx
+          .select({ webhookSecret: paymentBankAccounts.webhookSecret, apiKey: paymentBankAccounts.apiKey })
+          .from(paymentBankAccounts)
+          .where(eq(paymentBankAccounts.id, v.id))
+          .limit(1);
+        await tx.update(paymentBankAccounts)
+          .set({
+            provider: v.provider,
+            bankCode: v.bankCode,
+            gateway: blankToNull(v.gateway),
+            accountNumber: v.accountNumber,
+            subAccount: blankToNull(v.subAccount),
+            accountName: v.accountName,
+            isDefault: v.isDefault,
+            enabled: v.enabled,
+            webhookEnabled: v.webhookEnabled,
+            webhookSecret: blankToNull(v.webhookSecret) ?? current?.webhookSecret ?? null,
+            apiKey: blankToNull(v.apiKey) ?? current?.apiKey ?? null,
+            note: blankToNull(v.note),
+            updatedAt: sql`now()`,
+          })
+          .where(eq(paymentBankAccounts.id, v.id));
+        return;
+      }
+      await tx.insert(paymentBankAccounts).values({
+        provider: v.provider,
+        bankCode: v.bankCode,
+        gateway: blankToNull(v.gateway),
+        accountNumber: v.accountNumber,
+        subAccount: blankToNull(v.subAccount),
+        accountName: v.accountName,
+        isDefault: v.isDefault,
+        enabled: v.enabled,
+        webhookEnabled: v.webhookEnabled,
+        webhookSecret: blankToNull(v.webhookSecret),
+        apiKey: blankToNull(v.apiKey),
+        note: blankToNull(v.note),
+        createdBy: gate.userId,
+      });
+    });
+    revalidatePath(Routes.Settings);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    console.error("savePaymentBankAccount failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
+}
+
+export async function setPaymentBankAccountEnabled(id: string, enabled: boolean): Promise<ActionResult> {
+  const gate = await requireManager();
+  if (!gate.ok) return gate;
+  try {
+    await db.update(paymentBankAccounts)
+      .set({ enabled, updatedAt: sql`now()` })
+      .where(eq(paymentBankAccounts.id, id));
+    revalidatePath(Routes.Settings);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    console.error("setPaymentBankAccountEnabled failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
+}
+
+export async function setDefaultPaymentBankAccount(id: string): Promise<ActionResult> {
+  const gate = await requireManager();
+  if (!gate.ok) return gate;
+  try {
+    await db.transaction(async (tx) => {
+      const [target] = await tx
+        .select({ provider: paymentBankAccounts.provider })
+        .from(paymentBankAccounts)
+        .where(eq(paymentBankAccounts.id, id))
+        .limit(1);
+      if (!target) return;
+      await tx.update(paymentBankAccounts)
+        .set({ isDefault: false, updatedAt: sql`now()` })
+        .where(eq(paymentBankAccounts.provider, target.provider));
+      await tx.update(paymentBankAccounts)
+        .set({ isDefault: true, enabled: true, updatedAt: sql`now()` })
+        .where(eq(paymentBankAccounts.id, id));
+    });
+    revalidatePath(Routes.Settings);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    console.error("setDefaultPaymentBankAccount failed:", e);
     return { ok: false, error: "errors.serverError" };
   }
 }

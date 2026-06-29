@@ -1621,7 +1621,50 @@
     "previewHint": "Khi in thật, mẫu tự dàn trang theo khổ A4/A5/K80 đã chọn."
   },
   "settings": {
-    "moreSoon": "Các mục cài đặt khác (nhân viên, phân quyền, HĐĐT…) sẽ bổ sung theo lộ trình."
+    "moreSoon": "Các mục cài đặt khác (nhân viên, phân quyền, HĐĐT…) sẽ bổ sung theo lộ trình.",
+    "payments": {
+      "sepay": {
+        "title": "Tài khoản ngân hàng SePay / VietQR",
+        "accounts": "Tài khoản nhận tiền",
+        "help": "Cấu hình một hoặc nhiều tài khoản ngân hàng để thu tiền VietQR động. Secret chỉ lưu ở server.",
+        "newAccount": "Tài khoản mới",
+        "empty": "Chưa cấu hình tài khoản ngân hàng.",
+        "default": "Mặc định",
+        "disabled": "Đã tắt",
+        "webhookOn": "Webhook bật",
+        "webhookOff": "Webhook tắt",
+        "secretSet": "Đã có secret",
+        "secretMissing": "Chưa có secret",
+        "apiKeySet": "Đã có API key",
+        "apiKeyMissing": "Chưa có API key",
+        "edit": "Sửa",
+        "setDefault": "Đặt mặc định",
+        "disable": "Tắt",
+        "enable": "Bật",
+        "editAccount": "Sửa tài khoản",
+        "addAccount": "Thêm tài khoản",
+        "bankCode": "Mã ngân hàng",
+        "gateway": "Tên gateway",
+        "accountNumber": "Số tài khoản",
+        "subAccount": "Tài khoản phụ / VA",
+        "accountName": "Tên tài khoản",
+        "note": "Ghi chú",
+        "webhookSecret": "Webhook secret",
+        "apiKey": "SePay API key",
+        "optional": "Không bắt buộc",
+        "secretPlaceholder": "Để trống để giữ giá trị hiện tại",
+        "enabled": "Đang bật",
+        "enabledHint": "Dùng tài khoản này khi thanh toán",
+        "webhookEnabled": "Webhook",
+        "webhookHint": "Nhận callback từ SePay",
+        "makeDefault": "Mặc định",
+        "defaultHint": "Ưu tiên cho thanh toán VietQR mới",
+        "cancel": "Hủy",
+        "save": "Lưu tài khoản",
+        "saved": "Đã lưu",
+        "saveError": "Không lưu được tài khoản"
+      }
+    }
   },
   "quotes": {
     "title": "Báo giá",
