@@ -1140,6 +1140,14 @@
     "cost": "Giá vốn",
     "unit": "ĐVT",
     "qty": "Số lượng",
+    "emptyHint": "Thêm sản phẩm từ ô tìm kiếm phía trên hoặc nhập từ file excel.",
+    "chooseFile": "Chọn file dữ liệu",
+    "autoCodeLabel": "Mã xuất dùng nội bộ",
+    "autoCode": "Mã phiếu tự động",
+    "defaultBranch": "Kho chính",
+    "statusLabel": "Trạng thái",
+    "reasonPlaceholder": "Chọn loại xuất",
+    "departmentPlaceholder": "Chọn người nhận",
     "unitCost": "Đơn giá vốn",
     "lineTotal": "Thành tiền vốn",
     "totalCost": "Giá vốn ghi nhận",
@@ -1152,13 +1160,18 @@
     "historyTitle": "Lịch sử xuất nội bộ",
     "historyCount": "{n} phiếu",
     "empty": "Chưa có phiếu xuất nội bộ.",
+    "complete": "Hoàn thành",
     "cols": {
+      "no": "STT",
+      "sku": "Mã hàng hóa",
+      "product": "Tên hàng hóa",
       "code": "Số phiếu",
       "items": "SP",
       "cost": "Giá vốn",
       "by": "Nhân viên"
     },
     "status": {
+      "draft": "Phiếu tạm",
       "pending": "Chờ duyệt",
       "approved": "Đã duyệt"
     }

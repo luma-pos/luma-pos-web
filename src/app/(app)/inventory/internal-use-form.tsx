@@ -2,7 +2,7 @@
 
 import { type ReactNode, useMemo, useRef, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Search, Trash2, Check, Loader2, AlertTriangle, FileSpreadsheet, Printer, Eye, CircleAlert, PackageSearch, Save } from "lucide-react";
+import { Search, Trash2, Check, Loader2, AlertTriangle, FileSpreadsheet, Printer, Eye, CircleAlert, PackageSearch, Save, ClipboardList } from "lucide-react";
 import { SearchableSelect } from "@/components/combobox";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
@@ -105,9 +105,15 @@ export function InternalUseForm() {
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="min-w-0 overflow-hidden rounded-card border border-border-soft bg-surface shadow-e1">
-        <div className="flex flex-wrap items-center gap-3 border-b border-border-soft bg-canvas px-4 py-3">
-            <h2 className="text-xl font-extrabold">{t("nav.internalUse")}</h2>
+      <section className="min-w-0 overflow-hidden rounded-card border border-border bg-surface shadow-e1">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface px-4 py-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-card bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-200">
+              <ClipboardList className="h-5 w-5" />
+            </div>
+            <div className="min-w-36">
+              <h2 className="text-lg font-extrabold">{t("nav.internalUse")}</h2>
+              <p className="text-[11px] text-slate-400">{t("internalUse.formSub")}</p>
+            </div>
             <div className="relative min-w-64 flex-1 xl:max-w-xl">
               <Input
                 value={q}
@@ -115,7 +121,7 @@ export function InternalUseForm() {
                 placeholder={t("internalUse.searchProduct")}
                 leftIcon={<Search />}
                 size="lg"
-                className="bg-surface shadow-e1"
+                className="h-12 bg-canvas text-base shadow-e1"
               />
               {(results.length > 0 || searching) && q.trim() && (
                 <div className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-card border border-border-soft bg-surface shadow-e2">
@@ -143,6 +149,13 @@ export function InternalUseForm() {
           </div>
         )}
 
+          <div className="grid grid-cols-2 gap-2 border-b border-border bg-canvas/60 px-4 py-3 text-xs sm:grid-cols-4">
+            <FormMetric label={t("internalUse.cols.items")} value={String(lines.length)} />
+            <FormMetric label={t("internalUse.qty")} value={String(lines.reduce((sum, line) => sum + line.quantity, 0))} />
+            <FormMetric label={t("internalUse.totalCost")} value={formatCurrency(totalCost)} tone={needsApproval ? "warn" : "primary" } />
+            <FormMetric label={t("internalUse.status.draft")} value={needsApproval ? t("internalUse.status.pending") : t("internalUse.status.approved")} tone={needsApproval ? "warn" : "ok"} />
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full min-w-[880px] table-fixed text-sm">
               <colgroup>
@@ -157,11 +170,11 @@ export function InternalUseForm() {
               </colgroup>
               <thead>
                 <tr className="border-b border-border-soft bg-canvas text-left text-xs font-semibold text-slate-600">
-                  <th className="px-3 py-3 text-center">STT</th>
-                  <th className="px-3 py-3">Mã hàng hóa</th>
-                  <th className="px-3 py-3">Tên hàng hóa</th>
-                  <th className="px-3 py-3">Đơn vị tính</th>
-                  <th className="px-3 py-3 text-right">SL xuất</th>
+                  <th className="px-3 py-3 text-center">{t("internalUse.cols.no")}</th>
+                  <th className="px-3 py-3">{t("internalUse.cols.sku")}</th>
+                  <th className="px-3 py-3">{t("internalUse.cols.product")}</th>
+                  <th className="px-3 py-3">{t("internalUse.unit")}</th>
+                  <th className="px-3 py-3 text-right">{t("internalUse.qty")}</th>
                   <th className="px-3 py-3 text-right">{t("internalUse.unitCost")}</th>
                   <th className="px-3 py-3 text-right">{t("internalUse.lineTotal")}</th>
                   <th />
@@ -195,29 +208,31 @@ export function InternalUseForm() {
           </div>
 
           {lines.length === 0 && (
-            <div className="flex min-h-[420px] flex-col items-center justify-center px-4 text-center">
-              <PackageSearch className="mb-4 h-10 w-10 text-slate-300" />
-              <p className="text-lg font-extrabold">{t("internalUse.emptyForm")}</p>
-              <p className="mt-2 text-sm text-slate-400">Thêm sản phẩm từ ô tìm kiếm phía trên hoặc nhập từ file excel.</p>
-              <Button type="button" className="mt-8" size="lg">
-                <FileSpreadsheet className="h-4 w-4" />
-                Chọn file dữ liệu
-              </Button>
+            <div className="p-4 sm:p-6">
+              <div className="flex min-h-[420px] flex-col items-center justify-center rounded-card border border-dashed border-border bg-canvas/70 px-4 text-center">
+                <PackageSearch className="mb-4 h-10 w-10 text-slate-300" />
+                <p className="text-lg font-extrabold">{t("internalUse.emptyForm")}</p>
+                <p className="mt-2 text-sm text-slate-400">{t("internalUse.emptyHint")}</p>
+                <Button type="button" className="mt-8" size="lg">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  {t("internalUse.chooseFile")}
+                </Button>
+              </div>
             </div>
           )}
       </section>
 
-      <aside className="flex flex-col rounded-card border border-border-soft bg-surface p-4 shadow-e1">
+      <aside className="flex flex-col rounded-card border border-border bg-surface p-4 shadow-e1 xl:sticky xl:top-24 xl:self-start">
           <div className="mb-5 flex items-center justify-between gap-3">
-            <SearchableSelect options={[{ value: "main", label: "Hải Đăng" }]} value="main" onChange={() => undefined} placeholder="Hải Đăng" />
+            <SearchableSelect options={[{ value: "main", label: t("internalUse.defaultBranch") }]} value="main" onChange={() => undefined} placeholder={t("internalUse.defaultBranch")} />
             <div className="h-10 rounded-lg border border-border-soft bg-canvas px-3 py-2 text-sm font-semibold text-slate-400">{new Date().toLocaleDateString("vi-VN")}</div>
           </div>
 
           <div className="space-y-4 text-sm">
-            <PanelRow label="Mã xuất dùng nội bộ"><span className="rounded-lg border border-border-soft bg-canvas px-3 py-2 font-semibold text-slate-400">Mã phiếu tự động</span></PanelRow>
-            <PanelRow label="Trạng thái"><span className="font-semibold">Phiếu tạm</span></PanelRow>
-            <PanelRow label={t("internalUse.reason")}><SearchableSelect options={reasonOpts} value={reason} onChange={setReason} placeholder="Chọn loại xuất" /></PanelRow>
-            <PanelRow label={t("internalUse.department")}><SearchableSelect options={deptOpts} value={department} onChange={setDepartment} placeholder="Chọn người nhận" /></PanelRow>
+            <PanelRow label={t("internalUse.autoCodeLabel")}><span className="rounded-lg border border-border-soft bg-canvas px-3 py-2 font-semibold text-slate-400">{t("internalUse.autoCode")}</span></PanelRow>
+            <PanelRow label={t("internalUse.statusLabel")}><span className="font-semibold">{t("internalUse.status.draft")}</span></PanelRow>
+            <PanelRow label={t("internalUse.reason")}><SearchableSelect options={reasonOpts} value={reason} onChange={setReason} placeholder={t("internalUse.reasonPlaceholder")} /></PanelRow>
+            <PanelRow label={t("internalUse.department")}><SearchableSelect options={deptOpts} value={department} onChange={setDepartment} placeholder={t("internalUse.departmentPlaceholder")} /></PanelRow>
             <PanelRow label={t("internalUse.totalCost")}><span className={cn("font-mono text-lg font-extrabold", needsApproval ? "text-warn" : "text-primary-700")}>{formatCurrency(totalCost)}</span></PanelRow>
           </div>
 
@@ -235,7 +250,7 @@ export function InternalUseForm() {
             </Button>
             <Button type="button" size="lg" disabled={pending || lines.length === 0} loading={pending} onClick={submit} className={needsApproval ? "bg-warn hover:bg-warn/90" : undefined} block>
               {!pending && <Check className="w-4 h-4" />}
-              {needsApproval ? t("internalUse.submitForApproval") : "Hoàn thành"}
+              {needsApproval ? t("internalUse.submitForApproval") : t("internalUse.complete")}
             </Button>
           </div>
       </aside>
@@ -258,6 +273,15 @@ function PanelRow({ label, children }: { label: string; children: ReactNode }) {
     <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center gap-3">
       <span className="font-medium text-slate-600">{label}</span>
       {children}
+    </div>
+  );
+}
+
+function FormMetric({ label, value, tone }: { label: string; value: string; tone?: "primary" | "ok" | "warn" }) {
+  return (
+    <div className="rounded-lg border border-border bg-surface px-3 py-2">
+      <div className="text-[10px] font-semibold uppercase text-slate-400">{label}</div>
+      <div className={cn("mt-0.5 font-mono text-sm font-bold tabular-nums", tone === "primary" && "text-primary-700", tone === "ok" && "text-ok", tone === "warn" && "text-warn")}>{value}</div>
     </div>
   );
 }

@@ -1140,6 +1140,14 @@
     "cost": "Cost",
     "unit": "Unit",
     "qty": "Qty",
+    "emptyHint": "Add products from the search box above or import from an Excel file.",
+    "chooseFile": "Choose data file",
+    "autoCodeLabel": "Internal-use code",
+    "autoCode": "Auto-generated code",
+    "defaultBranch": "Main warehouse",
+    "statusLabel": "Status",
+    "reasonPlaceholder": "Select issue reason",
+    "departmentPlaceholder": "Select recipient",
     "unitCost": "Unit cost",
     "lineTotal": "Total cost",
     "totalCost": "Cost expensed",
@@ -1152,13 +1160,18 @@
     "historyTitle": "Internal-use history",
     "historyCount": "{n} issues",
     "empty": "No internal-use issues yet.",
+    "complete": "Complete",
     "cols": {
+      "no": "No.",
+      "sku": "SKU",
+      "product": "Product",
       "code": "Ref",
       "items": "Items",
       "cost": "Cost",
       "by": "Staff"
     },
     "status": {
+      "draft": "Draft",
       "pending": "Pending",
       "approved": "Approved"
     }
