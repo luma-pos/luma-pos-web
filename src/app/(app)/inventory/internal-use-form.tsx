@@ -6,6 +6,7 @@ import { Search, Trash2, Check, Loader2, AlertTriangle, FileSpreadsheet, Printer
 import { SearchableSelect } from "@/components/combobox";
 import { searchPurchaseProducts } from "@/lib/actions/purchase-search";
 import { createInternalUse } from "@/lib/actions/internal-use";
+import { Routes } from "@/lib/routes";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
@@ -90,7 +91,7 @@ export function InternalUseForm() {
       if (res.ok) {
         setToast(res.data.status === "pending" ? t("internalUse.submittedPending") : t("internalUse.submitted"));
         setLines([]); setNote(""); setReason(""); setDepartment("");
-        router.refresh();
+        router.push(`${Routes.Inventory}?tab=internal`);
         setTimeout(() => setToast(""), 3500);
       } else {
         setToast(t(res.error as never));

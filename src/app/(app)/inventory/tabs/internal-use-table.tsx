@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Copy, FileDown, LayoutList, Plus, Printer, Save, Search } from "lucide-react";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table";
+import { Routes } from "@/lib/routes";
 import { cn, formatCurrency, formatDate, formatNumber } from "@/lib/utils";
 import type { getInternalUseIssues } from "@/lib/data/internal-use";
 
@@ -88,14 +90,13 @@ export function InternalUseTable({ rows }: { rows: InternalUseRow[] }) {
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={openCreateForm}
+          <Link
+            href={Routes.InternalUseNew}
             className="inline-flex h-10 items-center gap-2 rounded-card bg-primary-600 px-4 text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" />
             {isVi ? "Xuất nội bộ" : t("internalUse.formTitle")}
-          </button>
+          </Link>
           <button type="button" className="inline-flex h-10 items-center gap-2 rounded-card border border-border bg-surface px-4 text-sm font-semibold text-slate-700 transition hover:bg-surface-2 active:scale-[0.98] dark:text-slate-200">
             <FileDown className="h-4 w-4" />
             {isVi ? "Xuất file" : "Export"}
@@ -121,13 +122,6 @@ export function InternalUseTable({ rows }: { rows: InternalUseRow[] }) {
       />
     </section>
   );
-}
-
-function openCreateForm() {
-  const details = document.getElementById("internal-use-create") as HTMLDetailsElement | null;
-  if (!details) return;
-  details.open = true;
-  details.scrollIntoView({ block: "start", behavior: "smooth" });
 }
 
 function ExpandedIssue({ row }: { row: InternalUseRow }) {

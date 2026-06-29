@@ -27,6 +27,7 @@ export const Routes = {
   Categories: "/products/categories",
   Pricing: "/pricing",
   Inventory: "/inventory",
+  InternalUseNew: "/internal-use/new",
   Stocktakes: "/stocktakes",
   StocktakeNew: "/stocktakes/new",
   Purchases: "/purchases",
