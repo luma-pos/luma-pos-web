@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Search, Trash2, Check, Loader2, AlertTriangle } from "lucide-react";
+import { Search, Trash2, Check, Loader2, AlertTriangle, ClipboardList, PackageSearch } from "lucide-react";
 import { SearchableSelect } from "@/components/combobox";
 import { searchPurchaseProducts } from "@/lib/actions/purchase-search";
 import { createInternalUse } from "@/lib/actions/internal-use";
@@ -100,37 +100,48 @@ export function InternalUseForm() {
   }
 
   return (
-    <div className="bg-surface rounded-card shadow-e2 mb-5">
-      <div className="px-4.5 py-3 border-b border-border bg-canvas rounded-t-card">
-        <div className="text-sm font-bold">{t("internalUse.formTitle")}</div>
-        <div className="text-[10px] italic text-slate-400 mt-px">{t("internalUse.formSub")}</div>
+    <div className="mb-5 overflow-hidden rounded-card border border-border bg-surface shadow-e2">
+      <div className="border-b border-border bg-surface-2 px-4 py-4 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-200">
+              <ClipboardList className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-base font-extrabold">{t("internalUse.formTitle")}</div>
+              <div className="mt-px text-xs text-slate-400">{t("internalUse.formSub")}</div>
+            </div>
+          </div>
+          <div className={cn("rounded-xl px-3 py-2 text-sm font-bold tabular-nums", needsApproval ? "bg-warn-soft text-warn" : "bg-canvas text-slate-600 dark:text-slate-300")}>
+            {formatCurrency(totalCost)}
+          </div>
+        </div>
       </div>
-      <div className="p-4.5 flex flex-col gap-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="flex flex-col gap-4 p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <span className="text-[9px] font-bold uppercase tracking-wide text-slate-500">{t("internalUse.department")}</span>
+            <span className="text-xs font-semibold text-slate-500">{t("internalUse.department")}</span>
             <SearchableSelect options={deptOpts} value={department} onChange={setDepartment} placeholder={t("internalUse.department")} />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-[9px] font-bold uppercase tracking-wide text-slate-500">{t("internalUse.reason")}</span>
+            <span className="text-xs font-semibold text-slate-500">{t("internalUse.reason")}</span>
             <SearchableSelect options={reasonOpts} value={reason} onChange={setReason} placeholder={t("internalUse.reason")} />
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-[9px] font-bold uppercase tracking-wide text-slate-500">{t("internalUse.note")}</span>
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("internalUse.notePlaceholder")} className="w-full px-3 py-2 text-sm rounded-[10px] border border-border bg-canvas" />
+          <span className="text-xs font-semibold text-slate-500">{t("internalUse.note")}</span>
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("internalUse.notePlaceholder")} className="h-11 w-full rounded-xl border border-border bg-canvas px-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-200" />
         </div>
 
-        {/* product search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input value={q} onChange={(e) => onSearch(e.target.value)} placeholder={t("internalUse.searchProduct")} className="w-full pl-9 pr-3 py-2.5 text-sm rounded-[10px] border border-border bg-canvas" />
+        <div className="relative max-w-2xl">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input value={q} onChange={(e) => onSearch(e.target.value)} placeholder={t("internalUse.searchProduct")} className="h-12 w-full rounded-xl border border-border bg-canvas pl-10 pr-3 text-sm shadow-e1 transition focus:outline-none focus:ring-2 focus:ring-primary-200" />
           {(results.length > 0 || searching) && q.trim() && (
-            <div className="absolute z-30 left-0 right-0 mt-1 bg-surface border border-border rounded-xl shadow-e2 overflow-hidden">
+            <div className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-xl border border-border bg-surface shadow-e2">
               {searching ? <div className="px-4 py-4 text-center text-sm text-slate-400"><Loader2 className="w-4 h-4 animate-spin inline" /></div>
                 : results.map((p) => (
-                  <button key={p.id} type="button" onClick={() => addItem(p)} className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-surface-2">
-                    <div className="flex-1 min-w-0"><div className="font-medium truncate">{p.name}</div><div className="text-[10px] text-slate-400 font-mono">{p.sku} · {t("internalUse.cost")} {formatCurrency(Number(p.costPrice))}/{p.baseUnit}</div></div>
+                  <button key={p.id} type="button" onClick={() => addItem(p)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-surface-2">
+                    <div className="min-w-0 flex-1"><div className="truncate font-semibold">{p.name}</div><div className="font-mono text-xs text-slate-400">{p.sku} · {t("internalUse.cost")} {formatCurrency(Number(p.costPrice))}/{p.baseUnit}</div></div>
                   </button>
                 ))}
             </div>
@@ -138,38 +149,41 @@ export function InternalUseForm() {
         </div>
 
         {needsApproval && (
-          <div className="flex items-start gap-2 px-3.5 py-2.5 bg-warn-soft border border-warn/25 rounded-[10px] text-[11px] text-warn">
+          <div className="flex items-start gap-2 rounded-xl border border-warn/25 bg-warn-soft px-3.5 py-2.5 text-xs text-warn">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-px" />
             <span>{t("internalUse.approvalBanner", { amount: formatCurrency(totalCost) })}</span>
           </div>
         )}
 
         {lines.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-slate-400 border border-dashed border-border rounded-[10px]">{t("internalUse.emptyForm")}</div>
+          <div className="flex min-h-36 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-canvas/60 px-4 py-8 text-center">
+            <PackageSearch className="mb-3 h-8 w-8 text-slate-300" />
+            <p className="text-sm font-semibold text-slate-500">{t("internalUse.emptyForm")}</p>
+          </div>
         ) : (
-          <div className="border border-border rounded-[10px] overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full text-sm min-w-150">
-              <thead><tr className="bg-canvas text-left text-[10px] uppercase tracking-wide text-slate-400 border-b border-border">
-                <th className="px-3 py-2 font-bold">{t("orders.cols.product")}</th>
-                <th className="px-3 py-2 font-bold w-36">{t("internalUse.unit")}</th>
-                <th className="px-3 py-2 font-bold w-24 text-center">{t("internalUse.qty")}</th>
-                <th className="px-3 py-2 font-bold w-32 text-right">{t("internalUse.unitCost")}</th>
-                <th className="px-3 py-2 font-bold w-32 text-right">{t("internalUse.lineTotal")}</th>
+              <thead><tr className="border-b border-border bg-canvas text-left text-[11px] text-slate-500">
+                <th className="px-3 py-3 font-semibold">{t("orders.cols.product")}</th>
+                <th className="w-36 px-3 py-3 font-semibold">{t("internalUse.unit")}</th>
+                <th className="w-24 px-3 py-3 text-center font-semibold">{t("internalUse.qty")}</th>
+                <th className="w-32 px-3 py-3 text-right font-semibold">{t("internalUse.unitCost")}</th>
+                <th className="w-32 px-3 py-3 text-right font-semibold">{t("internalUse.lineTotal")}</th>
                 <th className="w-8" />
               </tr></thead>
               <tbody>
                 {lines.map((l) => (
-                  <tr key={l.key} className="border-b border-border-soft last:border-0">
-                    <td className="px-3 py-2 font-medium">{l.productName}</td>
+                  <tr key={l.key} className="border-b border-border-soft transition last:border-0 hover:bg-surface-2/70">
+                    <td className="px-3 py-3 font-semibold">{l.productName}</td>
                     <td className="px-3 py-2">
-                      <select value={l.unitName} onChange={(e) => changeUnit(l, e.target.value)} className="w-full px-2 py-1.5 text-xs rounded-md border border-border bg-canvas">
+                      <select value={l.unitName} onChange={(e) => changeUnit(l, e.target.value)} className="w-full rounded-lg border border-border bg-canvas px-2 py-2 text-xs transition focus:outline-none focus:ring-2 focus:ring-primary-200">
                         {l.units.map((u) => <option key={u.name} value={u.name}>{u.name}{u.mult > 1 ? ` (×${u.mult})` : ""}</option>)}
                       </select>
                     </td>
-                    <td className="px-3 py-2"><input type="number" min={1} value={l.quantity} onChange={(e) => upd(l.key, { quantity: Math.max(1, Number(e.target.value) || 1) })} className="no-spinner w-full px-2 py-1.5 text-center text-sm rounded-md border border-border bg-canvas font-mono" /></td>
-                    <td className="px-3 py-2"><input type="number" min={0} value={l.unitCost} onChange={(e) => upd(l.key, { unitCost: Math.max(0, Number(e.target.value) || 0) })} className="no-spinner w-full px-2 py-1.5 text-right text-sm rounded-md border border-border bg-canvas font-mono" /></td>
-                    <td className="px-3 py-2 text-right font-mono font-bold text-warn">{formatCurrency(l.unitCost * l.quantity)}</td>
-                    <td className="px-3 py-2"><button type="button" onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))} className="text-slate-400 hover:text-er"><Trash2 className="w-4 h-4" /></button></td>
+                    <td className="px-3 py-2"><input type="number" min={1} value={l.quantity} onChange={(e) => upd(l.key, { quantity: Math.max(1, Number(e.target.value) || 1) })} className="no-spinner w-full rounded-lg border border-border bg-canvas px-2 py-2 text-center font-mono text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-200" /></td>
+                    <td className="px-3 py-2"><input type="number" min={0} value={l.unitCost} onChange={(e) => upd(l.key, { unitCost: Math.max(0, Number(e.target.value) || 0) })} className="no-spinner w-full rounded-lg border border-border bg-canvas px-2 py-2 text-right font-mono text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-200" /></td>
+                    <td className="px-3 py-3 text-right font-mono font-bold text-warn">{formatCurrency(l.unitCost * l.quantity)}</td>
+                    <td className="px-3 py-2"><button type="button" onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-er-soft hover:text-er active:scale-[0.98]"><Trash2 className="w-4 h-4" /></button></td>
                   </tr>
                 ))}
               </tbody>
@@ -178,9 +192,9 @@ export function InternalUseForm() {
         )}
 
         {lines.length > 0 && (
-          <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
-            <span className="text-sm">{t("internalUse.totalCost")}: <span className="font-mono font-extrabold text-warn text-base">{formatCurrency(totalCost)}</span></span>
-            <button type="button" disabled={pending} onClick={submit} className={cn("inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-white text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50", needsApproval ? "bg-warn hover:brightness-110" : "bg-primary-600 hover:brightness-110")}>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-canvas px-4 py-3">
+            <span className="text-sm text-slate-500">{t("internalUse.totalCost")}: <span className="font-mono text-base font-extrabold text-warn">{formatCurrency(totalCost)}</span></span>
+            <button type="button" disabled={pending} onClick={submit} className={cn("inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50", needsApproval ? "bg-warn hover:brightness-110" : "bg-primary-600 hover:brightness-110")}>
               {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               {needsApproval ? t("internalUse.submitForApproval") : t("internalUse.confirm")}
             </button>
