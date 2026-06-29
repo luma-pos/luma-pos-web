@@ -281,6 +281,7 @@ export function SettingsClient({
   bankAccounts: PaymentBankAccountRow[];
 }) {
   const locale = useLocale();
+  const tSettings = useTranslations("settings");
   const L = locale === "vi";
   const [active, setActive] = useState<SectionId>("store");
   useEffect(() => {
@@ -331,8 +332,10 @@ export function SettingsClient({
         </div>
 
         <div className="mb-4">
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.07em] text-primary-600">SETTINGS · {active.toUpperCase()}</div>
-          <h1 className="text-xl font-extrabold tracking-tight">{L ? sec.vi : sec.en}</h1>
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.07em] text-primary-600">
+            {tSettings("breadcrumb.settings")} · {tSettings(`breadcrumb.${active}`)}
+          </div>
+          {active !== "payments" && <h1 className="text-xl font-extrabold tracking-tight">{L ? sec.vi : sec.en}</h1>}
         </div>
 
         {active === "store" && <StoreSection L={L} locale={locale} store={store} canManage={canManage} />}

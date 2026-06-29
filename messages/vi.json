@@ -1655,6 +1655,17 @@
   },
   "settings": {
     "moreSoon": "Các mục cài đặt khác (nhân viên, phân quyền, HĐĐT…) sẽ bổ sung theo lộ trình.",
+    "breadcrumb": {
+      "settings": "Cài đặt",
+      "store": "Cửa hàng",
+      "staff": "Nhân viên",
+      "hardware": "Thiết bị",
+      "payments": "Thanh toán",
+      "print": "Mẫu in",
+      "tax": "Thuế",
+      "notifications": "Thông báo",
+      "ai": "AI"
+    },
     "payments": {
       "sepay": {
         "title": "Tài khoản ngân hàng SePay / VietQR",

@@ -1655,6 +1655,17 @@
   },
   "settings": {
     "moreSoon": "More settings (staff, permissions, e-invoice…) coming with the roadmap.",
+    "breadcrumb": {
+      "settings": "Settings",
+      "store": "Store",
+      "staff": "Staff",
+      "hardware": "Hardware",
+      "payments": "Payments",
+      "print": "Print",
+      "tax": "Tax",
+      "notifications": "Notifications",
+      "ai": "AI"
+    },
     "payments": {
       "sepay": {
         "title": "SePay / VietQR bank accounts",
