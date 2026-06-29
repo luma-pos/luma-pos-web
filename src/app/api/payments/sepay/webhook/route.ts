@@ -42,16 +42,12 @@ export async function POST(request: Request) {
       eq(paymentBankAccounts.provider, "sepay"),
       eq(paymentBankAccounts.accountNumber, event.accountNumber),
       eq(paymentBankAccounts.enabled, true),
-      eq(paymentBankAccounts.webhookEnabled, true),
     ))
     .limit(1);
-  if (!account) {
-    return NextResponse.json({ ok: false, error: "payments.errors.bankAccountNotFound" }, { status: 404 });
-  }
 
-  const configuredSecret = process.env.SEPAY_WEBHOOK_SECRET?.trim() || account.webhookSecret?.trim() || null;
+  const configuredSecret = process.env.SEPAY_WEBHOOK_SECRET?.trim() || account?.webhookSecret?.trim() || null;
   const validSignature = verifySepaySignature(rawBody, headerSignature(request), configuredSecret);
-  const configuredApiKey = process.env.SEPAY_API_KEY?.trim() || account.apiKey?.trim();
+  const configuredApiKey = process.env.SEPAY_API_KEY?.trim() || account?.apiKey?.trim();
   const validApiKey = Boolean(configuredApiKey && headerApiKey(request) === configuredApiKey);
   const hasConfiguredAuth = Boolean(configuredSecret || configuredApiKey);
   if (hasConfiguredAuth && !validSignature && !validApiKey) {
@@ -62,6 +58,29 @@ export async function POST(request: Request) {
   if (!recorded.ok) {
     return NextResponse.json({ ok: false, error: recorded.error }, { status: 500 });
   }
+  if (!account) {
+    return NextResponse.json({
+      ok: true,
+      data: {
+        eventId: recorded.data.eventId,
+        duplicate: recorded.data.duplicate,
+        matched: false,
+        reason: "bank_account_not_found",
+      },
+    });
+  }
+  if (!account.webhookEnabled) {
+    return NextResponse.json({
+      ok: true,
+      data: {
+        eventId: recorded.data.eventId,
+        duplicate: recorded.data.duplicate,
+        matched: false,
+        reason: "webhook_disabled",
+      },
+    });
+  }
+
   const matched = await matchSepayWebhookEvent(recorded.data.eventId);
   if (!matched.ok) {
     return NextResponse.json({ ok: false, error: matched.error }, { status: 500 });
