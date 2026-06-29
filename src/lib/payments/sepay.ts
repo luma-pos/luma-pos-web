@@ -96,12 +96,19 @@ export function buildSepayVietQrImageUrl(input: {
   return `https://qr.sepay.vn/img?${params.toString()}`;
 }
 
-export function verifySepaySignature(rawBody: string, signature: string | null, secret: string | null) {
+function safeHexEqual(leftHex: string, rightHex: string) {
+  const left = Buffer.from(leftHex, "hex");
+  const right = Buffer.from(rightHex, "hex");
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+export function verifySepaySignature(rawBody: string, signature: string | null, secret: string | null, timestamp?: string | null) {
   if (!secret) return true;
   if (!signature) return false;
   const cleaned = signature.replace(/^sha256=/i, "").trim();
-  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-  const left = Buffer.from(cleaned, "hex");
-  const right = Buffer.from(expected, "hex");
-  return left.length === right.length && timingSafeEqual(left, right);
+  const candidates = [
+    createHmac("sha256", secret).update(rawBody).digest("hex"),
+    ...(timestamp ? [createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex")] : []),
+  ];
+  return candidates.some((expected) => safeHexEqual(cleaned, expected));
 }

@@ -21,6 +21,12 @@ function headerApiKey(request: Request) {
     ?? bearerToken(request.headers.get("authorization"));
 }
 
+function headerTimestamp(request: Request) {
+  return request.headers.get("x-sepay-timestamp")
+    ?? request.headers.get("sepay-timestamp")
+    ?? request.headers.get("x-timestamp");
+}
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
   let json: unknown;
@@ -46,7 +52,7 @@ export async function POST(request: Request) {
     .limit(1);
 
   const configuredSecret = process.env.SEPAY_WEBHOOK_SECRET?.trim() || account?.webhookSecret?.trim() || null;
-  const validSignature = verifySepaySignature(rawBody, headerSignature(request), configuredSecret);
+  const validSignature = verifySepaySignature(rawBody, headerSignature(request), configuredSecret, headerTimestamp(request));
   const configuredApiKey = process.env.SEPAY_API_KEY?.trim() || account?.apiKey?.trim();
   const validApiKey = Boolean(configuredApiKey && headerApiKey(request) === configuredApiKey);
   const hasConfiguredAuth = Boolean(configuredSecret || configuredApiKey);
