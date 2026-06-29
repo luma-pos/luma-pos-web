@@ -87,8 +87,8 @@
   --canvas:       oklch(0.985 0.003 95);
   --surface:      oklch(1 0 0);            /* #FFFFFF */
   --surface-2:    oklch(0.975 0.004 95);   /* #F7F6F3 */
-  --border:       oklch(0.925 0.003 90);   /* #EAEAEA hairline */
-  --border-soft:  oklch(0.955 0.003 90);   /* #F3F2EF */
+  --border:       oklch(0.94 0.003 90);    /* warm hairline */
+  --border-soft:  oklch(0.965 0.003 90);   /* soft dividers */
   /* muted semantic pastels (text + soft bg) */
   --ok:   oklch(0.52 0.13 150);  --ok-soft:   oklch(0.97 0.03 150);
   --warn: oklch(0.55 0.13 70);   --warn-soft: oklch(0.97 0.04 80);
@@ -146,9 +146,9 @@
   /* 16px card radius (spec) */
   --radius-card: 16px;
 
-  /* diffuse + 1px hairline elevation (<0.06 opacity) — thay shadow-md/lg/xl */
-  --shadow-e1: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px var(--border);
-  --shadow-e2: 0 4px 16px rgba(0,0,0,0.05), 0 1px 4px rgba(0,0,0,0.03), 0 0 0 1px var(--border);
+  /* diffuse elevation only; borders are explicit via border tokens */
+  --shadow-e1: 0 1px 3px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.03);
+  --shadow-e2: 0 12px 34px rgba(15,23,42,0.06), 0 2px 8px rgba(15,23,42,0.035);
 
   --font-sans: var(--font-be-vietnam), ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;

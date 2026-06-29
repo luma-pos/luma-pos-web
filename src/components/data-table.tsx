@@ -161,7 +161,7 @@ export function DataTableShell<T>({
               const expanded = expandedId === id;
               const toggle = () => setExpanded(expanded ? null : id);
               return (
-                <div key={id} className={cn("overflow-hidden rounded-card border bg-surface", expanded ? "border-primary-300 shadow-e1" : "border-border")}>
+                <div key={id} className={cn("overflow-hidden rounded-card border bg-surface", expanded ? "border-primary-200 shadow-e1" : "border-border-soft")}>
                   {renderMobileRow ? (
                     renderMobileRow({ row, expanded, toggle })
                   ) : (
@@ -184,7 +184,7 @@ export function DataTableShell<T>({
             })}
           </div>
 
-          <div className="hidden overflow-x-auto rounded-card border border-border bg-surface lg:block">
+          <div className="hidden overflow-x-auto rounded-card border border-border-soft bg-surface lg:block">
             <table className="w-full table-fixed text-sm" style={{ minWidth }}>
               <colgroup>
                 {visibleColumns.map((column) => (
@@ -193,7 +193,7 @@ export function DataTableShell<T>({
                 <col style={{ width: "44px" }} />
               </colgroup>
               <thead>
-                <tr className="bg-primary-50/70 text-left text-xs font-semibold text-slate-700 dark:bg-primary-950/20 dark:text-slate-300">
+                <tr className="bg-canvas text-left text-xs font-semibold text-slate-500 dark:text-slate-300">
                   {visibleColumns.map((column) => (
                     <th
                       key={column.key}
@@ -257,7 +257,7 @@ export function DataTableShell<T>({
                         </td>
                       </tr>
                       {expanded && renderExpanded && (
-                        <tr className="border-t border-primary-100 dark:border-primary-900/50">
+                        <tr className="border-t border-border-soft">
                           <td colSpan={visibleColumns.length + 1} className="p-0">
                             {renderExpanded(row)}
                           </td>
@@ -307,7 +307,7 @@ function ColumnVisibilityMenu<T>({
       {open && (
         <>
           <button type="button" className="fixed inset-0 z-30 cursor-default" aria-label="Đóng chọn cột" onClick={() => onOpenChange(false)} />
-          <div className="absolute right-0 top-full z-40 mt-2 w-[320px] rounded-card border border-border bg-surface p-3 text-left shadow-2xl">
+          <div className="absolute right-0 top-full z-40 mt-2 w-[320px] rounded-card border border-border-soft bg-surface p-3 text-left shadow-e2">
             <div className="mb-2 flex items-center justify-between gap-3">
               <div className="text-sm font-bold">Thông tin hiển thị</div>
               <button type="button" onClick={() => onOpenChange(false)} className="rounded-md p-1 text-slate-400 hover:bg-surface-2 hover:text-slate-700">
@@ -371,7 +371,7 @@ export function RowPreviewModal({
         className="mx-auto flex h-full max-h-[900px] w-full max-w-6xl flex-col overflow-hidden rounded-card bg-surface shadow-2xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-3 sm:px-5">
+        <div className="flex items-start justify-between gap-4 border-b border-border-soft px-4 py-3 sm:px-5">
           <div className="min-w-0">
             <div className="truncate text-lg font-bold">{title}</div>
             {subtitle && <div className="mt-0.5 truncate text-sm text-slate-500">{subtitle}</div>}
@@ -381,7 +381,7 @@ export function RowPreviewModal({
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-auto p-4 sm:p-5">{children}</div>
-        {footer && <div className="border-t border-border px-4 py-3 sm:px-5">{footer}</div>}
+        {footer && <div className="border-t border-border-soft px-4 py-3 sm:px-5">{footer}</div>}
       </div>
     </div>
   );

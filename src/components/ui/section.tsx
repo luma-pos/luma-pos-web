@@ -34,7 +34,7 @@ export function Section({
 
   return (
     <div className={cn(
-      "bg-surface border border-border rounded-card shadow-e1",
+      "bg-surface border border-border-soft rounded-card shadow-e1",
       className
     )}>
       <div

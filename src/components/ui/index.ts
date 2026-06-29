@@ -5,6 +5,7 @@ export { NumberInput, type NumberInputProps } from "./number-input";
 export { MoneyInput, type MoneyInputProps } from "./money-input";
 export { Select, type SelectProps, type SelectOption } from "./select";
 export { Section, type SectionProps } from "./section";
+export { SegmentedTabs, type TabItem } from "./tabs";
 export { TagInput, type TagInputProps } from "./tag-input";
 export { Text, Heading, Muted, Code, type TextProps } from "./text";
 export { Label, Field, type LabelProps, type FieldProps } from "./label";

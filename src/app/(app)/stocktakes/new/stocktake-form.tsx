@@ -116,7 +116,7 @@ export function StocktakeForm({ activeWarehouseId, warehouses, products }: { act
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="min-w-0 overflow-hidden rounded-card bg-surface shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+        <section className="min-w-0 overflow-hidden rounded-card bg-surface shadow-e1">
           <div className="border-b border-border-soft bg-surface px-4 py-4 sm:px-5">
             <div className="relative">
               <Input
@@ -210,7 +210,7 @@ export function StocktakeForm({ activeWarehouseId, warehouses, products }: { act
           )}
         </section>
 
-        <aside className="rounded-card bg-surface p-5 shadow-[0_14px_36px_rgba(15,23,42,0.05)] xl:sticky xl:top-24 xl:self-start">
+        <aside className="rounded-card bg-surface p-5 shadow-e1 xl:sticky xl:top-24 xl:self-start">
           <div className="mb-4 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-card bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-200">
               <ClipboardCheck className="h-5 w-5" />

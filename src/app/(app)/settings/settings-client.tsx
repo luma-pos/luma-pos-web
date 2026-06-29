@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Check, ChevronDown, Copy, ExternalLink, KeyRound, Loader2, Pencil, Plus, Power, Printer, Save, Star, Trash2 } from "lucide-react";
 import { SearchableSelect } from "@/components/combobox";
+import { SegmentedTabs } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import { normalizeSearch } from "@/lib/normalize";
@@ -247,7 +248,7 @@ const SEC_META: Record<SectionId, { en: string; vi: string; subEn: string; subVi
 function Card({ title, vi, action, children }: { title: string; vi: string; action?: React.ReactNode; children?: React.ReactNode }) {
   return (
     <div className="bg-surface rounded-card shadow-e2 mb-4">
-      <div className="px-4.5 py-3 border-b border-border bg-canvas rounded-t-card flex items-center justify-between gap-3">
+      <div className="px-4.5 py-3 border-b border-border-soft bg-canvas rounded-t-card flex items-center justify-between gap-3">
         <div>
           <div className="text-xs font-bold">{title}</div>
           <div className="text-[10px] italic text-slate-400 mt-px">{vi}</div>
@@ -260,8 +261,8 @@ function Card({ title, vi, action, children }: { title: string; vi: string; acti
 }
 const FL = "text-[9px] font-bold uppercase tracking-wide text-slate-500";
 const FI = "w-full px-[11px] py-[9px] bg-canvas border-[1.5px] border-border rounded-[10px] text-[13px] outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30";
-const ROW = "flex items-center justify-between gap-3 px-3.5 py-2.5 bg-canvas rounded-[10px] border border-border";
-const btnS = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-semibold hover:bg-surface-2 transition";
+const ROW = "flex items-center justify-between gap-3 px-3.5 py-2.5 bg-canvas rounded-[10px] border border-border-soft";
+const btnS = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-soft text-xs font-semibold hover:bg-surface-2 transition";
 const btnF = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-semibold hover:brightness-110 transition";
 
 export function SettingsClient({
@@ -441,11 +442,15 @@ function StaffSection({ L, staff, canManage }: { L: boolean; staff: StaffRow[]; 
   const roles = ["owner", "manager", "cashier", "stock", "accountant"];
   return (
     <>
-      <div className="inline-flex bg-canvas border border-border rounded-[10px] p-0.75 gap-0.5 mb-3.5">
-        {([["list", L ? "Danh sách NV" : "Staff List"], ["perms", L ? "Phân quyền" : "Permission Matrix"]] as const).map(([k, lbl]) => (
-          <button key={k} onClick={() => setTab(k)} className={cn("px-3.5 py-1.5 rounded-[7px] text-[11px] font-bold transition", tab === k ? "bg-surface shadow-e1" : "text-slate-500")}>{lbl}</button>
-        ))}
-      </div>
+      <SegmentedTabs
+        className="mb-3.5"
+        items={[
+          { id: "list", label: L ? "Danh sách NV" : "Staff List" },
+          { id: "perms", label: L ? "Phân quyền" : "Permission Matrix" },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
       {tab === "list" && (
         <Card title={L ? "Danh sách nhân viên" : "Staff Members"} vi={L ? "Staff Members — RBAC" : "Nhân viên — phân quyền"}>
           {staff.length === 0 ? (
@@ -577,21 +582,7 @@ function PaymentsSection({
   ] as const;
   return (
     <>
-      <div className="mb-4 flex flex-wrap gap-2 rounded-card border border-border bg-surface p-1 shadow-e1">
-        {tabs.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setTab(item.id)}
-            className={cn(
-              "rounded-[10px] px-3 py-2 text-xs font-bold transition",
-              tab === item.id ? "bg-primary-600 text-white shadow-e1" : "text-slate-500 hover:bg-surface-2 hover:text-foreground"
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs className="mb-4" items={tabs} value={tab} onChange={setTab} />
       {tab === "methods" && (
         <Card title={L ? "Phương thức thanh toán" : "Payment Methods"} vi={L ? "Bật phương thức cho màn thanh toán" : "Enable methods for checkout"}>
           <div className="p-4 flex flex-col gap-2">

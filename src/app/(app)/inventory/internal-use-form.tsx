@@ -105,7 +105,7 @@ export function InternalUseForm() {
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="min-w-0 overflow-hidden rounded-card bg-surface shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+      <section className="min-w-0 overflow-hidden rounded-card bg-surface shadow-e1">
         <div className="flex flex-wrap items-center gap-3 border-b border-border-soft bg-surface px-4 py-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-card bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-200">
               <ClipboardList className="h-5 w-5" />
@@ -222,7 +222,7 @@ export function InternalUseForm() {
           )}
       </section>
 
-      <aside className="flex flex-col rounded-card bg-surface p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] xl:sticky xl:top-24 xl:self-start">
+      <aside className="flex flex-col rounded-card bg-surface p-4 shadow-e1 xl:sticky xl:top-24 xl:self-start">
           <div className="mb-5 flex items-center justify-between gap-3">
             <SearchableSelect options={[{ value: "main", label: t("internalUse.defaultBranch") }]} value="main" onChange={() => undefined} placeholder={t("internalUse.defaultBranch")} />
             <div className="h-10 rounded-lg border border-border-soft bg-canvas px-3 py-2 text-sm font-semibold text-slate-400">{new Date().toLocaleDateString("vi-VN")}</div>
