@@ -436,6 +436,15 @@ export function PosClient({
   const [syncing, setSyncing] = useState(false);
   const [offlineSaved, setOfflineSaved] = useState(false);
 
+  /** Khi chỉ có một tab, nút X sẽ làm trống hóa đơn thay vì đóng tab. */
+  function clearInvoice(id: string) {
+    setInvoices((list) => list.map((inv) => (inv.id === id ? makeInvoice(id) : inv)));
+    setActiveId(id);
+    setError("");
+    setAiUnresolvedItems([]);
+    setAiHighlightedProductIds([]);
+  }
+
   useEffect(() => {
     const q = search.trim();
     let cancelled = false;
@@ -834,11 +843,17 @@ export function PosClient({
                 isActive ? "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300" : "bg-slate-200 dark:bg-slate-700"
               )}>{count}</span>
             )}
-            {invoices.length > 1 && (
+            {(invoices.length > 1 || inv.id === activeId) && (
               <button
-                onClick={(e) => { e.stopPropagation(); closeInvoice(inv.id); }}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (invoices.length > 1) closeInvoice(inv.id);
+                  else clearInvoice(inv.id);
+                }}
                 className="p-0.5 rounded text-slate-400 hover:text-er hover:bg-slate-200/70 dark:hover:bg-slate-700"
-                title={t("pos.invoice.close")}
+                title={t(invoices.length > 1 ? "pos.invoice.close" : "pos.invoice.clear")}
+                aria-label={t(invoices.length > 1 ? "pos.invoice.close" : "pos.invoice.clear")}
               >
                 <X className="w-3 h-3" />
               </button>

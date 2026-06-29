@@ -195,6 +195,7 @@
       "tab": "Order {n}",
       "add": "Add invoice",
       "close": "Close invoice",
+      "clear": "Clear cart",
       "newOrder": "New order"
     },
     "modes": {
