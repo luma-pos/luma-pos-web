@@ -16,6 +16,7 @@ import { Text } from "@/components/ui/text";
 import { PrintDoc } from "@/components/print/print-doc";
 import { AiQuickActionButton } from "@/components/ai-quick-actions/ai-quick-action-button";
 import { AiQuickActionModal } from "@/components/ai-quick-actions/ai-quick-action-modal";
+import { CustomerCreateDialog, type CustomerCreateResult } from "@/components/partners/customer-create-dialog";
 import type { PaperSize, PrintTemplate } from "@/lib/print/template-shared";
 import type { AiActionPreview } from "@/lib/ai/actions";
 import { createOrder } from "@/lib/actions/orders";
@@ -66,6 +67,7 @@ type PosAiCartDraftPayload = {
 };
 
 type PayMethod = "cash" | "bank_transfer" | "credit";
+type PosCustomer = PosData["customers"][number];
 export type PosSourceInvoice = {
   id?: string;
   mode: "edit" | "copy";
@@ -307,6 +309,8 @@ export function PosClient({
   const [overKey, setOverKey] = useState<string | null>(null);
   const [dropHover, setDropHover] = useState(false);
   const [mobileView, setMobileView] = useState<"catalog" | "cart">("catalog"); // chuyển đổi trên mobile
+  const [customerOptions, setCustomerOptions] = useState<PosCustomer[]>(() => data.customers);
+  const [customerCreateOpen, setCustomerCreateOpen] = useState(false);
   const [variantParent, setVariantParent] = useState<PosProduct | null>(null);
   const [browsing, setBrowsing] = useState(false); // click vào ô tìm → mở dropdown SP
   const searchRef = useRef<HTMLDivElement>(null);
@@ -419,8 +423,8 @@ export function PosClient({
   }
 
   const customer = useMemo(
-    () => data.customers.find((c) => c.id === customerId) ?? null,
-    [customerId, data.customers]
+    () => customerOptions.find((c) => c.id === customerId) ?? null,
+    [customerId, customerOptions]
   );
   const searchableProducts = useMemo(() => flattenProducts(data.products), [data.products]);
 
@@ -495,7 +499,7 @@ export function PosClient({
     queueMicrotask(() => {
       if (cancelled) return;
       setOnline(navigator.onLine);
-      saveCatalog({ products: data.products, customers: data.customers, savedAt: Date.now() });
+      saveCatalog({ products: data.products, customers: customerOptions, savedAt: Date.now() });
       getOutbox().then((o) => { if (!cancelled) setPending(o.filter((x) => !x.failed).length); });
       flushOutbox();
     });
@@ -506,6 +510,10 @@ export function PosClient({
     return () => { cancelled = true; window.removeEventListener("online", on); window.removeEventListener("offline", off); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    void saveCatalog({ products: data.products, customers: customerOptions, savedAt: Date.now() });
+  }, [customerOptions, data.products]);
 
   const filtered = useMemo(() => {
     // có từ khoá → dùng kết quả server; không → lưới SP mặc định
@@ -707,6 +715,20 @@ export function PosClient({
 
   function changeCustomer(id: string) {
     patchActive({ customerId: id });
+  }
+
+  function applyCreatedCustomer(created: CustomerCreateResult) {
+    const next: PosCustomer = {
+      id: created.id,
+      name: created.name,
+      phone: created.phone || null,
+      type: created.type,
+      currentDebt: "0",
+      debtLimit: String(created.debtLimit ?? 0),
+    };
+    setCustomerOptions((list) => [next, ...list.filter((item) => item.id !== next.id)]);
+    changeCustomer(next.id);
+    setCustomerCreateOpen(false);
   }
 
   /** Đổi bảng giá cho đơn đang mở + tính lại giá toàn giỏ (giữ dòng sửa giá tay). */
@@ -1224,13 +1246,25 @@ export function PosClient({
         {/* customer + bảng giá */}
         <div className="p-3 border-b border-border space-y-2">
           <div className="flex gap-2">
-            <div className="flex-1 min-w-0">
+            <div className="flex flex-1 min-w-0 gap-1.5">
               <Combobox
                 value={customerId}
                 onChange={changeCustomer}
                 placeholder={t("pos.walkInCustomer")}
-                options={data.customers.map((c) => ({ value: c.id, label: c.name, hint: c.phone ?? undefined }))}
+                className="min-w-0 flex-1"
+                options={customerOptions.map((c) => ({ value: c.id, label: c.name, hint: c.phone ?? undefined }))}
               />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setCustomerCreateOpen(true)}
+                title={t("customers.createNew")}
+                aria-label={t("customers.createNew")}
+                className="h-10 w-10 shrink-0 rounded-[10px]"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
             <Combobox
               value={priceBook || defaultBook?.id || ""}
@@ -1404,6 +1438,11 @@ export function PosClient({
         existingDataLabel={t("aiQuick.pos.existingData")}
         onClose={() => setAiQuickOpen(false)}
         onApply={applyAiCartPreview}
+      />
+      <CustomerCreateDialog
+        open={customerCreateOpen}
+        onOpenChange={setCustomerCreateOpen}
+        onCreated={applyCreatedCustomer}
       />
 
       {/* Modal chọn bảng giá áp cho đơn đang mở */}

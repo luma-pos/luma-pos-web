@@ -1275,6 +1275,7 @@
     "fields": {
       "name": "Customer name",
       "namePlaceholder": "e.g. Mr. Tuan (contractor)",
+      "email": "Email",
       "address": "Address",
       "taxCode": "Tax code",
       "debtLimit": "Credit limit",
@@ -1374,6 +1375,10 @@
     "cols": {
       "name": "Supplier",
       "debt": "Payable"
+    },
+    "fields": {
+      "name": "Supplier name",
+      "namePlaceholder": "Example: Minh Anh Co."
     },
     "filter": {
       "allDebt": "All debt",

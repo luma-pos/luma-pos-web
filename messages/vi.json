@@ -1275,6 +1275,7 @@
     "fields": {
       "name": "Tên khách hàng",
       "namePlaceholder": "VD: Anh Tuấn (thầu)",
+      "email": "Email",
       "address": "Địa chỉ",
       "taxCode": "Mã số thuế",
       "debtLimit": "Hạn mức công nợ",
@@ -1374,6 +1375,10 @@
     "cols": {
       "name": "Nhà cung cấp",
       "debt": "Nợ phải trả"
+    },
+    "fields": {
+      "name": "Tên nhà cung cấp",
+      "namePlaceholder": "VD: Công ty Minh Anh"
     },
     "filter": {
       "allDebt": "Tất cả công nợ",

@@ -96,6 +96,7 @@ export type UpdateCustomerOutput = z.output<typeof updateCustomerSchema>;
 export const createSupplierSchema = z.object({
   name: z.string().min(1, { error: "validation.required" }),
   phone: z.string().optional(),
+  email: z.string().optional(),
   address: z.string().optional(),
   taxCode: z.string().optional(),
   note: z.string().optional(),

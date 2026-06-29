@@ -112,6 +112,7 @@ export async function createSupplier(
       code: generateCode("NCC"),
       name: v.name.trim(),
       phone: v.phone?.trim() || null,
+      email: v.email?.trim() || null,
       address: v.address?.trim() || null,
       taxCode: v.taxCode?.trim() || null,
       note: v.note || null,
