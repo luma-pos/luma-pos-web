@@ -1,14 +1,26 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { desc, eq, sql } from "drizzle-orm";
-import { ClipboardCheck, Plus } from "lucide-react";
+import { desc, eq, ilike, or, sql } from "drizzle-orm";
+import { ClipboardCheck, Plus, Search } from "lucide-react";
 import { db } from "@/db";
 import { profiles, stocktakeItems, stocktakes, warehouses } from "@/db/schema";
 import { Routes } from "@/lib/routes";
 import { StocktakesTable } from "./stocktakes-table";
 
-export async function StocktakesTab() {
+type SP = Record<string, string | undefined>;
+
+export async function StocktakesTab({ searchParams }: { searchParams: SP }) {
   const t = await getTranslations();
+  const q = searchParams.q?.trim();
+  const searchCondition = q
+    ? or(
+      ilike(stocktakes.code, `%${q}%`),
+      ilike(stocktakes.note, `%${q}%`),
+      ilike(warehouses.name, `%${q}%`),
+      ilike(profiles.fullName, `%${q}%`),
+    )
+    : undefined;
+
   const rows = await db
     .select({
       id: stocktakes.id, code: stocktakes.code, status: stocktakes.status, note: stocktakes.note,
@@ -19,13 +31,31 @@ export async function StocktakesTab() {
     .from(stocktakes)
     .innerJoin(warehouses, eq(stocktakes.warehouseId, warehouses.id))
     .leftJoin(profiles, eq(stocktakes.createdBy, profiles.id))
+    .where(searchCondition)
     .orderBy(desc(stocktakes.createdAt)).limit(50);
 
   return (
     <>
-      <div className="flex items-center justify-end gap-3 flex-wrap mb-4">
-        <Link href={Routes.StocktakeNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 hover:brightness-110 text-white text-sm font-medium transition active:scale-[0.98]"><Plus className="w-4 h-4" />{t("stocktakes.createNew")}</Link>
-      </div>
+      <form className="mb-4 flex flex-wrap items-center gap-3" action={Routes.Inventory}>
+        <input type="hidden" name="tab" value="stocktakes" />
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            name="q"
+            defaultValue={searchParams.q ?? ""}
+            placeholder="Theo mã phiếu kiểm"
+            className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm"
+          />
+        </div>
+        <button type="submit" className="rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:brightness-110 active:scale-[0.98]">
+          {t("common.search")}
+        </button>
+        <Link href={Routes.StocktakeNew} className="ml-auto inline-flex shrink-0 items-center gap-2 rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:brightness-110 active:scale-[0.98]">
+          <Plus className="h-4 w-4" />
+          {t("stocktakes.createNew")}
+        </Link>
+      </form>
 
       {rows.length === 0 ? (
         <div className="bg-surface border border-dashed border-border rounded-card p-12 text-center text-slate-400">

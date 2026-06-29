@@ -38,7 +38,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         : tab === "pricing" ? <PricingTab searchParams={params} />
         : tab === "purchases" ? <PurchasesTab searchParams={params} />
         : tab === "internal" ? <InternalUseTab searchParams={params} />
-        : tab === "stocktakes" ? <StocktakesTab />
+        : tab === "stocktakes" ? <StocktakesTab searchParams={params} />
         : <StockTab searchParams={params} />}
     </div>
   );
