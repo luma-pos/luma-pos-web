@@ -7,6 +7,7 @@ import {
   payments,
   shifts,
 } from "@/db/schema";
+import type { SepayWebhookInput } from "@/lib/payments/sepay";
 
 export type PaymentActionResult<T = undefined> =
   | { ok: true; data: T }
@@ -208,6 +209,82 @@ export async function expirePendingPayment(db: DbLike, paymentId: string): Promi
     return { ok: true, data: undefined };
   } catch (e) {
     console.error("expirePendingPayment failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
+}
+
+export async function getSepayPaymentStatus(
+  db: DbLike,
+  paymentId: string
+): Promise<PaymentActionResult<{
+  id: string;
+  orderId: string;
+  status: string;
+  amount: number;
+  reference: string | null;
+  confirmedAt: Date | null;
+  providerTransactionId: string | null;
+}>> {
+  try {
+    const [payment] = await db
+      .select({
+        id: payments.id,
+        orderId: payments.orderId,
+        status: payments.status,
+        amount: payments.amount,
+        reference: payments.reference,
+        confirmedAt: payments.confirmedAt,
+        providerTransactionId: payments.providerTransactionId,
+      })
+      .from(payments)
+      .where(and(eq(payments.id, paymentId), eq(payments.provider, "sepay")))
+      .limit(1);
+    if (!payment) return { ok: false, error: "errors.invalidData" };
+    return {
+      ok: true,
+      data: {
+        ...payment,
+        amount: Number(payment.amount),
+      },
+    };
+  } catch (e) {
+    console.error("getSepayPaymentStatus failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
+}
+
+export async function recordSepayWebhookEvent(
+  db: DbLike,
+  input: SepayWebhookInput
+): Promise<PaymentActionResult<{ eventId: string; duplicate: boolean }>> {
+  try {
+    const [existing] = await db
+      .select({ id: paymentWebhookEvents.id })
+      .from(paymentWebhookEvents)
+      .where(and(
+        eq(paymentWebhookEvents.provider, "sepay"),
+        eq(paymentWebhookEvents.providerEventId, input.providerEventId),
+      ))
+      .limit(1);
+    if (existing) return { ok: true, data: { eventId: existing.id, duplicate: true } };
+
+    const [event] = await db.insert(paymentWebhookEvents).values({
+      provider: "sepay",
+      providerEventId: input.providerEventId,
+      referenceCode: input.referenceCode,
+      accountNumber: input.accountNumber,
+      subAccount: input.subAccount,
+      gateway: input.gateway,
+      transferType: input.transferType,
+      transferAmount: toMoney(input.transferAmount),
+      transactionDate: input.transactionDate,
+      content: input.content,
+      rawPayload: input.rawPayload,
+    }).returning({ id: paymentWebhookEvents.id });
+
+    return { ok: true, data: { eventId: event.id, duplicate: false } };
+  } catch (e) {
+    console.error("recordSepayWebhookEvent failed:", e);
     return { ok: false, error: "errors.serverError" };
   }
 }

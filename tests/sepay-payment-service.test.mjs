@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 const PROJ = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const schema = await import(`${PROJ}/src/db/schema.ts`);
 const service = await import(`${PROJ}/src/lib/payments/service-core.ts`);
+const sepay = await import(`${PROJ}/src/lib/payments/sepay.ts`);
 const {
   profiles,
   shifts,
@@ -108,6 +109,26 @@ ok("cashbook posted once", cashRows.length === 1 && cashRows[0].fund === "bank" 
 const replay = await service.matchSepayWebhookEvent(db, event.id);
 cashRows = await db.select().from(cashTransactions).where(eq(cashTransactions.refId, order.id));
 ok("webhook replay is idempotent", replay.ok && replay.data.matched === true && cashRows.length === 1);
+
+const normalized = sepay.normalizeSepayWebhookPayload({
+  id: "sepay-svc-evt-normalized",
+  account_number: account.accountNumber,
+  amount: "1000000",
+  content: "Thanh toan LUMA-DH-SVC",
+});
+ok("webhook payload normalization extracts reference", normalized?.referenceCode === "LUMA-DH-SVC" && normalized.transferAmount === 1_000_000);
+
+const recorded = await service.recordSepayWebhookEvent(db, normalized);
+const recordedAgain = await service.recordSepayWebhookEvent(db, normalized);
+ok("webhook event recording is idempotent", recorded.ok && recordedAgain.ok && recorded.data.eventId === recordedAgain.data.eventId && recordedAgain.data.duplicate === true);
+
+const qrUrl = sepay.buildSepayVietQrImageUrl({
+  bankCode: account.bankCode,
+  accountNumber: account.accountNumber,
+  amount: 1_000_000,
+  reference: "LUMA-DH-SVC",
+});
+ok("VietQR image url includes account amount and reference", qrUrl.includes("qr.sepay.vn/img?") && qrUrl.includes("amount=1000000") && qrUrl.includes("des=LUMA-DH-SVC"));
 
 console.log("3) Wrong amount stays unmatched and does not post");
 const [wrongOrder] = await db.insert(orders).values({

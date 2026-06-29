@@ -6,8 +6,10 @@ import {
   confirmPaymentFromProvider as confirmPaymentFromProviderCore,
   createPendingSepayPayment as createPendingSepayPaymentCore,
   expirePendingPayment as expirePendingPaymentCore,
+  getSepayPaymentStatus as getSepayPaymentStatusCore,
   manualConfirmPaymentCore,
   matchSepayWebhookEvent as matchSepayWebhookEventCore,
+  recordSepayWebhookEvent as recordSepayWebhookEventCore,
 } from "@/lib/payments/service-core";
 
 export async function createPendingSepayPayment(input: Parameters<typeof createPendingSepayPaymentCore>[1]) {
@@ -20,6 +22,14 @@ export async function confirmPaymentFromProvider(input: Parameters<typeof confir
 
 export async function expirePendingPayment(paymentId: string) {
   return expirePendingPaymentCore(db, paymentId);
+}
+
+export async function getSepayPaymentStatus(paymentId: string) {
+  return getSepayPaymentStatusCore(db, paymentId);
+}
+
+export async function recordSepayWebhookEvent(input: Parameters<typeof recordSepayWebhookEventCore>[1]) {
+  return recordSepayWebhookEventCore(db, input);
 }
 
 export async function manualConfirmPayment(paymentId: string) {
