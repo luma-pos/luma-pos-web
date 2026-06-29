@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, KeyRound, Loader2, Pencil, Plus, Power, Printer, Save, Star } from "lucide-react";
+import { Check, ChevronDown, KeyRound, Loader2, Pencil, Plus, Power, Printer, Save, Star } from "lucide-react";
 import { SearchableSelect } from "@/components/combobox";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
+import { normalizeSearch } from "@/lib/normalize";
 import {
   savePaymentBankAccount,
   setDefaultPaymentBankAccount,
@@ -62,6 +63,32 @@ const PAYMENTS = [
   { ico: "🔴", name: "VNPay", vi: "VNPay", id: "vnpay", enabled: false, color: "#CC0000", note: "Not yet configured — tap to set up" },
   { ico: "💳", name: "Card / SoftPOS", vi: "Thẻ / mPOS", id: "card", enabled: false, color: "#374151", note: "Connect card reader in Hardware first" },
 ];
+const VIETQR_BANKS = [
+  { code: "ICB", bin: "970415", shortName: "VietinBank", name: "Ngân hàng TMCP Công thương Việt Nam", logo: "https://api.vietqr.io/img/ICB.png", aliases: [] },
+  { code: "VCB", bin: "970436", shortName: "Vietcombank", name: "Ngân hàng TMCP Ngoại Thương Việt Nam", logo: "https://api.vietqr.io/img/VCB.png", aliases: [] },
+  { code: "MB", bin: "970422", shortName: "MBBank", name: "Ngân hàng TMCP Quân đội", logo: "https://api.vietqr.io/img/MB.png", aliases: [] },
+  { code: "ACB", bin: "970416", shortName: "ACB", name: "Ngân hàng TMCP Á Châu", logo: "https://api.vietqr.io/img/ACB.png", aliases: [] },
+  { code: "VPB", bin: "970432", shortName: "VPBank", name: "Ngân hàng TMCP Việt Nam Thịnh Vượng", logo: "https://api.vietqr.io/img/VPB.png", aliases: [] },
+  { code: "TPB", bin: "970423", shortName: "TPBank", name: "Ngân hàng TMCP Tiên Phong", logo: "https://api.vietqr.io/img/TPB.png", aliases: [] },
+  { code: "MSB", bin: "970426", shortName: "MSB", name: "Ngân hàng TMCP Hàng Hải Việt Nam", logo: "https://api.vietqr.io/img/MSB.png", aliases: [] },
+  { code: "LPB", bin: "970449", shortName: "LienVietPostBank", name: "Ngân hàng TMCP Lộc Phát Việt Nam", logo: "https://api.vietqr.io/img/LPB.png", aliases: ["LPBank"] },
+  { code: "VCCB", bin: "970454", shortName: "VietCapitalBank", name: "Ngân hàng TMCP Bản Việt", logo: "https://api.vietqr.io/img/VCCB.png", aliases: ["BVBank"] },
+  { code: "BIDV", bin: "970418", shortName: "BIDV", name: "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam", logo: "https://api.vietqr.io/img/BIDV.png", aliases: [] },
+  { code: "STB", bin: "970403", shortName: "Sacombank", name: "Ngân hàng TMCP Sài Gòn Tài Lộc", logo: "https://api.vietqr.io/img/STB.png", aliases: [] },
+  { code: "VIB", bin: "970441", shortName: "VIB", name: "Ngân hàng TMCP Quốc tế Việt Nam", logo: "https://api.vietqr.io/img/VIB.png", aliases: [] },
+  { code: "HDB", bin: "970437", shortName: "HDBank", name: "Ngân hàng TMCP Phát triển Thành phố Hồ Chí Minh", logo: "https://api.vietqr.io/img/HDB.png", aliases: [] },
+  { code: "SEAB", bin: "970440", shortName: "SeABank", name: "Ngân hàng TMCP Đông Nam Á", logo: "https://api.vietqr.io/img/SEAB.png", aliases: [] },
+  { code: "SHBVN", bin: "970424", shortName: "ShinhanBank", name: "Ngân hàng TNHH MTV Shinhan Việt Nam", logo: "https://api.vietqr.io/img/SHBVN.png", aliases: [] },
+  { code: "VBA", bin: "970405", shortName: "Agribank", name: "Ngân hàng Nông nghiệp và Phát triển Nông thôn Việt Nam", logo: "https://api.vietqr.io/img/VBA.png", aliases: [] },
+  { code: "TCB", bin: "970407", shortName: "Techcombank", name: "Ngân hàng TMCP Kỹ thương Việt Nam", logo: "https://api.vietqr.io/img/TCB.png", aliases: [] },
+  { code: "BAB", bin: "970409", shortName: "BacABank", name: "Ngân hàng TMCP Bắc Á", logo: "https://api.vietqr.io/img/BAB.png", aliases: [] },
+  { code: "ABB", bin: "970425", shortName: "ABBANK", name: "Ngân hàng TMCP An Bình", logo: "https://api.vietqr.io/img/ABB.png", aliases: [] },
+  { code: "EIB", bin: "970431", shortName: "Eximbank", name: "Ngân hàng TMCP Xuất Nhập khẩu Việt Nam", logo: "https://api.vietqr.io/img/EIB.png", aliases: [] },
+  { code: "PBVN", bin: "970439", shortName: "PublicBank", name: "Ngân hàng TNHH MTV Public Việt Nam", logo: "https://api.vietqr.io/img/PBVN.png", aliases: [] },
+  { code: "OCB", bin: "970448", shortName: "OCB", name: "Ngân hàng TMCP Phương Đông", logo: "https://api.vietqr.io/img/OCB.png", aliases: [] },
+  { code: "KLB", bin: "970452", shortName: "KienLongBank", name: "Ngân hàng TMCP Kiên Long", logo: "https://api.vietqr.io/img/KLB.png", aliases: [] },
+] as const;
+type VietQrBank = (typeof VIETQR_BANKS)[number];
 const VAT_RATES = [
   { rate: 0, en: "Exempt", vi: "Miễn thuế", itemsEn: "Exports, financial services", itemsVi: "Xuất khẩu, dịch vụ tài chính" },
   { rate: 5, en: "Reduced", vi: "Giảm thuế", itemsEn: "Essential food, medicine", itemsVi: "Thực phẩm thiết yếu, dược phẩm" },
@@ -618,6 +645,10 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
       setMessage(res.ok ? t("saved") : t("saveError"));
     });
   };
+  const selectBank = (bank: VietQrBank) => {
+    setForm((prev) => ({ ...prev, bankCode: bank.code, gateway: bank.shortName }));
+    setMessage("");
+  };
   return (
     <Card title={t("title")} vi={L ? "Tài khoản ngân hàng nhận VietQR" : "Bank accounts for VietQR collection"}>
       <div className="p-4 flex flex-col gap-4">
@@ -639,7 +670,7 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
           {accounts.map((account) => (
             <div key={account.id} className={cn(ROW, "items-start")}>
               <div className="w-9 h-9 rounded-[10px] bg-primary-50 dark:bg-primary-950/40 grid place-items-center text-primary-700 dark:text-primary-300 shrink-0">
-                <KeyRound className="w-4 h-4" />
+                <BankLogo bank={VIETQR_BANKS.find((bank) => bank.code === account.bankCode)} fallback={account.bankCode} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -677,7 +708,7 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
           <div className="border-t border-border pt-4 flex flex-col gap-3">
             <div className="text-xs font-bold">{isEditing ? t("editAccount") : t("addAccount")}</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1"><span className={FL}>{t("bankCode")}</span><input className={FI} value={form.bankCode} onChange={(e) => set("bankCode", e.target.value)} placeholder="VCB" /></div>
+              <div className="flex flex-col gap-1"><span className={FL}>{t("bankCode")}</span><BankSelect value={form.bankCode} onChange={selectBank} placeholder={t("bankPlaceholder")} /></div>
               <div className="flex flex-col gap-1"><span className={FL}>{t("gateway")}</span><input className={FI} value={form.gateway ?? ""} onChange={(e) => set("gateway", e.target.value)} placeholder="Vietcombank" /></div>
               <div className="flex flex-col gap-1"><span className={FL}>{t("accountNumber")}</span><input className={cn(FI, "font-mono")} value={form.accountNumber} onChange={(e) => set("accountNumber", e.target.value)} /></div>
               <div className="flex flex-col gap-1"><span className={FL}>{t("subAccount")}</span><input className={cn(FI, "font-mono")} value={form.subAccount ?? ""} onChange={(e) => set("subAccount", e.target.value)} placeholder={t("optional")} /></div>
@@ -702,6 +733,105 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
         )}
       </div>
     </Card>
+  );
+}
+
+function BankLogo({ bank, fallback }: { bank?: VietQrBank; fallback: string }) {
+  return bank ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={bank.logo} alt={bank.shortName} className="h-6 w-6 object-contain" />
+  ) : (
+    <span className="text-[10px] font-black">{fallback.slice(0, 3).toUpperCase() || <KeyRound className="w-4 h-4" />}</span>
+  );
+}
+
+function BankSelect({ value, onChange, placeholder }: { value: string; onChange: (bank: VietQrBank) => void; placeholder: string }) {
+  const t = useTranslations("settings.payments.sepay");
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = VIETQR_BANKS.find((bank) => bank.code === value);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const query = normalizeSearch(q);
+    if (!query) return VIETQR_BANKS;
+    return VIETQR_BANKS.filter((bank) =>
+      normalizeSearch(`${bank.code} ${bank.bin} ${bank.shortName} ${bank.name} ${bank.aliases.join(" ")}`).includes(query)
+    );
+  }, [q]);
+
+  function pick(bank: VietQrBank) {
+    onChange(bank);
+    setOpen(false);
+    setQ("");
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn(FI, "h-[42px] flex items-center gap-2 text-left")}
+      >
+        {selected ? (
+          <>
+            <span className="w-7 h-7 rounded-lg border border-border bg-white grid place-items-center shrink-0"><BankLogo bank={selected} fallback={selected.code} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-semibold">{selected.shortName}</span>
+              <span className="block truncate text-[10px] text-slate-500">{selected.code} · BIN {selected.bin}</span>
+            </span>
+          </>
+        ) : (
+          <span className="text-slate-400">{placeholder}</span>
+        )}
+        <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute inset-x-0 top-full z-[70] mt-1 overflow-hidden rounded-xl border border-border bg-surface shadow-e2">
+          <div className="border-b border-border-soft">
+            <input
+              autoFocus
+              className="w-full bg-transparent px-3 py-2.5 text-sm outline-none"
+              value={q}
+              onChange={(event) => setQ(event.target.value)}
+              placeholder={t("bankSearch")}
+            />
+          </div>
+          <div className="max-h-72 overflow-auto py-1">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-4 text-center text-xs text-slate-500">{t("bankNoResults")}</div>
+            ) : filtered.map((bank) => (
+              <button
+                key={bank.code}
+                type="button"
+                onClick={() => pick(bank)}
+                className={cn(
+                  "flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-surface-2",
+                  bank.code === value && "bg-primary-50 dark:bg-primary-950/40"
+                )}
+              >
+                <span className="w-9 h-9 rounded-lg border border-border bg-white grid place-items-center shrink-0"><BankLogo bank={bank} fallback={bank.code} /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-bold">{bank.shortName}</span>
+                  <span className="block truncate text-[10px] text-slate-500">{bank.name}</span>
+                  <span className="block truncate text-[10px] font-mono text-slate-400">{bank.code} · {bank.bin}</span>
+                </span>
+                {bank.code === value && <Check className="w-4 h-4 text-primary-600 shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
