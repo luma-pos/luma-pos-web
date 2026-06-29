@@ -1657,6 +1657,7 @@
         "secretMissing": "Chưa có secret",
         "apiKeySet": "Đã có API key",
         "apiKeyMissing": "Chưa có API key",
+        "envManaged": "Bảo mật qua env",
         "edit": "Sửa",
         "setDefault": "Đặt mặc định",
         "disable": "Tắt",

@@ -1657,6 +1657,7 @@
         "secretMissing": "No secret",
         "apiKeySet": "API key set",
         "apiKeyMissing": "No API key",
+        "envManaged": "Security via env",
         "edit": "Edit",
         "setDefault": "Set default",
         "disable": "Disable",

@@ -683,8 +683,7 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-semibold text-slate-500">{account.webhookEnabled ? t("webhookOn") : t("webhookOff")}</span>
-                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-semibold text-slate-500">{account.webhookSecretSet ? t("secretSet") : t("secretMissing")}</span>
-                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-semibold text-slate-500">{account.apiKeySet ? t("apiKeySet") : t("apiKeyMissing")}</span>
+                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-semibold text-slate-500">{t("envManaged")}</span>
                 </div>
               </div>
               {canManage && (
@@ -714,8 +713,6 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
               <div className="flex flex-col gap-1"><span className={FL}>{t("subAccount")}</span><input className={cn(FI, "font-mono")} value={form.subAccount ?? ""} onChange={(e) => set("subAccount", e.target.value)} placeholder={t("optional")} /></div>
               <div className="flex flex-col gap-1"><span className={FL}>{t("accountName")}</span><input className={FI} value={form.accountName} onChange={(e) => set("accountName", e.target.value)} /></div>
               <div className="flex flex-col gap-1"><span className={FL}>{t("note")}</span><input className={FI} value={form.note ?? ""} onChange={(e) => set("note", e.target.value)} placeholder={t("optional")} /></div>
-              <div className="flex flex-col gap-1"><span className={FL}>{t("webhookSecret")}</span><input className={FI} value={form.webhookSecret ?? ""} onChange={(e) => set("webhookSecret", e.target.value)} placeholder={isEditing ? t("secretPlaceholder") : ""} /></div>
-              <div className="flex flex-col gap-1"><span className={FL}>{t("apiKey")}</span><input className={FI} value={form.apiKey ?? ""} onChange={(e) => set("apiKey", e.target.value)} placeholder={isEditing ? t("secretPlaceholder") : ""} /></div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <CtrlRow title={t("enabled")} desc={t("enabledHint")} checked={Boolean(form.enabled)} onChange={(v) => set("enabled", v)} />
