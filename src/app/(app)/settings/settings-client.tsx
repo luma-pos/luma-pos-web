@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, ChevronDown, KeyRound, Loader2, Pencil, Plus, Power, Printer, Save, Star } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, KeyRound, Loader2, Pencil, Plus, Power, Printer, Save, Star } from "lucide-react";
 import { SearchableSelect } from "@/components/combobox";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
@@ -594,8 +594,11 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
   const t = useTranslations("settings.payments.sepay");
   const [form, setForm] = useState<PaymentBankAccountInput>(EMPTY_BANK_ACCOUNT);
   const [message, setMessage] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [origin] = useState(() => typeof window !== "undefined" ? window.location.origin : "");
   const [pending, start] = useTransition();
   const isEditing = Boolean(form.id);
+  const webhookUrl = origin ? `${origin}/api/payments/sepay/webhook` : "/api/payments/sepay/webhook";
   const set = <K extends keyof PaymentBankAccountInput>(key: K, value: PaymentBankAccountInput[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setMessage("");
@@ -649,9 +652,47 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
     setForm((prev) => ({ ...prev, bankCode: bank.code, gateway: bank.shortName }));
     setMessage("");
   };
+  const copyWebhookUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  };
   return (
     <Card title={t("title")} vi={L ? "Tài khoản ngân hàng nhận VietQR" : "Bank accounts for VietQR collection"}>
       <div className="p-4 flex flex-col gap-4">
+        <div className="rounded-xl border border-border bg-canvas p-3.5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="text-xs font-bold">{t("setupTitle")}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-slate-500">{t("setupHelp")}</div>
+            </div>
+            <a
+              href="https://my.sepay.vn"
+              target="_blank"
+              rel="noreferrer"
+              className={cn(btnS, "justify-center")}
+            >
+              <ExternalLink className="w-3.5 h-3.5" />{t("openSepay")}
+            </a>
+          </div>
+          <div className="mt-3 grid gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+            <div className="flex gap-2"><span className="font-bold text-primary-600">1.</span><span>{t("setupStep1")}</span></div>
+            <div className="flex gap-2"><span className="font-bold text-primary-600">2.</span><span>{t("setupStep2")}</span></div>
+            <div className="flex gap-2"><span className="font-bold text-primary-600">3.</span><span>{t("setupStep3")}</span></div>
+          </div>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 font-mono text-[11px] text-slate-600 dark:text-slate-300 truncate">
+              {webhookUrl}
+            </div>
+            <button type="button" onClick={copyWebhookUrl} className={btnS}>
+              <Copy className="w-3.5 h-3.5" />{copied ? t("copied") : t("copyUrl")}
+            </button>
+          </div>
+        </div>
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-xs font-bold">{t("accounts")}</div>

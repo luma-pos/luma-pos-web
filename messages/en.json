@@ -1645,6 +1645,14 @@
     "payments": {
       "sepay": {
         "title": "SePay / VietQR bank accounts",
+        "setupTitle": "SePay setup",
+        "setupHelp": "LumaPOS manages the webhook endpoint and server secret. Store users only add the receiving bank account here.",
+        "setupStep1": "In SePay, connect or enable the bank account that will receive transfers.",
+        "setupStep2": "Add the same bank account below so LumaPOS can generate VietQR and match incoming webhooks.",
+        "setupStep3": "Paste this webhook URL into SePay and choose HMAC-SHA256. The secret is configured in deployment env.",
+        "openSepay": "Open SePay",
+        "copyUrl": "Copy URL",
+        "copied": "Copied",
         "accounts": "Receiving accounts",
         "help": "Configure one or more bank accounts for dynamic VietQR collection. Secrets stay on the server.",
         "newAccount": "New account",
