@@ -300,6 +300,16 @@ function makeTempSlipCode(): string {
   return `TT${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
 }
 
+function buildVietQrImageUrl(input: { bankCode: string; accountNumber: string; amount: number; reference: string }) {
+  const params = new URLSearchParams({
+    acc: input.accountNumber,
+    bank: input.bankCode,
+    amount: String(Math.round(input.amount)),
+    des: input.reference,
+  });
+  return `https://qr.sepay.vn/img?${params.toString()}`;
+}
+
 function currentTimestamp(): number {
   return Date.now();
 }
@@ -922,6 +932,25 @@ export function PosClient({
   const closeSearch = () => { setBrowsing(false); setSearch(""); };
   const isEditMode = sourceInvoice?.mode === "edit";
   const isCopyMode = sourceInvoice?.mode === "copy";
+  const printPaymentQr = payMethod === "bank_transfer" && printCode && data.defaultBankAccount
+    ? {
+        title: t("pos.sepay.title"),
+        qrImageUrl: buildVietQrImageUrl({
+          bankCode: data.defaultBankAccount.bankCode,
+          accountNumber: data.defaultBankAccount.accountNumber,
+          amount: payableAmount,
+          reference: printCode,
+        }),
+        bankLabel: t("pos.sepay.bank"),
+        accountLabel: t("pos.sepay.account"),
+        nameLabel: t("pos.sepay.name"),
+        referenceLabel: t("pos.sepay.reference"),
+        bankName: data.defaultBankAccount.gateway ?? data.defaultBankAccount.bankCode,
+        accountNumber: data.defaultBankAccount.accountNumber,
+        accountName: data.defaultBankAccount.accountName,
+        reference: printCode,
+      }
+    : null;
 
   // Tabs hóa đơn — đặt cạnh thanh tìm kiếm (giống KiotViet).
   const invoiceTabs = (
@@ -1578,6 +1607,7 @@ export function PosClient({
             ]}
             grandTotalLabel={t("print.grandTotal")}
             grandTotal={total}
+            paymentQr={printPaymentQr}
             afterTotals={printTemplate.options.showDebt && payMethod !== "credit" && paid > 0
               ? [
                   { label: t("print.paid"), value: paid },

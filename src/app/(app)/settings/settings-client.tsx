@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, ChevronDown, Copy, ExternalLink, KeyRound, Loader2, Pencil, Plus, Power, Printer, Save, Star } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, KeyRound, Loader2, Pencil, Plus, Power, Printer, Save, Star, Trash2 } from "lucide-react";
 import { SearchableSelect } from "@/components/combobox";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import { normalizeSearch } from "@/lib/normalize";
 import {
+  deletePaymentBankAccount,
   savePaymentBankAccount,
   setDefaultPaymentBankAccount,
   setPaymentBankAccountEnabled,
@@ -563,30 +564,100 @@ function PaymentsSection({
   bankAccounts: PaymentBankAccountRow[];
 }) {
   const [pm, setPm] = useState(prefs);
+  const [tab, setTab] = useState<"methods" | "accounts" | "notifications">("methods");
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();
   const toggle = (id: keyof typeof pm) => { if (!canManage) return; setPm((p) => ({ ...p, [id]: !p[id] })); setDirty(true); setSaved(false); };
   function save() { start(async () => { const r = await updateStorePrefs({ payments: pm }); if (r.ok) { setDirty(false); setSaved(true); } }); }
+  const tabs = [
+    { id: "methods", label: L ? "Phương thức" : "Methods" },
+    { id: "accounts", label: L ? "Tài khoản ngân hàng" : "Bank accounts" },
+    { id: "notifications", label: L ? "Thông báo thanh toán" : "Payment notifications" },
+  ] as const;
   return (
     <>
-      <Card title={L ? "Phương thức thanh toán" : "Payment Methods"} vi={L ? "Bật phương thức cho màn thanh toán" : "Enable methods for checkout"}>
-        <div className="p-4 flex flex-col gap-2">
-          {PAYMENTS.map((p) => {
-            const id = p.id as keyof typeof pm;
-            return (
-              <div key={p.id} className={ROW}>
-                <span className="w-9 h-9 rounded-[10px] grid place-items-center text-lg shrink-0" style={{ background: p.color + "22", border: `1px solid ${p.color}33` }}>{p.ico}</span>
-                <div className="flex-1 min-w-0"><div className="text-xs font-bold">{L ? p.vi : p.name}</div><div className="text-[10px] text-slate-500">{p.note}</div></div>
-                <Toggle checked={pm[id]} onChange={() => toggle(id)} aria-label={p.name} />
-              </div>
-            );
-          })}
-        </div>
-        <div className="px-4.5 pb-4"><SaveBar L={L} dirty={dirty} saved={saved} pending={pending} canManage={canManage} onSave={save} /></div>
-      </Card>
-      <SePayAccountsSection L={L} accounts={bankAccounts} canManage={canManage} />
+      <div className="mb-4 flex flex-wrap gap-2 rounded-card border border-border bg-surface p-1 shadow-e1">
+        {tabs.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setTab(item.id)}
+            className={cn(
+              "rounded-[10px] px-3 py-2 text-xs font-bold transition",
+              tab === item.id ? "bg-primary-600 text-white shadow-e1" : "text-slate-500 hover:bg-surface-2 hover:text-foreground"
+            )}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      {tab === "methods" && (
+        <Card title={L ? "Phương thức thanh toán" : "Payment Methods"} vi={L ? "Bật phương thức cho màn thanh toán" : "Enable methods for checkout"}>
+          <div className="p-4 flex flex-col gap-2">
+            {PAYMENTS.map((p) => {
+              const id = p.id as keyof typeof pm;
+              return (
+                <div key={p.id} className={ROW}>
+                  <span className="w-9 h-9 rounded-[10px] grid place-items-center text-lg shrink-0" style={{ background: p.color + "22", border: `1px solid ${p.color}33` }}>{p.ico}</span>
+                  <div className="flex-1 min-w-0"><div className="text-xs font-bold">{L ? p.vi : p.name}</div><div className="text-[10px] text-slate-500">{p.note}</div></div>
+                  <Toggle checked={pm[id]} onChange={() => toggle(id)} aria-label={p.name} />
+                </div>
+              );
+            })}
+          </div>
+          <div className="px-4.5 pb-4"><SaveBar L={L} dirty={dirty} saved={saved} pending={pending} canManage={canManage} onSave={save} /></div>
+        </Card>
+      )}
+      {tab === "accounts" && <SePayAccountsSection L={L} accounts={bankAccounts} canManage={canManage} />}
+      {tab === "notifications" && <SePayNotificationsSection L={L} />}
     </>
+  );
+}
+
+function SePayNotificationsSection({ L }: { L: boolean }) {
+  const t = useTranslations("settings.payments.sepay");
+  const [copied, setCopied] = useState(false);
+  const [origin] = useState(() => typeof window !== "undefined" ? window.location.origin : "");
+  const webhookUrl = origin ? `${origin}/api/payments/sepay/webhook` : "/api/payments/sepay/webhook";
+  const copyWebhookUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <Card title={t("notificationTitle")} vi={L ? "Webhook SePay để tự xác nhận tiền vào" : "SePay webhook for automatic payment confirmation"}>
+      <div className="p-4 flex flex-col gap-4">
+        <div className="rounded-xl border border-border bg-canvas p-3.5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="text-xs font-bold">{t("setupTitle")}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-slate-500">{t("notificationHelp")}</div>
+            </div>
+            <a href="https://my.sepay.vn" target="_blank" rel="noreferrer" className={cn(btnS, "justify-center")}>
+              <ExternalLink className="w-3.5 h-3.5" />{t("openSepay")}
+            </a>
+          </div>
+          <div className="mt-3 grid gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+            <div className="flex gap-2"><span className="font-bold text-primary-600">1.</span><span>{t("notifyStep1")}</span></div>
+            <div className="flex gap-2"><span className="font-bold text-primary-600">2.</span><span>{t("notifyStep2")}</span></div>
+            <div className="flex gap-2"><span className="font-bold text-primary-600">3.</span><span>{t("notifyStep3")}</span></div>
+          </div>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 font-mono text-[11px] text-slate-600 dark:text-slate-300 truncate">
+              {webhookUrl}
+            </div>
+            <button type="button" onClick={copyWebhookUrl} className={btnS}>
+              <Copy className="w-3.5 h-3.5" />{copied ? t("copied") : t("copyUrl")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -594,11 +665,8 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
   const t = useTranslations("settings.payments.sepay");
   const [form, setForm] = useState<PaymentBankAccountInput>(EMPTY_BANK_ACCOUNT);
   const [message, setMessage] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [origin] = useState(() => typeof window !== "undefined" ? window.location.origin : "");
   const [pending, start] = useTransition();
   const isEditing = Boolean(form.id);
-  const webhookUrl = origin ? `${origin}/api/payments/sepay/webhook` : "/api/payments/sepay/webhook";
   const set = <K extends keyof PaymentBankAccountInput>(key: K, value: PaymentBankAccountInput[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setMessage("");
@@ -648,51 +716,23 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
       setMessage(res.ok ? t("saved") : t("saveError"));
     });
   };
+  const remove = (account: PaymentBankAccountRow) => {
+    const ok = window.confirm(t("deleteConfirm", { account: account.accountNumber }));
+    if (!ok) return;
+    start(async () => {
+      const res = await deletePaymentBankAccount(account.id);
+      setMessage(res.ok ? t("deleted") : t("deleteError"));
+      if (form.id === account.id) reset();
+    });
+  };
   const selectBank = (bank: VietQrBank) => {
     setForm((prev) => ({ ...prev, bankCode: bank.code, gateway: bank.shortName }));
     setMessage("");
   };
-  const copyWebhookUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(webhookUrl);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
-    }
-  };
   return (
-    <Card title={t("title")} vi={L ? "Tài khoản ngân hàng nhận VietQR" : "Bank accounts for VietQR collection"}>
+    <Card title={t("title")} vi={L ? "Chỉ cần tài khoản ngân hàng để tạo VietQR" : "Only a bank account is required to generate VietQR"}>
       <div className="p-4 flex flex-col gap-4">
-        <div className="rounded-xl border border-border bg-canvas p-3.5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <div className="text-xs font-bold">{t("setupTitle")}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-slate-500">{t("setupHelp")}</div>
-            </div>
-            <a
-              href="https://my.sepay.vn"
-              target="_blank"
-              rel="noreferrer"
-              className={cn(btnS, "justify-center")}
-            >
-              <ExternalLink className="w-3.5 h-3.5" />{t("openSepay")}
-            </a>
-          </div>
-          <div className="mt-3 grid gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
-            <div className="flex gap-2"><span className="font-bold text-primary-600">1.</span><span>{t("setupStep1")}</span></div>
-            <div className="flex gap-2"><span className="font-bold text-primary-600">2.</span><span>{t("setupStep2")}</span></div>
-            <div className="flex gap-2"><span className="font-bold text-primary-600">3.</span><span>{t("setupStep3")}</span></div>
-          </div>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 font-mono text-[11px] text-slate-600 dark:text-slate-300 truncate">
-              {webhookUrl}
-            </div>
-            <button type="button" onClick={copyWebhookUrl} className={btnS}>
-              <Copy className="w-3.5 h-3.5" />{copied ? t("copied") : t("copyUrl")}
-            </button>
-          </div>
-        </div>
+        <div className="rounded-xl border border-in/20 bg-in-soft px-3.5 py-3 text-[11px] leading-relaxed text-in">{t("qrOnlyHelp")}</div>
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-xs font-bold">{t("accounts")}</div>
@@ -724,7 +764,7 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-semibold text-slate-500">{account.webhookEnabled ? t("webhookOn") : t("webhookOff")}</span>
-                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-semibold text-slate-500">{t("envManaged")}</span>
+                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-semibold text-slate-500">{t("qrReady")}</span>
                 </div>
               </div>
               {canManage && (
@@ -737,6 +777,9 @@ function SePayAccountsSection({ L, accounts, canManage }: { L: boolean; accounts
                   </button>
                   <button type="button" disabled={pending} onClick={() => toggleEnabled(account.id, !account.enabled)} className={btnS} aria-label={account.enabled ? t("disable") : t("enable")}>
                     <Power className="w-3.5 h-3.5" />
+                  </button>
+                  <button type="button" disabled={pending} onClick={() => remove(account)} className={cn(btnS, "text-er hover:bg-er-soft")} aria-label={t("delete")}>
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               )}

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { paymentBankAccounts, profiles, storeSettings } from "@/db/schema";
 import {
@@ -324,23 +324,42 @@ export async function savePaymentBankAccount(input: PaymentBankAccountInput): Pr
             updatedAt: sql`now()`,
           })
           .where(eq(paymentBankAccounts.id, v.id));
-        return;
+      } else {
+        await tx.insert(paymentBankAccounts).values({
+          provider: v.provider,
+          bankCode: v.bankCode,
+          gateway: blankToNull(v.gateway),
+          accountNumber: v.accountNumber,
+          subAccount: blankToNull(v.subAccount),
+          accountName: v.accountName,
+          isDefault: v.isDefault,
+          enabled: v.enabled,
+          webhookEnabled: v.webhookEnabled,
+          webhookSecret: blankToNull(v.webhookSecret),
+          apiKey: blankToNull(v.apiKey),
+          note: blankToNull(v.note),
+          createdBy: gate.userId,
+        });
       }
-      await tx.insert(paymentBankAccounts).values({
-        provider: v.provider,
-        bankCode: v.bankCode,
-        gateway: blankToNull(v.gateway),
-        accountNumber: v.accountNumber,
-        subAccount: blankToNull(v.subAccount),
-        accountName: v.accountName,
-        isDefault: v.isDefault,
-        enabled: v.enabled,
-        webhookEnabled: v.webhookEnabled,
-        webhookSecret: blankToNull(v.webhookSecret),
-        apiKey: blankToNull(v.apiKey),
-        note: blankToNull(v.note),
-        createdBy: gate.userId,
-      });
+      const [defaultAccount] = await tx
+        .select({ id: paymentBankAccounts.id })
+        .from(paymentBankAccounts)
+        .where(and(eq(paymentBankAccounts.provider, v.provider), eq(paymentBankAccounts.isDefault, true)))
+        .limit(1);
+      if (!defaultAccount) {
+        const [firstEnabled] = await tx
+          .select({ id: paymentBankAccounts.id })
+          .from(paymentBankAccounts)
+          .where(and(eq(paymentBankAccounts.provider, v.provider), eq(paymentBankAccounts.enabled, true)))
+          .orderBy(asc(paymentBankAccounts.createdAt))
+          .limit(1);
+        if (firstEnabled) {
+          await tx
+            .update(paymentBankAccounts)
+            .set({ isDefault: true, updatedAt: sql`now()` })
+            .where(eq(paymentBankAccounts.id, firstEnabled.id));
+        }
+      }
     });
     revalidatePath(Routes.Settings);
     return { ok: true, data: undefined };
@@ -354,9 +373,30 @@ export async function setPaymentBankAccountEnabled(id: string, enabled: boolean)
   const gate = await requireManager();
   if (!gate.ok) return gate;
   try {
-    await db.update(paymentBankAccounts)
-      .set({ enabled, updatedAt: sql`now()` })
-      .where(eq(paymentBankAccounts.id, id));
+    await db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ provider: paymentBankAccounts.provider, isDefault: paymentBankAccounts.isDefault })
+        .from(paymentBankAccounts)
+        .where(eq(paymentBankAccounts.id, id))
+        .limit(1);
+      await tx.update(paymentBankAccounts)
+        .set({ enabled, ...(enabled ? {} : { isDefault: false }), updatedAt: sql`now()` })
+        .where(eq(paymentBankAccounts.id, id));
+      if (current?.isDefault && !enabled) {
+        const [next] = await tx
+          .select({ id: paymentBankAccounts.id })
+          .from(paymentBankAccounts)
+          .where(and(eq(paymentBankAccounts.provider, current.provider), eq(paymentBankAccounts.enabled, true)))
+          .orderBy(asc(paymentBankAccounts.createdAt))
+          .limit(1);
+        if (next) {
+          await tx
+            .update(paymentBankAccounts)
+            .set({ isDefault: true, updatedAt: sql`now()` })
+            .where(eq(paymentBankAccounts.id, next.id));
+        }
+      }
+    });
     revalidatePath(Routes.Settings);
     return { ok: true, data: undefined };
   } catch (e) {
@@ -387,6 +427,41 @@ export async function setDefaultPaymentBankAccount(id: string): Promise<ActionRe
     return { ok: true, data: undefined };
   } catch (e) {
     console.error("setDefaultPaymentBankAccount failed:", e);
+    return { ok: false, error: "errors.serverError" };
+  }
+}
+
+export async function deletePaymentBankAccount(id: string): Promise<ActionResult> {
+  const gate = await requireManager();
+  if (!gate.ok) return gate;
+  try {
+    await db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ provider: paymentBankAccounts.provider, isDefault: paymentBankAccounts.isDefault })
+        .from(paymentBankAccounts)
+        .where(eq(paymentBankAccounts.id, id))
+        .limit(1);
+      if (!current) return;
+      await tx.delete(paymentBankAccounts).where(eq(paymentBankAccounts.id, id));
+      if (current.isDefault) {
+        const [next] = await tx
+          .select({ id: paymentBankAccounts.id })
+          .from(paymentBankAccounts)
+          .where(and(eq(paymentBankAccounts.provider, current.provider), eq(paymentBankAccounts.enabled, true)))
+          .orderBy(asc(paymentBankAccounts.createdAt))
+          .limit(1);
+        if (next) {
+          await tx
+            .update(paymentBankAccounts)
+            .set({ isDefault: true, updatedAt: sql`now()` })
+            .where(eq(paymentBankAccounts.id, next.id));
+        }
+      }
+    });
+    revalidatePath(Routes.Settings);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    console.error("deletePaymentBankAccount failed:", e);
     return { ok: false, error: "errors.serverError" };
   }
 }

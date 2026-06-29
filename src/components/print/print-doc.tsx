@@ -37,6 +37,18 @@ export interface PrintDocProps {
   grandTotalLabel: string;
   grandTotal: number;
   afterTotals?: PrintTotalRow[]; // đã trả / còn lại…
+  paymentQr?: {
+    title: string;
+    qrImageUrl: string;
+    bankLabel: string;
+    accountLabel: string;
+    nameLabel: string;
+    referenceLabel: string;
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    reference: string;
+  } | null;
   inWordsLabel: string;
   signatures?: [string, string, string]; // [trái, giữa, phải]
   signHint?: string;
@@ -147,6 +159,20 @@ export function PrintDoc(p: PrintDocProps) {
         </div>
       )}
 
+      {p.paymentQr && (
+        <div className="mt-3 flex gap-3 rounded border border-slate-300 p-2 text-[11px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={p.paymentQr.qrImageUrl} alt={p.paymentQr.title} className="h-24 w-24 object-contain" />
+          <div className="min-w-0 flex-1">
+            <div className="font-bold">{p.paymentQr.title}</div>
+            <div>{p.paymentQr.bankLabel}: <b>{p.paymentQr.bankName}</b></div>
+            <div>{p.paymentQr.accountLabel}: <b className="font-mono">{p.paymentQr.accountNumber}</b></div>
+            <div>{p.paymentQr.nameLabel}: <b>{p.paymentQr.accountName}</b></div>
+            <div>{p.paymentQr.referenceLabel}: <b className="font-mono">{p.paymentQr.reference}</b></div>
+          </div>
+        </div>
+      )}
+
       {p.note && <div className="text-[11px] mt-2"><b>Ghi chú:</b> {p.note}</div>}
 
       {t.options.showSignatures && p.signatures && (
@@ -200,6 +226,18 @@ function K80Doc(p: PrintDocProps) {
       {(p.afterTotals ?? []).map((r) => (
         <div key={r.label} className={r.bold ? "font-bold" : ""}>{r.label}<span className="float-right">{formatNumber(r.value)}</span></div>
       ))}
+      {p.paymentQr && (
+        <>
+          <div className="border-t border-dashed border-slate-400 my-2" />
+          <div className="text-center font-bold">{p.paymentQr.title}</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={p.paymentQr.qrImageUrl} alt={p.paymentQr.title} className="mx-auto my-1 h-36 w-36 object-contain" />
+          <div>{p.paymentQr.bankLabel}: {p.paymentQr.bankName}</div>
+          <div>{p.paymentQr.accountLabel}: {p.paymentQr.accountNumber}</div>
+          <div>{p.paymentQr.nameLabel}: {p.paymentQr.accountName}</div>
+          <div>{p.paymentQr.referenceLabel}: {p.paymentQr.reference}</div>
+        </>
+      )}
       {t.footerNote && (
         <>
           <div className="border-t border-dashed border-slate-400 my-2" />

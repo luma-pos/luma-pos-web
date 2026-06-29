@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, customers, products, productPrices, productUnits, projects, promotions, stockLevels, warehouses } from "@/db/schema";
+import { categories, customers, paymentBankAccounts, products, productPrices, productUnits, projects, promotions, stockLevels, warehouses } from "@/db/schema";
 import { isPromoActive, type PromoTier } from "@/lib/promo";
 import { getPriceBooks } from "@/lib/data/price-books";
 import { accentInsensitiveLike } from "@/lib/search";
@@ -152,7 +152,7 @@ export async function getPosData(options?: { includeProductIds?: string[] }) {
 
   const priceBookRows = await getPriceBooks();
 
-  const [promoRows, projectRows] = await Promise.all([
+  const [promoRows, projectRows, defaultBankAccount] = await Promise.all([
     db
       .select({
         productId: promotions.productId,
@@ -169,6 +169,19 @@ export async function getPosData(options?: { includeProductIds?: string[] }) {
       .where(eq(projects.status, "active"))
       .orderBy(asc(projects.name))
       .limit(300),
+    db
+      .select({
+        id: paymentBankAccounts.id,
+        bankCode: paymentBankAccounts.bankCode,
+        gateway: paymentBankAccounts.gateway,
+        accountNumber: paymentBankAccounts.accountNumber,
+        subAccount: paymentBankAccounts.subAccount,
+        accountName: paymentBankAccounts.accountName,
+      })
+      .from(paymentBankAccounts)
+      .where(and(eq(paymentBankAccounts.provider, "sepay"), eq(paymentBankAccounts.enabled, true)))
+      .orderBy(sql`${paymentBankAccounts.isDefault} desc`, asc(paymentBankAccounts.createdAt))
+      .limit(1),
   ]);
 
   // map productId → tiers đang hiệu lực
@@ -184,6 +197,7 @@ export async function getPosData(options?: { includeProductIds?: string[] }) {
     promoByProduct,
     projects: projectRows,
     priceBooks: priceBookRows,
+    defaultBankAccount: defaultBankAccount[0] ?? null,
   };
 }
 
