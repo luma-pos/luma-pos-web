@@ -1087,27 +1087,29 @@ export function PosClient({
               </div>
             </div>
           )}
-          <div ref={searchRef} className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onFocus={() => setBrowsing(true)}
-              placeholder={t("pos.searchPlaceholder")}
-              className="w-full pl-10 pr-24 py-3 rounded-xl border border-border bg-surface"
-            />
+          <div ref={searchRef} className="relative flex gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setBrowsing(true)}
+                placeholder={t("pos.searchPlaceholder")}
+                className="w-full rounded-xl border border-border bg-surface py-3 pl-10 pr-10"
+              />
+            </div>
             <AiQuickActionButton
               onClick={() => setAiQuickOpen(true)}
               label={t("aiQuick.pos.open")}
-              className="absolute right-12 top-1/2 z-10 h-8 w-8 -translate-y-1/2 rounded-lg"
+              className="h-[50px] w-12"
             />
             {showResults && (
               <button
                 type="button"
                 onClick={closeSearch}
                 title={t("common.close")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 z-10 grid place-items-center w-9 h-9 lg:w-7 lg:h-7 rounded-md text-slate-400 hover:text-slate-600 hover:bg-surface-2"
+                className="absolute right-16 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-md text-slate-400 hover:bg-surface-2 hover:text-slate-600 lg:h-7 lg:w-7"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1115,7 +1117,7 @@ export function PosClient({
 
             {/* dropdown kết quả nổi dưới ô tìm — giỏ hàng vẫn hiện phía sau */}
             {showResults && (
-              <div className="absolute left-0 right-0 top-full mt-1 z-40 bg-surface border border-border rounded-xl shadow-e2 max-h-[min(64dvh,520px)] overflow-auto">
+              <div className="absolute left-0 right-14 top-full z-40 mt-1 max-h-[min(64dvh,520px)] overflow-auto rounded-xl border border-border bg-surface shadow-e2">
                 {searching ? (
                   <div className="px-4 py-6 text-center text-sm text-slate-400">
                     <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />{t("common.search")}…</span>
