@@ -94,8 +94,8 @@ async function StockContent({ searchParams }: { searchParams: SP }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4">
-        <div>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="min-w-0">
           {rows.length === 0 ? (
             <div className="rounded-card border border-border bg-surface p-12 text-center text-slate-400 shadow-e1">
               <Warehouse className="mx-auto mb-3 h-10 w-10 opacity-60" />
@@ -107,7 +107,7 @@ async function StockContent({ searchParams }: { searchParams: SP }) {
           <Pagination page={page} pageCount={pageCount} total={total} pageSize={pageSize} unitLabel={t("products.unitLabel")} />
         </div>
 
-        <div className="bg-surface border border-border rounded-card shadow-e1 overflow-hidden self-start">
+        <div className="min-w-0 self-start overflow-hidden rounded-card border border-border bg-surface shadow-e1">
           <div className="px-4 py-3 border-b border-border font-bold text-sm">{t("inventory.movementsTitle")}</div>
           {movements.length === 0 ? (
             <p className="px-4 py-8 text-sm text-slate-400 text-center">{t("inventory.noMovements")}</p>
@@ -116,9 +116,12 @@ async function StockContent({ searchParams }: { searchParams: SP }) {
               {movements.map((m) => {
                 const qty = Number(m.quantity);
                 return (
-                  <div key={m.id} className="px-4 py-2.5 text-sm flex items-center gap-3">
-                    <span className={cn("font-mono font-bold w-24 shrink-0", MOVE_STYLES[m.type] ?? "")}>{qty > 0 ? "+" : ""}{formatNumber(qty)}</span>
-                    <div className="min-w-0 flex-1"><div className="font-medium truncate">{m.productName}</div><div className="text-xs text-slate-400">{t(`inventory.moveTypes.${m.type}` as never)} · {m.warehouseName} · {formatDate(m.createdAt)}</div></div>
+                  <div key={m.id} className="flex min-w-0 items-center gap-3 px-4 py-2.5 text-sm">
+                    <span className={cn("w-12 shrink-0 font-mono font-bold tabular-nums", MOVE_STYLES[m.type] ?? "")}>{qty > 0 ? "+" : ""}{formatNumber(qty)}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{m.productName}</div>
+                      <div className="truncate text-xs text-slate-400">{t(`inventory.moveTypes.${m.type}` as never)} · {m.warehouseName} · {formatDate(m.createdAt)}</div>
+                    </div>
                   </div>
                 );
               })}

@@ -1472,6 +1472,14 @@
     "statusOk": "In stock",
     "movementsTitle": "Stock movements",
     "noMovements": "No movements yet",
+    "expand": {
+      "tabs": {
+        "info": "Info",
+        "stock": "Stock"
+      },
+      "stockManaged": "Stock managed",
+      "openProduct": "Open product"
+    },
     "moveTypes": {
       "purchase": "Purchase",
       "sale": "Sale",

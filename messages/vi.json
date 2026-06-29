@@ -1472,6 +1472,14 @@
     "statusOk": "Đủ hàng",
     "movementsTitle": "Lịch sử xuất nhập",
     "noMovements": "Chưa có biến động kho",
+    "expand": {
+      "tabs": {
+        "info": "Thông tin",
+        "stock": "Tồn kho"
+      },
+      "stockManaged": "Quản lý tồn kho",
+      "openProduct": "Mở hàng hóa"
+    },
     "moveTypes": {
       "purchase": "Nhập hàng",
       "sale": "Bán hàng",
