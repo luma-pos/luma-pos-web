@@ -1,11 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Copy, FileDown, LayoutList, Plus, Printer, Save, Search } from "lucide-react";
+import { Copy, FileDown, LayoutList, Printer, Save } from "lucide-react";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table";
-import { Routes } from "@/lib/routes";
 import { cn, formatCurrency, formatDate, formatNumber } from "@/lib/utils";
 import type { getInternalUseIssues } from "@/lib/data/internal-use";
 
@@ -15,16 +12,6 @@ export function InternalUseTable({ rows }: { rows: InternalUseRow[] }) {
   const t = useTranslations();
   const locale = useLocale();
   const isVi = locale === "vi";
-  const [query, setQuery] = useState("");
-
-  const filteredRows = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return rows;
-    return rows.filter((row) =>
-      [row.code, row.reason, row.department, row.note, row.createdByName, row.warehouseName]
-        .some((value) => String(value ?? "").toLowerCase().includes(needle)),
-    );
-  }, [query, rows]);
 
   const columns: DataTableColumn<InternalUseRow>[] = [
     {
@@ -77,40 +64,14 @@ export function InternalUseTable({ rows }: { rows: InternalUseRow[] }) {
   ];
 
   return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-64 flex-1 md:max-w-xl">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={isVi ? "Theo mã xuất dùng nội bộ" : "Search internal-use code"}
-            className="h-11 w-full rounded-card border border-border bg-surface pl-10 pr-3 text-sm shadow-e1 transition focus:outline-none focus:ring-2 focus:ring-primary-200"
-          />
-        </div>
-
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Link
-            href={Routes.InternalUseNew}
-            className="inline-flex h-10 items-center gap-2 rounded-card bg-primary-600 px-4 text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.98]"
-          >
-            <Plus className="h-4 w-4" />
-            {isVi ? "Xuất nội bộ" : t("internalUse.formTitle")}
-          </Link>
-          <button type="button" className="inline-flex h-10 items-center gap-2 rounded-card border border-border bg-surface px-4 text-sm font-semibold text-slate-700 transition hover:bg-surface-2 active:scale-[0.98] dark:text-slate-200">
-            <FileDown className="h-4 w-4" />
-            {isVi ? "Xuất file" : "Export"}
-          </button>
-        </div>
-      </div>
-
+    <section>
       <DataTableShell
         tableId="inventory.internal-use"
-        rows={filteredRows}
+        rows={rows}
         columns={columns}
         getRowId={(row) => row.id}
         minWidth="1120px"
-        initialExpandedId={filteredRows[0]?.id ?? null}
+        initialExpandedId={rows[0]?.id ?? null}
         empty={(
           <div className="rounded-card border border-dashed border-border bg-surface px-4 py-14 text-center text-slate-400">
             <LayoutList className="mx-auto mb-3 h-10 w-10 opacity-60" />

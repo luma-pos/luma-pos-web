@@ -1,11 +1,22 @@
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { internalUseIssues, internalUseItems, products, profiles, warehouses } from "@/db/schema";
 
 /** Lịch sử phiếu xuất nội bộ (audit) — mới nhất trước. */
-export async function getInternalUseIssues(limit = 50) {
+export async function getInternalUseIssues({ limit = 50, q }: { limit?: number; q?: string } = {}) {
   const creator = alias(profiles, "iu_creator");
+  const search = q?.trim();
+  const searchCondition = search
+    ? or(
+      ilike(internalUseIssues.code, `%${search}%`),
+      ilike(internalUseIssues.department, `%${search}%`),
+      ilike(internalUseIssues.reason, `%${search}%`),
+      ilike(internalUseIssues.note, `%${search}%`),
+      ilike(warehouses.name, `%${search}%`),
+    )
+    : undefined;
+
   const rows = await db
     .select({
       id: internalUseIssues.id,
@@ -23,6 +34,7 @@ export async function getInternalUseIssues(limit = 50) {
     .from(internalUseIssues)
     .leftJoin(warehouses, eq(internalUseIssues.warehouseId, warehouses.id))
     .leftJoin(creator, eq(internalUseIssues.createdBy, creator.id))
+    .where(searchCondition)
     .orderBy(desc(internalUseIssues.createdAt))
     .limit(limit);
 
