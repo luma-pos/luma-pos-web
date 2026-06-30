@@ -67,33 +67,6 @@ type PosAiCartDraftPayload = {
 };
 
 type PayMethod = "cash" | "bank_transfer" | "credit";
-type PosPrintPaymentQr = {
-  title: string;
-  qrImageUrl: string;
-  bankLabel: string;
-  accountLabel: string;
-  nameLabel: string;
-  referenceLabel: string;
-  bankName: string;
-  accountNumber: string;
-  accountName: string;
-  reference: string;
-};
-type PosPrintJob = {
-  title: string;
-  code: string;
-  date: string;
-  partyName: string;
-  partyPhone?: string | null;
-  projectName?: string | null;
-  items: CartLine[];
-  totals: { subtotal: number; discount: number; tax: number; shipping: number };
-  grandTotal: number;
-  paid: number;
-  remaining: number;
-  payMethod: PayMethod;
-  paymentQr?: PosPrintPaymentQr | null;
-};
 type SepayCheckout = {
   paymentId: string;
   orderId: string;
@@ -109,7 +82,6 @@ type SepayCheckout = {
     subAccount: string | null;
     accountName: string;
   };
-  printJob: PosPrintJob;
 };
 type PosCustomer = PosData["customers"][number];
 export type PosSourceInvoice = {
@@ -160,7 +132,6 @@ interface Invoice {
 
 const INV_KEY = "pos-invoices";
 const ACT_KEY = "pos-active-invoice";
-const PRINT_SIZE_KEY = "pos-print-default-size";
 const AI_POS_DRAFT_KEY = "luma-pos-ai-cart-draft";
 const FIRST_INV_ID = "inv-1"; // id ổn định cho SSR (tránh hydration mismatch)
 
@@ -372,24 +343,13 @@ export function PosClient({
   const searchRef = useRef<HTMLDivElement>(null);
   const [printMenuOpen, setPrintMenuOpen] = useState(false); // chọn khổ in
   const [printSize, setPrintSize] = useState<PaperSize | null>(null); // đang in phiếu tạm
-  const [printDefaultSize, setPrintDefaultSize] = useState<PaperSize>(printTemplate.paperDefault);
-  const [printJob, setPrintJob] = useState<PosPrintJob | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (cancelled) return;
-      try {
-        const saved = localStorage.getItem(PRINT_SIZE_KEY);
-        if (saved === "a4" || saved === "a5" || saved === "k80") setPrintDefaultSize(saved);
-      } catch { /* localStorage unavailable */ }
-    });
-    return () => { cancelled = true; };
-  }, []);
+  const [printCode, setPrintCode] = useState("");
+  const [printDate, setPrintDate] = useState("");
   // In phiếu tạm: ẩn app, chỉ hiện phiếu, gọi in trình duyệt rồi khôi phục.
   useEffect(() => {
     if (!printSize) return;
     document.body.classList.add("pos-printing");
-    const restore = () => { document.body.classList.remove("pos-printing"); setPrintSize(null); setPrintJob(null); };
+    const restore = () => { document.body.classList.remove("pos-printing"); setPrintSize(null); };
     window.addEventListener("afterprint", restore, { once: true });
     const id = setTimeout(() => window.print(), 60);
     return () => { clearTimeout(id); window.removeEventListener("afterprint", restore); document.body.classList.remove("pos-printing"); };
@@ -459,8 +419,6 @@ export function PosClient({
         );
         if (["confirmed", "reconciled", "manual_confirmed"].includes(result.data.status)) {
           window.clearInterval(id);
-          setPrintJob(sepayCheckout.printJob);
-          setPrintSize(printDefaultSize);
         }
       } catch {
         // Polling is best-effort; webhook remains source of truth.
@@ -470,7 +428,7 @@ export function PosClient({
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [sepayCheckout, printDefaultSize]);
+  }, [router, sepayCheckout]);
 
   const active = invoices.find((i) => i.id === activeId) ?? invoices[0];
   const { cart, customerId, projectId, projectName, discountInput, discountMode, taxRate, shippingFee, payMethod, paidInput, note: orderNote } = active;
@@ -643,42 +601,6 @@ export function PosClient({
   const paid = payMethod === "credit" ? 0 : (paidInput ?? total);
   const payableAmount = Math.min(Math.max(0, paid), total);
   const remaining = Math.max(0, total - paid);
-
-  function changePrintDefaultSize(size: PaperSize) {
-    setPrintDefaultSize(size);
-    try {
-      localStorage.setItem(PRINT_SIZE_KEY, size);
-    } catch { /* localStorage unavailable */ }
-  }
-
-  function startPrint(job: PosPrintJob, size = printDefaultSize) {
-    setPrintJob(job);
-    setPrintSize(size);
-    setPrintMenuOpen(false);
-  }
-
-  function buildPrintJob(input: { title: string; code: string; paymentQr?: PosPrintPaymentQr | null }): PosPrintJob {
-    return {
-      title: input.title,
-      code: input.code,
-      date: new Date().toISOString(),
-      partyName: customer?.name ?? t("pos.walkInCustomer"),
-      partyPhone: customer?.phone,
-      projectName: projectName || null,
-      items: cart.map((line) => ({ ...line })),
-      totals: {
-        subtotal,
-        discount: discountVnd,
-        tax: taxAmount,
-        shipping: shippingFee,
-      },
-      grandTotal: total,
-      paid: payableAmount,
-      remaining,
-      payMethod,
-      paymentQr: input.paymentQr ?? null,
-    };
-  }
 
   function addToCart(p: PosProduct) {
     if (p.isVariantParent) {
@@ -959,37 +881,16 @@ export function PosClient({
           setSubmitting(false);
           if (!paymentJson.ok || !paymentJson.data) {
             setError(paymentJson.error ? t(paymentJson.error) : t("pos.sepay.createFailed"));
+            router.push(Routes.order(res.data.id));
             return;
           }
-          const paymentQr: PosPrintPaymentQr = {
-            title: t("pos.sepay.title"),
-            qrImageUrl: paymentJson.data.qrImageUrl,
-            bankLabel: t("pos.sepay.bank"),
-            accountLabel: t("pos.sepay.account"),
-            nameLabel: t("pos.sepay.name"),
-            referenceLabel: t("pos.sepay.reference"),
-            bankName: paymentJson.data.bankAccount.gateway ?? paymentJson.data.bankAccount.bankCode,
-            accountNumber: paymentJson.data.bankAccount.accountNumber,
-            accountName: paymentJson.data.bankAccount.accountName,
-            reference: paymentJson.data.reference,
-          };
-          const printJob = buildPrintJob({
-            title: t("print.titles.order"),
-            code: res.data.code,
-            paymentQr,
-          });
           closeInvoice(activeId);
-          setSepayCheckout({ ...paymentJson.data, orderId: res.data.id, orderCode: res.data.code, printJob });
+          setSepayCheckout({ ...paymentJson.data, orderId: res.data.id, orderCode: res.data.code });
           return;
         }
-        const printJob = buildPrintJob({
-          title: mode === "quote" ? t("print.titles.quote") : t("print.titles.order"),
-          code: res.data.code,
-        });
         setSubmitting(false);
         closeInvoice(activeId);
         if (mode === "quote") router.push(Routes.Quotes);
-        else startPrint(printJob);
       } else {
         setSubmitting(false);
         setError(t(res.error));
@@ -1019,30 +920,10 @@ export function PosClient({
 
   /** Mở in phiếu tạm theo khổ đã chọn. */
   const doPrint = (size: PaperSize) => {
-    const code = makeTempSlipCode();
-    startPrint(buildPrintJob({
-      title: t("pos.tempSlipTitle"),
-      code,
-      paymentQr: payMethod === "bank_transfer" && data.defaultBankAccount
-        ? {
-            title: t("pos.sepay.title"),
-            qrImageUrl: buildVietQrImageUrl({
-              bankCode: data.defaultBankAccount.bankCode,
-              accountNumber: data.defaultBankAccount.accountNumber,
-              amount: payableAmount,
-              reference: code,
-            }),
-            bankLabel: t("pos.sepay.bank"),
-            accountLabel: t("pos.sepay.account"),
-            nameLabel: t("pos.sepay.name"),
-            referenceLabel: t("pos.sepay.reference"),
-            bankName: data.defaultBankAccount.gateway ?? data.defaultBankAccount.bankCode,
-            accountNumber: data.defaultBankAccount.accountNumber,
-            accountName: data.defaultBankAccount.accountName,
-            reference: code,
-          }
-        : null,
-    }), size);
+    setPrintCode(makeTempSlipCode());
+    setPrintDate(new Date().toISOString());
+    setPrintMenuOpen(false);
+    setPrintSize(size);
   };
 
   // Khu chính hiện lưới SP khi đang tìm hoặc khi bấm vào ô tìm; ngược lại hiện dòng hàng đã chọn.
@@ -1050,6 +931,25 @@ export function PosClient({
   const closeSearch = () => { setBrowsing(false); setSearch(""); };
   const isEditMode = sourceInvoice?.mode === "edit";
   const isCopyMode = sourceInvoice?.mode === "copy";
+  const printPaymentQr = payMethod === "bank_transfer" && printCode && data.defaultBankAccount
+    ? {
+        title: t("pos.sepay.title"),
+        qrImageUrl: buildVietQrImageUrl({
+          bankCode: data.defaultBankAccount.bankCode,
+          accountNumber: data.defaultBankAccount.accountNumber,
+          amount: payableAmount,
+          reference: printCode,
+        }),
+        bankLabel: t("pos.sepay.bank"),
+        accountLabel: t("pos.sepay.account"),
+        nameLabel: t("pos.sepay.name"),
+        referenceLabel: t("pos.sepay.reference"),
+        bankName: data.defaultBankAccount.gateway ?? data.defaultBankAccount.bankCode,
+        accountNumber: data.defaultBankAccount.accountNumber,
+        accountName: data.defaultBankAccount.accountName,
+        reference: printCode,
+      }
+    : null;
 
   // Tabs hóa đơn — đặt cạnh thanh tìm kiếm (giống KiotViet).
   const invoiceTabs = (
@@ -1590,18 +1490,6 @@ export function PosClient({
               {t("pos.willOweAmount", { amount: formatCurrency(remaining) })}
             </p>
           )}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-500">{t("pos.defaultPrintTemplate")}</span>
-            <select
-              value={printDefaultSize}
-              onChange={(event) => changePrintDefaultSize(event.target.value as PaperSize)}
-              className="h-8 rounded-lg border border-border bg-surface px-2 text-xs font-medium"
-            >
-              <option value="a4">{t("pos.printA4Short")}</option>
-              <option value="a5">{t("pos.printA5Short")}</option>
-              <option value="k80">{t("pos.printK80Short")}</option>
-            </select>
-          </div>
           {error && <p className="text-xs text-red-600">{error}</p>}
 
           <div className="flex gap-2">
@@ -1619,7 +1507,6 @@ export function PosClient({
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setPrintMenuOpen(false)} />
                   <div className="absolute bottom-full mb-1 left-0 z-50 min-w-[150px] bg-surface border border-border rounded-lg shadow-e2 overflow-hidden py-1">
-                    <button onClick={() => doPrint("a4")} className="w-full text-left px-3 py-2 text-sm hover:bg-surface-2">{t("pos.printA4")}</button>
                     <button onClick={() => doPrint("a5")} className="w-full text-left px-3 py-2 text-sm hover:bg-surface-2">{t("pos.printA5")}</button>
                     <button onClick={() => doPrint("k80")} className="w-full text-left px-3 py-2 text-sm hover:bg-surface-2">{t("pos.printK80")}</button>
                   </div>
@@ -1692,36 +1579,36 @@ export function PosClient({
       )}
 
       {/* Phiếu tạm để in (ẩn trên màn hình, chỉ hiện khi in) */}
-      {printSize && printJob && createPortal(
+      {printSize && createPortal(
         <div className="pos-print-root">
           <PrintDoc
             template={printTemplate}
             size={printSize}
-            title={printJob.title}
-            code={printJob.code}
-            date={printJob.date}
+            title={t("pos.tempSlipTitle")}
+            code={printCode}
+            date={printDate}
             partyLabel={t("orders.cols.customer")}
-            partyName={printJob.partyName}
-            partyPhone={printJob.partyPhone}
-            projectName={printJob.projectName || null}
+            partyName={customer?.name ?? t("pos.walkInCustomer")}
+            partyPhone={customer?.phone}
+            projectName={projectName || null}
             sellerLabel={t("orders.detail.seller")}
-            items={printJob.items.map((l) => {
+            items={cart.map((l) => {
               const e = effPrice(l);
               return { id: l.key, name: l.product.name, unitName: l.unitName, quantity: l.quantity, unitPrice: e.price, total: e.price * l.quantity };
             })}
             totals={[
-              { label: t("pos.subtotal"), value: printJob.totals.subtotal },
-              ...(printJob.totals.discount > 0 ? [{ label: t("pos.discount"), value: printJob.totals.discount, negative: true }] : []),
-              ...(printJob.totals.tax > 0 ? [{ label: t("pos.tax"), value: printJob.totals.tax }] : []),
-              ...(printJob.totals.shipping > 0 ? [{ label: t("pos.shipping"), value: printJob.totals.shipping }] : []),
+              { label: t("pos.subtotal"), value: subtotal },
+              ...(discountVnd > 0 ? [{ label: t("pos.discount"), value: discountVnd, negative: true }] : []),
+              ...(taxAmount > 0 ? [{ label: t("pos.tax"), value: taxAmount }] : []),
+              ...(shippingFee > 0 ? [{ label: t("pos.shipping"), value: shippingFee }] : []),
             ]}
             grandTotalLabel={t("print.grandTotal")}
-            grandTotal={printJob.grandTotal}
-            paymentQr={printJob.paymentQr}
-            afterTotals={printTemplate.options.showDebt && printJob.payMethod !== "credit" && printJob.paid > 0
+            grandTotal={total}
+            paymentQr={printPaymentQr}
+            afterTotals={printTemplate.options.showDebt && payMethod !== "credit" && paid > 0
               ? [
-                  { label: t("print.paid"), value: printJob.paid },
-                  ...(printJob.remaining > 0 ? [{ label: t("print.remaining"), value: printJob.remaining, bold: true }] : []),
+                  { label: t("print.paid"), value: paid },
+                  ...(remaining > 0 ? [{ label: t("print.remaining"), value: remaining, bold: true }] : []),
                 ]
               : []}
             inWordsLabel={t("print.inWords")}
