@@ -419,7 +419,6 @@ export function PosClient({
         );
         if (["confirmed", "reconciled", "manual_confirmed"].includes(result.data.status)) {
           window.clearInterval(id);
-          window.setTimeout(() => router.push(Routes.order(sepayCheckout.orderId)), 600);
         }
       } catch {
         // Polling is best-effort; webhook remains source of truth.
@@ -891,7 +890,7 @@ export function PosClient({
         }
         setSubmitting(false);
         closeInvoice(activeId);
-        router.push(mode === "quote" ? Routes.Quotes : Routes.order(res.data.id));
+        if (mode === "quote") router.push(Routes.Quotes);
       } else {
         setSubmitting(false);
         setError(t(res.error));
@@ -1560,9 +1559,7 @@ export function PosClient({
         <SepayCheckoutModal
           checkout={sepayCheckout}
           onClose={() => {
-            const orderId = sepayCheckout.orderId;
             setSepayCheckout(null);
-            router.push(Routes.order(orderId));
           }}
         />
       )}
