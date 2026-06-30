@@ -18,6 +18,8 @@ const GROUPS: Group[] = [
   {
     labelKey: "nav.groups.overview",
     items: [
+      { href: Routes.Notifications, icon: Bell, key: "nav.notifications", badge: "notifications" },
+      { href: Routes.Reports, icon: BarChart3, key: "nav.reports" },
       { href: Routes.Dashboard, icon: LayoutDashboard, key: "nav.dashboard" },
       { href: Routes.POS, icon: ShoppingCart, key: "nav.pos" },
     ],
@@ -35,8 +37,6 @@ const GROUPS: Group[] = [
     labelKey: "nav.groups.system",
     items: [
       { href: "/ai", icon: Sparkles, key: "nav.ai" },
-      { href: Routes.Reports, icon: BarChart3, key: "nav.reports" },
-      { href: Routes.Notifications, icon: Bell, key: "nav.notifications", badge: "notifications" },
       { href: Routes.Settings, icon: Settings, key: "nav.settings" },
     ],
   },
