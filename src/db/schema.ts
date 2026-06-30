@@ -704,6 +704,29 @@ export const printTemplates = pgTable("print_templates", {
   uniqueIndex("print_templates_default_doc_type_idx").on(t.docType).where(sql`${t.isDefault} = true and ${t.isActive} = true`),
 ]);
 
+// ============= Barcode label templates (mẫu in tem mã sản phẩm) =============
+
+export const labelTemplates = pgTable("label_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  widthMm: decimal("width_mm", { precision: 8, scale: 2 }).notNull().default("40"),
+  heightMm: decimal("height_mm", { precision: 8, scale: 2 }).notNull().default("30"),
+  columns: integer("columns").notNull().default(3),
+  gapMm: decimal("gap_mm", { precision: 8, scale: 2 }).notNull().default("2"),
+  barcodeType: text("barcode_type").notNull().default("code128"),
+  showName: boolean("show_name").notNull().default(true),
+  showSku: boolean("show_sku").notNull().default(true),
+  showPrice: boolean("show_price").notNull().default(true),
+  showUnit: boolean("show_unit").notNull().default(false),
+  isDefault: boolean("is_default").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index("label_templates_active_idx").on(t.isActive),
+  uniqueIndex("label_templates_default_idx").on(t.isDefault).where(sql`${t.isDefault} = true and ${t.isActive} = true`),
+]);
+
 // ============= Shifts (Quản lý ca — Part 17) =============
 
 export const shifts = pgTable("shifts", {

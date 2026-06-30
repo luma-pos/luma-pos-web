@@ -517,7 +517,13 @@
       "print": "In tem",
       "barcodeValue": "Mã in",
       "price": "Giá bán",
-      "preview": "Xem trước tem mã"
+      "preview": "Xem trước tem mã",
+      "template": "Mẫu tem",
+      "quantity": "Số lượng",
+      "codeSource": "Nguồn mã",
+      "codeSourceBarcode": "Mã vạch",
+      "codeSourceSku": "SKU",
+      "labelsUnit": "tem"
     },
     "variants": {
       "applyTitle": "Áp dụng cho hàng hóa con cùng loại",

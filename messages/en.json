@@ -517,7 +517,13 @@
       "print": "Print labels",
       "barcodeValue": "Code",
       "price": "Price",
-      "preview": "Label preview"
+      "preview": "Label preview",
+      "template": "Template",
+      "quantity": "Quantity",
+      "codeSource": "Code source",
+      "codeSourceBarcode": "Barcode",
+      "codeSourceSku": "SKU",
+      "labelsUnit": "labels"
     },
     "variants": {
       "applyTitle": "Apply to sibling child products",
