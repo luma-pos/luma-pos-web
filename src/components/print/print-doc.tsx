@@ -159,7 +159,7 @@ export function PrintDoc(p: PrintDocProps) {
         </div>
       )}
 
-      {p.paymentQr && (
+      {t.options.showPaymentQr && p.paymentQr && (
         <div className="mt-3 flex gap-3 rounded border border-slate-300 p-2 text-[11px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={p.paymentQr.qrImageUrl} alt={p.paymentQr.title} className="h-24 w-24 object-contain" />
@@ -226,7 +226,7 @@ function K80Doc(p: PrintDocProps) {
       {(p.afterTotals ?? []).map((r) => (
         <div key={r.label} className={r.bold ? "font-bold" : ""}>{r.label}<span className="float-right">{formatNumber(r.value)}</span></div>
       ))}
-      {p.paymentQr && (
+      {t.options.showPaymentQr && p.paymentQr && (
         <>
           <div className="border-t border-dashed border-slate-400 my-2" />
           <div className="text-center font-bold">{p.paymentQr.title}</div>

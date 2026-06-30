@@ -1685,6 +1685,7 @@
       "showSeller": "Tên người lập/bán",
       "showProject": "Công trình",
       "showDebt": "Đã trả / còn nợ",
+      "showPaymentQr": "QR và thông tin chuyển khoản",
       "showInWords": "Số tiền bằng chữ",
       "showSignatures": "Khu vực chữ ký",
       "showSku": "Mã SKU cạnh tên SP"

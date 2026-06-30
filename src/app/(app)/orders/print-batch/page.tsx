@@ -2,7 +2,9 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Routes } from "@/lib/routes";
 import { getOrder } from "@/lib/data/orders";
+import { getDefaultSepayBankAccount } from "@/lib/data/payment-bank-accounts";
 import { getPrintTemplate, getPrintTemplatesForDoc, type PaperSize } from "@/lib/print/template";
+import { buildSepayVietQrImageUrl } from "@/lib/payments/sepay";
 import { PrintDoc } from "@/components/print/print-doc";
 import { PrintToolbar } from "@/components/print/print-toolbar";
 
@@ -20,9 +22,10 @@ export default async function PrintBatchPage({ searchParams }: Props) {
     .filter(Boolean)
     .slice(0, MAX_BATCH);
 
-  const [template, templates] = await Promise.all([
+  const [template, templates, defaultBankAccount] = await Promise.all([
     getPrintTemplate("order", params.templateId),
     getPrintTemplatesForDoc("order"),
+    getDefaultSepayBankAccount(),
   ]);
   const size: PaperSize = (["a4", "a5", "k80"] as const).includes(params.size as PaperSize)
     ? (params.size as PaperSize)
@@ -57,6 +60,25 @@ export default async function PrintBatchPage({ searchParams }: Props) {
           const total = Number(order.total);
           const paid = Number(order.amountPaid);
           const remaining = Math.max(0, total - paid);
+          const paymentQr = template.options.showPaymentQr && remaining > 0 && defaultBankAccount
+            ? {
+                title: t("pos.sepay.title"),
+                qrImageUrl: buildSepayVietQrImageUrl({
+                  bankCode: defaultBankAccount.bankCode,
+                  accountNumber: defaultBankAccount.accountNumber,
+                  amount: remaining,
+                  reference: order.code,
+                }),
+                bankLabel: t("pos.sepay.bank"),
+                accountLabel: t("pos.sepay.account"),
+                nameLabel: t("pos.sepay.name"),
+                referenceLabel: t("pos.sepay.reference"),
+                bankName: defaultBankAccount.gateway ?? defaultBankAccount.bankCode,
+                accountNumber: defaultBankAccount.accountNumber,
+                accountName: defaultBankAccount.accountName,
+                reference: order.code,
+              }
+            : null;
           return (
             <div key={order.id} className="break-after-page">
               <PrintDoc
@@ -88,6 +110,7 @@ export default async function PrintBatchPage({ searchParams }: Props) {
                 ]}
                 grandTotalLabel={t("print.grandTotal")}
                 grandTotal={total}
+                paymentQr={paymentQr}
                 afterTotals={[
                   ...(template.options.showDebt ? [{ label: t("print.paid"), value: paid }] : []),
                   ...(template.options.showDebt && remaining > 0 ? [{ label: t("print.remaining"), value: remaining, bold: true }] : []),

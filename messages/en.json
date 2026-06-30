@@ -1685,6 +1685,7 @@
       "showSeller": "Seller name",
       "showProject": "Project",
       "showDebt": "Paid / remaining",
+      "showPaymentQr": "Payment QR and bank info",
       "showInWords": "Amount in words",
       "showSignatures": "Signature area",
       "showSku": "SKU next to product"

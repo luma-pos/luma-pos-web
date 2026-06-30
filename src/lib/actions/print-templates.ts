@@ -25,6 +25,7 @@ const saveSchema = z.object({
     showSeller: z.boolean(),
     showProject: z.boolean(),
     showDebt: z.boolean(),
+    showPaymentQr: z.boolean(),
     showInWords: z.boolean(),
     showSignatures: z.boolean(),
     showSku: z.boolean(),

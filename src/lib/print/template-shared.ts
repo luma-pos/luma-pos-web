@@ -10,6 +10,7 @@ export interface PrintTemplateOptions {
   showSeller: boolean;
   showProject: boolean;
   showDebt: boolean;
+  showPaymentQr: boolean;
   showInWords: boolean;
   showSignatures: boolean;
   showSku: boolean;
@@ -35,6 +36,7 @@ export const DEFAULT_OPTIONS: PrintTemplateOptions = {
   showSeller: true,
   showProject: true,
   showDebt: true,
+  showPaymentQr: true,
   showInWords: true,
   showSignatures: true,
   showSku: false,

@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Routes } from "@/lib/routes";
 import { getOrder } from "@/lib/data/orders";
+import { getDefaultSepayBankAccount } from "@/lib/data/payment-bank-accounts";
 import { getPrintTemplate, getPrintTemplatesForDoc, type PaperSize } from "@/lib/print/template";
+import { buildSepayVietQrImageUrl } from "@/lib/payments/sepay";
 import { PrintDoc } from "@/components/print/print-doc";
 import { PrintToolbar } from "@/components/print/print-toolbar";
 
@@ -20,9 +22,10 @@ export default async function PrintOrderPage({ params, searchParams }: Props) {
   const isQuote = order.status === "quote";
   const isBooking = order.status === "confirmed";
   const docType = isQuote ? "quote" : isBooking ? "booking" : "order";
-  const [template, templates] = await Promise.all([
+  const [template, templates, defaultBankAccount] = await Promise.all([
     getPrintTemplate(docType, templateId),
     getPrintTemplatesForDoc(docType),
+    getDefaultSepayBankAccount(),
   ]);
 
   const size: PaperSize = (["a4", "a5", "k80"] as const).includes(sizeParam as PaperSize)
@@ -42,6 +45,25 @@ export default async function PrintOrderPage({ params, searchParams }: Props) {
     ...(template.options.showDebt ? [{ label: t("print.paid"), value: paid }] : []),
     ...(template.options.showDebt && remaining > 0 ? [{ label: t("print.remaining"), value: remaining, bold: true }] : []),
   ];
+  const paymentQr = !isQuote && !isBooking && template.options.showPaymentQr && remaining > 0 && defaultBankAccount
+    ? {
+        title: t("pos.sepay.title"),
+        qrImageUrl: buildSepayVietQrImageUrl({
+          bankCode: defaultBankAccount.bankCode,
+          accountNumber: defaultBankAccount.accountNumber,
+          amount: remaining,
+          reference: order.code,
+        }),
+        bankLabel: t("pos.sepay.bank"),
+        accountLabel: t("pos.sepay.account"),
+        nameLabel: t("pos.sepay.name"),
+        referenceLabel: t("pos.sepay.reference"),
+        bankName: defaultBankAccount.gateway ?? defaultBankAccount.bankCode,
+        accountNumber: defaultBankAccount.accountNumber,
+        accountName: defaultBankAccount.accountName,
+        reference: order.code,
+      }
+    : null;
 
   return (
     <div className="min-h-screen bg-slate-200 dark:bg-slate-950 print:bg-white">
@@ -73,6 +95,7 @@ export default async function PrintOrderPage({ params, searchParams }: Props) {
           grandTotalLabel={t("print.grandTotal")}
           grandTotal={total}
           afterTotals={afterTotals}
+          paymentQr={paymentQr}
           inWordsLabel={t("print.inWords")}
           signatures={[t("print.buyerSign"), t("print.delivererSign"), t("print.sellerSign")]}
           signHint={t("print.signHint")}

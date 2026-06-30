@@ -24,7 +24,7 @@ import {
   type PrintTemplate,
 } from "@/lib/print/template-shared";
 
-const TOGGLES = ["showSeller", "showProject", "showDebt", "showInWords", "showSignatures", "showSku"] as const;
+const TOGGLES = ["showSeller", "showProject", "showDebt", "showPaymentQr", "showInWords", "showSignatures", "showSku"] as const;
 
 export function PrintSettingsForm({ templates }: { templates: PrintTemplate[] }) {
   const t = useTranslations();
@@ -269,6 +269,18 @@ export function PrintSettingsForm({ templates }: { templates: PrintTemplate[] })
                   grandTotalLabel={t("print.grandTotal")}
                   grandTotal={920000}
                   afterTotals={[{ label: t("print.paid"), value: 500000 }, { label: t("print.remaining"), value: 420000, bold: true }]}
+                  paymentQr={{
+                    title: t("pos.sepay.title"),
+                    qrImageUrl: "https://qr.sepay.vn/img?bank=VCB&acc=0123456789&amount=420000&des=XX-000",
+                    bankLabel: t("pos.sepay.bank"),
+                    accountLabel: t("pos.sepay.account"),
+                    nameLabel: t("pos.sepay.name"),
+                    referenceLabel: t("pos.sepay.reference"),
+                    bankName: "Vietcombank",
+                    accountNumber: "0123456789",
+                    accountName: "LumaPOS",
+                    reference: "XX-000",
+                  }}
                   inWordsLabel={t("print.inWords")}
                   signatures={[t("print.buyerSign"), t("print.delivererSign"), t("print.sellerSign")]}
                   signHint={t("print.signHint")}
