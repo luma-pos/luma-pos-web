@@ -1,7 +1,10 @@
 // Phần dùng chung cho cả server và client (KHÔNG import db) — để PrintDoc dùng được ở client.
 
-export type PrintDocType = "order" | "quote" | "purchase" | "return" | "receipt";
+export type PrintDocType = "order" | "quote" | "booking" | "purchase" | "return" | "receipt";
 export type PaperSize = "a4" | "a5" | "k80";
+
+export const PRINT_DOC_TYPES = ["order", "quote", "booking", "purchase", "return", "receipt"] as const satisfies readonly PrintDocType[];
+export const PAPER_SIZES = ["a4", "a5", "k80"] as const satisfies readonly PaperSize[];
 
 export interface PrintTemplateOptions {
   showSeller: boolean;
@@ -13,8 +16,13 @@ export interface PrintTemplateOptions {
 }
 
 export interface PrintTemplate {
+  id: string;
+  name: string;
   docType: PrintDocType;
   paperDefault: PaperSize;
+  isDefault: boolean;
+  isActive: boolean;
+  sortOrder: number;
   storeName: string;
   storeAddress: string;
   storePhone: string;
@@ -35,6 +43,7 @@ export const DEFAULT_OPTIONS: PrintTemplateOptions = {
 export const DEFAULT_FOOTER: Record<PrintDocType, string> = {
   order: "Vui lòng kiểm tra hàng khi nhận. Hàng nguyên kiện chưa khui được đổi/trả trong 7 ngày.",
   quote: "Báo giá có hiệu lực trong 7 ngày. Giá chưa gồm vận chuyển nếu không ghi rõ.",
+  booking: "Phiếu đặt hàng chưa phải hóa đơn bán hàng. Vui lòng xác nhận lại thời gian giao trước khi xuất kho.",
   purchase: "Đề nghị NCC giao đúng chủng loại, quy cách. Hàng hư hỏng vỡ bể sẽ trả lại.",
   return: "Biên nhận trả hàng — kèm theo hóa đơn gốc.",
   receipt: "",
@@ -42,8 +51,13 @@ export const DEFAULT_FOOTER: Record<PrintDocType, string> = {
 
 export function defaultTemplate(docType: PrintDocType): PrintTemplate {
   return {
+    id: `default-${docType}`,
+    name: DEFAULT_TEMPLATE_NAME[docType],
     docType,
-    paperDefault: docType === "quote" || docType === "purchase" ? "a4" : "a5",
+    paperDefault: docType === "quote" || docType === "booking" || docType === "purchase" ? "a4" : "a5",
+    isDefault: true,
+    isActive: true,
+    sortOrder: 0,
     storeName: "",
     storeAddress: "",
     storePhone: "",
@@ -51,6 +65,19 @@ export function defaultTemplate(docType: PrintDocType): PrintTemplate {
     footerNote: DEFAULT_FOOTER[docType],
     options: { ...DEFAULT_OPTIONS },
   };
+}
+
+export const DEFAULT_TEMPLATE_NAME: Record<PrintDocType, string> = {
+  order: "Mẫu hóa đơn mặc định",
+  quote: "Mẫu báo giá mặc định",
+  booking: "Mẫu đặt hàng mặc định",
+  purchase: "Mẫu nhập hàng mặc định",
+  return: "Mẫu trả hàng mặc định",
+  receipt: "Mẫu biên nhận mặc định",
+};
+
+export function isPersistedTemplateId(id: string | null | undefined) {
+  return Boolean(id && !id.startsWith("default-"));
 }
 
 /** Đọc số tiền thành chữ tiếng Việt. */

@@ -1,225 +1,303 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Copy, EyeOff, Loader2, Plus, Save, Star } from "lucide-react";
 import Link from "next/link";
+import { PrintDoc } from "@/components/print/print-doc";
+import {
+  deactivatePrintTemplate,
+  duplicatePrintTemplate,
+  savePrintTemplate,
+  setDefaultPrintTemplate,
+} from "@/lib/actions/print-templates";
 import { Routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
-import { savePrintTemplate } from "@/lib/actions/print-templates";
-import type { PaperSize, PrintDocType, PrintTemplate } from "@/lib/print/template";
+import {
+  DEFAULT_OPTIONS,
+  PAPER_SIZES,
+  PRINT_DOC_TYPES,
+  defaultTemplate,
+  type PaperSize,
+  type PrintDocType,
+  type PrintTemplate,
+} from "@/lib/print/template-shared";
 
-const DOC_TYPES: PrintDocType[] = ["order", "quote", "purchase", "return", "receipt"];
-const SIZES: PaperSize[] = ["a4", "a5", "k80"];
 const TOGGLES = ["showSeller", "showProject", "showDebt", "showInWords", "showSignatures", "showSku"] as const;
 
-export function PrintSettingsForm({ templates }: { templates: Record<PrintDocType, PrintTemplate> }) {
+export function PrintSettingsForm({ templates }: { templates: PrintTemplate[] }) {
   const t = useTranslations();
   const router = useRouter();
+  const [drafts, setDrafts] = useState<PrintTemplate[]>(templates);
   const [docType, setDocType] = useState<PrintDocType>("order");
-  const [drafts, setDrafts] = useState(templates);
-  const [busy, setBusy] = useState(false);
+  const visible = useMemo(() => drafts.filter((item) => item.docType === docType), [drafts, docType]);
+  const [selectedId, setSelectedId] = useState(() => visible[0]?.id ?? defaultTemplate("order").id);
+  const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const selected = drafts.find((item) => item.id === selectedId && item.docType === docType) ?? visible[0] ?? defaultTemplate(docType);
+  const persisted = !selected.id.startsWith("draft-") && !selected.id.startsWith("default-");
 
-  const tpl = drafts[docType];
-
-  function patch(p: Partial<PrintTemplate>) {
-    setDrafts((d) => ({ ...d, [docType]: { ...d[docType], ...p } }));
-  }
-  function patchOption(key: (typeof TOGGLES)[number], value: boolean) {
-    patch({ options: { ...tpl.options, [key]: value } });
-  }
-
-  /** Áp dụng thông tin cửa hàng cho tất cả loại chứng từ. */
-  function applyStoreToAll() {
-    setDrafts((d) => {
-      const next = { ...d };
-      for (const dt of DOC_TYPES) {
-        next[dt] = {
-          ...next[dt],
-          storeName: tpl.storeName,
-          storeAddress: tpl.storeAddress,
-          storePhone: tpl.storePhone,
-          storeTaxCode: tpl.storeTaxCode,
-        };
-      }
-      return next;
-    });
-    setMsg({ ok: true, text: t("printSettings.appliedAll") });
-  }
-
-  async function save() {
-    setBusy(true);
+  function selectDocType(next: PrintDocType) {
+    setDocType(next);
+    const first = drafts.find((item) => item.docType === next);
+    setSelectedId(first?.id ?? defaultTemplate(next).id);
     setMsg(null);
-    const res = await savePrintTemplate({
-      docType: tpl.docType,
-      paperDefault: tpl.paperDefault,
-      storeName: tpl.storeName,
-      storeAddress: tpl.storeAddress,
-      storePhone: tpl.storePhone,
-      storeTaxCode: tpl.storeTaxCode,
-      footerNote: tpl.footerNote,
-      options: tpl.options,
-    });
-    setBusy(false);
-    if (res.ok) {
-      setMsg({ ok: true, text: t("printSettings.saved") });
-      router.refresh();
-    } else {
-      setMsg({ ok: false, text: t(res.error as never) });
-    }
   }
 
-  const inputCls = "w-full px-3 py-2 text-sm rounded-lg border border-border bg-surface";
+  function patch(value: Partial<PrintTemplate>) {
+    setDrafts((current) => current.map((item) => item.id === selected.id ? { ...item, ...value } : item));
+  }
+
+  function patchOption(key: (typeof TOGGLES)[number], value: boolean) {
+    patch({ options: { ...DEFAULT_OPTIONS, ...selected.options, [key]: value } });
+  }
+
+  function addTemplate() {
+    const id = `draft-${docType}-${Date.now()}`;
+    const next = {
+      ...defaultTemplate(docType),
+      id,
+      name: t("printSettings.newTemplateName", { type: t(`printSettings.docTypes.${docType}`) }),
+      isDefault: visible.length === 0,
+      sortOrder: visible.length,
+    };
+    setDrafts((current) => [next, ...current]);
+    setSelectedId(id);
+    setMsg(null);
+  }
+
+  function runAction(
+    action: () => Promise<{ ok: true; data: unknown } | { ok: false; error: string }>,
+    successKey: string,
+    onSuccess?: (data: unknown) => void,
+  ) {
+    startTransition(async () => {
+      setMsg(null);
+      const result = await action();
+      if (result.ok) {
+        onSuccess?.(result.data);
+        setMsg({ ok: true, text: t(successKey as never) });
+        router.refresh();
+      } else {
+        setMsg({ ok: false, text: t(result.error as never) });
+      }
+    });
+  }
+
+  function save() {
+    const oldId = selected.id;
+    runAction(
+      () => savePrintTemplate({
+        id: persisted ? selected.id : undefined,
+        name: selected.name,
+        docType: selected.docType,
+        paperDefault: selected.paperDefault,
+        isDefault: selected.isDefault,
+        isActive: selected.isActive,
+        sortOrder: selected.sortOrder,
+        storeName: selected.storeName,
+        storeAddress: selected.storeAddress,
+        storePhone: selected.storePhone,
+        storeTaxCode: selected.storeTaxCode,
+        footerNote: selected.footerNote,
+        options: { ...DEFAULT_OPTIONS, ...selected.options },
+      }),
+      "printSettings.saved",
+      (data) => {
+        const nextId = (data as { id?: string } | undefined)?.id;
+        if (!nextId || nextId === oldId) return;
+        setDrafts((current) => current.map((item) => item.id === oldId ? { ...item, id: nextId } : item));
+        setSelectedId(nextId);
+      },
+    );
+  }
+
+  const inputCls = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm";
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl">
-      <div className="flex items-center gap-3 mb-5">
-        <Link href={Routes.Settings} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-          <ArrowLeft className="w-4 h-4" />
+    <div className="p-4 sm:p-6">
+      <div className="mb-5 flex items-center gap-3">
+        <Link href={Routes.Settings} className="grid h-10 w-10 place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" aria-label={t("common.back")}>
+          <ArrowLeft className="h-4 w-4" />
         </Link>
-        <h1 className="text-2xl font-bold">{t("printSettings.title")}</h1>
+        <div>
+          <h1 className="text-2xl font-bold">{t("printSettings.title")}</h1>
+          <p className="text-sm text-slate-500">{t("printSettings.settingsDesc")}</p>
+        </div>
       </div>
 
-      {/* doc type tabs */}
-      <div className="flex gap-1 border-b border-border mb-5 overflow-x-auto">
-        {DOC_TYPES.map((dt) => (
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
+        {PRINT_DOC_TYPES.map((item) => (
           <button
-            key={dt}
-            onClick={() => { setDocType(dt); setMsg(null); }}
+            key={item}
+            type="button"
+            onClick={() => selectDocType(item)}
             className={cn(
-              "px-4 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap",
-              docType === dt
-                ? "border-primary-600 text-primary-600"
-                : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+              "shrink-0 border-b-2 px-4 py-2 text-sm font-semibold",
+              docType === item ? "border-primary-600 text-primary-600" : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200",
             )}
           >
-            {t(`printSettings.docTypes.${dt}`)}
+            {t(`printSettings.docTypes.${item}`)}
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        <div className="space-y-4">
-          {/* store info */}
-          <div className="bg-surface border border-border rounded-card p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-sm">{t("printSettings.storeSection")}</h2>
-              <button onClick={applyStoreToAll} className="text-xs font-medium text-primary-600 hover:underline">
-                {t("printSettings.applyAll")}
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">{t("printSettings.storeName")}</label>
-                <input value={tpl.storeName} onChange={(e) => patch({ storeName: e.target.value })} className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">{t("printSettings.storePhone")}</label>
-                <input value={tpl.storePhone} onChange={(e) => patch({ storePhone: e.target.value })} className={inputCls} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">{t("printSettings.storeAddress")}</label>
-              <input value={tpl.storeAddress} onChange={(e) => patch({ storeAddress: e.target.value })} className={inputCls} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">{t("printSettings.storeTaxCode")}</label>
-                <input value={tpl.storeTaxCode} onChange={(e) => patch({ storeTaxCode: e.target.value })} className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">{t("printSettings.paperDefault")}</label>
-                <div className="flex gap-1.5">
-                  {SIZES.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => patch({ paperDefault: s })}
-                      className={cn(
-                        "px-3 py-2 rounded-lg text-xs font-medium border uppercase",
-                        tpl.paperDefault === s ? "bg-primary-600 text-white border-primary-600" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                      )}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* options */}
-          <div className="bg-surface border border-border rounded-card p-5 space-y-3">
-            <h2 className="font-semibold text-sm">{t("printSettings.optionsSection")}</h2>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2.5">
-              {TOGGLES.map((k) => (
-                <label key={k} className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={tpl.options[k]} onChange={(e) => patchOption(k, e.target.checked)} />
-                  {t(`printSettings.toggles.${k}`)}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* footer */}
-          <div className="bg-surface border border-border rounded-card p-5">
-            <label className="block text-xs font-medium text-slate-500 mb-1">{t("printSettings.footerNote")}</label>
-            <textarea
-              rows={2} value={tpl.footerNote}
-              onChange={(e) => patch({ footerNote: e.target.value })}
-              className={inputCls}
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={save} disabled={busy}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium disabled:opacity-50"
-            >
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {t("printSettings.saveFor", { type: t(`printSettings.docTypes.${docType}`) })}
+      <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="rounded-card border border-border bg-surface">
+          <div className="flex items-center justify-between border-b border-border-soft p-3">
+            <div className="text-sm font-bold">{t("printSettings.templateList")}</div>
+            <button type="button" onClick={addTemplate} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary-600 px-3 text-xs font-semibold text-white">
+              <Plus className="h-3.5 w-3.5" />
+              {t("common.add")}
             </button>
-            {msg && <span className={cn("text-sm", msg.ok ? "text-ok" : "text-er")}>{msg.text}</span>}
           </div>
-        </div>
+          <div className="max-h-[620px] overflow-y-auto p-2">
+            {visible.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => { setSelectedId(item.id); setMsg(null); }}
+                className={cn(
+                  "mb-1 w-full rounded-lg border px-3 py-2.5 text-left text-sm transition",
+                  selected.id === item.id ? "border-primary-500 bg-primary-50 text-primary-800 dark:bg-primary-950/40 dark:text-primary-200" : "border-transparent hover:bg-surface-2",
+                )}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate font-semibold">{item.name}</span>
+                  {item.isDefault && <Star className="h-3.5 w-3.5 shrink-0 fill-current text-primary-600" />}
+                </span>
+                <span className="mt-1 block text-xs text-slate-500">{item.paperDefault.toUpperCase()} · {item.isActive ? t("printSettings.active") : t("printSettings.inactive")}</span>
+              </button>
+            ))}
+          </div>
+        </aside>
 
-        {/* mini preview */}
-        <div className="self-start">
-          <p className="text-xs font-medium text-slate-500 mb-2">{t("printSettings.preview")}</p>
-          <div className="bg-white text-black rounded-lg border border-slate-300 p-4 text-[10px] leading-relaxed shadow-sm">
-            <div className="flex justify-between border-b border-black pb-1.5">
-              <div>
-                <b className="text-[12px]">{tpl.storeName || "—"}</b>
-                <div className="text-slate-600">{tpl.storeAddress}{tpl.storePhone && <><br />ĐT: {tpl.storePhone}</>}{tpl.storeTaxCode && <> · MST: {tpl.storeTaxCode}</>}</div>
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="space-y-4">
+            <Panel>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label={t("printSettings.templateName")}><input value={selected.name} onChange={(event) => patch({ name: event.target.value })} className={inputCls} /></Field>
+                <Field label={t("printSettings.paperDefault")}>
+                  <div className="flex gap-1.5">
+                    {PAPER_SIZES.map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => patch({ paperDefault: size })}
+                        className={cn(
+                          "h-10 rounded-lg border px-3 text-xs font-bold uppercase",
+                          selected.paperDefault === size ? "border-primary-600 bg-primary-600 text-white" : "border-border text-slate-600 dark:text-slate-300",
+                        )}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
               </div>
-              <div className="text-right">
-                <b>{t(`printSettings.previewTitles.${docType}`)}</b>
-                <div className="text-slate-600">Số: XX-000 · {new Date().toLocaleDateString("vi-VN")}</div>
+              <label className="mt-3 flex items-center gap-2 text-sm font-semibold">
+                <input type="checkbox" checked={selected.isDefault} onChange={(event) => patch({ isDefault: event.target.checked })} />
+                {t("printSettings.defaultTemplate")}
+              </label>
+            </Panel>
+
+            <Panel title={t("printSettings.storeSection")}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label={t("printSettings.storeName")}><input value={selected.storeName} onChange={(event) => patch({ storeName: event.target.value })} className={inputCls} /></Field>
+                <Field label={t("printSettings.storePhone")}><input value={selected.storePhone} onChange={(event) => patch({ storePhone: event.target.value })} className={inputCls} /></Field>
+                <Field label={t("printSettings.storeAddress")} className="sm:col-span-2"><input value={selected.storeAddress} onChange={(event) => patch({ storeAddress: event.target.value })} className={inputCls} /></Field>
+                <Field label={t("printSettings.storeTaxCode")}><input value={selected.storeTaxCode} onChange={(event) => patch({ storeTaxCode: event.target.value })} className={inputCls} /></Field>
               </div>
+            </Panel>
+
+            <Panel title={t("printSettings.optionsSection")}>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {TOGGLES.map((key) => (
+                  <label key={key} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={Boolean(selected.options[key])} onChange={(event) => patchOption(key, event.target.checked)} />
+                    {t(`printSettings.toggles.${key}`)}
+                  </label>
+                ))}
+              </div>
+            </Panel>
+
+            <Panel>
+              <Field label={t("printSettings.footerNote")}><textarea rows={3} value={selected.footerNote} onChange={(event) => patch({ footerNote: event.target.value })} className={inputCls} /></Field>
+            </Panel>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={save} disabled={isPending} className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary-600 px-4 text-sm font-semibold text-white disabled:opacity-50">
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {t("common.save")}
+              </button>
+              <button type="button" onClick={() => persisted && runAction(() => duplicatePrintTemplate(selected.id), "printSettings.duplicated")} disabled={!persisted || isPending} className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-4 text-sm font-semibold disabled:opacity-50">
+                <Copy className="h-4 w-4" />
+                {t("printSettings.duplicate")}
+              </button>
+              <button type="button" onClick={() => persisted && runAction(() => setDefaultPrintTemplate(selected.id), "printSettings.defaultSaved")} disabled={!persisted || selected.isDefault || isPending} className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-4 text-sm font-semibold disabled:opacity-50">
+                <Star className="h-4 w-4" />
+                {t("printSettings.setDefault")}
+              </button>
+              <button type="button" onClick={() => persisted && runAction(() => deactivatePrintTemplate(selected.id), "printSettings.deactivated")} disabled={!persisted || isPending} className="inline-flex h-10 items-center gap-2 rounded-lg border border-er/40 px-4 text-sm font-semibold text-er disabled:opacity-50">
+                <EyeOff className="h-4 w-4" />
+                {t("printSettings.deactivate")}
+              </button>
+              {msg && <span className={cn("text-sm font-medium", msg.ok ? "text-ok" : "text-er")}>{msg.text}</span>}
             </div>
-            <div className="my-1.5">
-              <b>{docType === "purchase" ? "NCC" : "KH"}:</b> Nguyễn Văn A
-              {tpl.options.showProject && docType === "order" && <> · <b>CT:</b> Nhà Q.7</>}
-              {tpl.options.showSeller && <span className="float-right"><b>NV:</b> Dev</span>}
-            </div>
-            <table className="w-full border-collapse">
-              <thead><tr className="bg-slate-100"><th className="border border-slate-400 px-1 text-left">SP{tpl.options.showSku && " (SKU)"}</th><th className="border border-slate-400 px-1">SL</th><th className="border border-slate-400 px-1 text-right">T.tiền</th></tr></thead>
-              <tbody>
-                <tr><td className="border border-slate-400 px-1">Xi măng PCB40{tpl.options.showSku && <span className="text-slate-500"> (HT40)</span>}</td><td className="border border-slate-400 px-1 text-center">50</td><td className="border border-slate-400 px-1 text-right">4.600.000</td></tr>
-              </tbody>
-            </table>
-            <div className="text-right mt-1"><b>TỔNG: 4.600.000₫</b></div>
-            {tpl.options.showDebt && <div className="text-right text-slate-600">Đã trả: 2.300.000 · Còn lại: <b>2.300.000</b></div>}
-            {tpl.options.showInWords && <div className="italic text-slate-600 mt-1">Bằng chữ: Bốn triệu sáu trăm nghìn đồng.</div>}
-            {tpl.options.showSignatures && (
-              <div className="flex justify-between text-center mt-3"><span><b>Khách hàng</b></span><span><b>Người giao</b></span><span><b>Người lập</b></span></div>
-            )}
-            {tpl.footerNote && <div className="border-t border-dashed border-slate-400 mt-2 pt-1 text-center text-slate-500">{tpl.footerNote}</div>}
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">{t("printSettings.previewHint")}</p>
-        </div>
+
+          <div className="min-w-0">
+            <p className="mb-2 text-xs font-semibold text-slate-500">{t("printSettings.preview")}</p>
+            <div className="max-h-[720px] overflow-auto rounded-card border border-border bg-slate-200 p-4 dark:bg-slate-950">
+              <div className="scale-[0.46] origin-top-left">
+                <PrintDoc
+                  template={selected}
+                  size={selected.paperDefault as PaperSize}
+                  title={t(`printSettings.previewTitles.${selected.docType}`)}
+                  code="XX-000"
+                  date={new Date()}
+                  partyLabel={selected.docType === "purchase" ? t("purchases.cols.supplier") : t("orders.cols.customer")}
+                  partyName="Nguyen Van A"
+                  partyPhone="0909 000 000"
+                  projectName="Nha Q.7"
+                  deliveryAddress="12 Nguyen Trai"
+                  sellerLabel={t("orders.detail.seller")}
+                  sellerName="LumaPOS"
+                  items={[{ id: "1", name: "Xi mang PCB40", sku: "HT40", unitName: "bao", quantity: 10, unitPrice: 92000, total: 920000 }]}
+                  totals={[{ label: t("pos.subtotal"), value: 920000 }]}
+                  grandTotalLabel={t("print.grandTotal")}
+                  grandTotal={920000}
+                  afterTotals={[{ label: t("print.paid"), value: 500000 }, { label: t("print.remaining"), value: 420000, bold: true }]}
+                  inWordsLabel={t("print.inWords")}
+                  signatures={[t("print.buyerSign"), t("print.delivererSign"), t("print.sellerSign")]}
+                  signHint={t("print.signHint")}
+                  note={t("printSettings.previewNote")}
+                  cols={{ product: t("orders.cols.product"), unit: t("orders.cols.unit"), qty: t("orders.cols.qty"), unitPrice: t("orders.cols.unitPrice"), lineTotal: t("orders.cols.lineTotal") }}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
+  );
+}
+
+function Panel({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <div className="rounded-card border border-border bg-surface p-5">
+      {title && <h2 className="mb-3 text-sm font-bold">{title}</h2>}
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <label className={cn("block", className)}>
+      <span className="mb-1 block text-xs font-semibold text-slate-500">{label}</span>
+      {children}
+    </label>
   );
 }

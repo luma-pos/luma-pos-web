@@ -2,12 +2,12 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Routes } from "@/lib/routes";
 import { getOrder } from "@/lib/data/orders";
-import { getPrintTemplate, type PaperSize } from "@/lib/print/template";
+import { getPrintTemplate, getPrintTemplatesForDoc, type PaperSize } from "@/lib/print/template";
 import { PrintDoc } from "@/components/print/print-doc";
 import { PrintToolbar } from "@/components/print/print-toolbar";
 
 interface Props {
-  searchParams: Promise<{ ids?: string | string[]; size?: string }>;
+  searchParams: Promise<{ ids?: string | string[]; size?: string; templateId?: string }>;
 }
 
 const MAX_BATCH = 20;
@@ -20,7 +20,10 @@ export default async function PrintBatchPage({ searchParams }: Props) {
     .filter(Boolean)
     .slice(0, MAX_BATCH);
 
-  const template = await getPrintTemplate("order");
+  const [template, templates] = await Promise.all([
+    getPrintTemplate("order", params.templateId),
+    getPrintTemplatesForDoc("order"),
+  ]);
   const size: PaperSize = (["a4", "a5", "k80"] as const).includes(params.size as PaperSize)
     ? (params.size as PaperSize)
     : template.paperDefault;
@@ -45,7 +48,7 @@ export default async function PrintBatchPage({ searchParams }: Props) {
 
   return (
     <div className="min-h-screen bg-slate-200 dark:bg-slate-950 print:bg-white">
-      <PrintToolbar backHref={Routes.Orders} baseHref={baseHref} size={size} />
+      <PrintToolbar backHref={Routes.Orders} baseHref={baseHref} size={size} templates={templates} selectedTemplateId={template.id} />
       <div className="px-4 py-2 text-xs text-slate-500 text-center print:hidden">
         {t("orders.batchCount", { count: orders.length })}
       </div>

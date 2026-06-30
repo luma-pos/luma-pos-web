@@ -2,23 +2,28 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Routes } from "@/lib/routes";
 import { getOrder } from "@/lib/data/orders";
-import { getPrintTemplate, type PaperSize } from "@/lib/print/template";
+import { getPrintTemplate, getPrintTemplatesForDoc, type PaperSize } from "@/lib/print/template";
 import { PrintDoc } from "@/components/print/print-doc";
 import { PrintToolbar } from "@/components/print/print-toolbar";
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ size?: string }>;
+  searchParams: Promise<{ size?: string; templateId?: string }>;
 }
 
 export default async function PrintOrderPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { size: sizeParam } = await searchParams;
+  const { size: sizeParam, templateId } = await searchParams;
   const t = await getTranslations();
   const order = await getOrder(id).catch(() => null);
   if (!order) notFound();
   const isQuote = order.status === "quote";
-  const template = await getPrintTemplate(isQuote ? "quote" : "order");
+  const isBooking = order.status === "confirmed";
+  const docType = isQuote ? "quote" : isBooking ? "booking" : "order";
+  const [template, templates] = await Promise.all([
+    getPrintTemplate(docType, templateId),
+    getPrintTemplatesForDoc(docType),
+  ]);
 
   const size: PaperSize = (["a4", "a5", "k80"] as const).includes(sizeParam as PaperSize)
     ? (sizeParam as PaperSize)
@@ -33,19 +38,19 @@ export default async function PrintOrderPage({ params, searchParams }: Props) {
     ...(Number(order.discount) > 0 ? [{ label: t("pos.discount"), value: Number(order.discount), negative: true }] : []),
     ...(Number(order.shippingFee) > 0 ? [{ label: t("pos.shipping"), value: Number(order.shippingFee) }] : []),
   ];
-  const afterTotals = isQuote ? [] : [
+  const afterTotals = isQuote || isBooking ? [] : [
     ...(template.options.showDebt ? [{ label: t("print.paid"), value: paid }] : []),
     ...(template.options.showDebt && remaining > 0 ? [{ label: t("print.remaining"), value: remaining, bold: true }] : []),
   ];
 
   return (
     <div className="min-h-screen bg-slate-200 dark:bg-slate-950 print:bg-white">
-      <PrintToolbar backHref={Routes.order(order.id)} baseHref={`${Routes.order(order.id)}/print`} size={size} />
+      <PrintToolbar backHref={Routes.order(order.id)} baseHref={`${Routes.order(order.id)}/print`} size={size} templates={templates} selectedTemplateId={template.id} />
       <div className="py-8 print:py-0 flex justify-center">
         <PrintDoc
           template={template}
           size={size}
-          title={isQuote ? t("print.titles.quote") : t("print.titles.order")}
+          title={isQuote ? t("print.titles.quote") : isBooking ? t("print.titles.booking") : t("print.titles.order")}
           code={order.code}
           date={order.createdAt}
           partyLabel={t("orders.cols.customer")}

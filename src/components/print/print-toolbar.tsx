@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, Printer, Settings2 } from "lucide-react";
+import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { PaperSize } from "@/lib/print/template";
+import type { PaperSize, PrintTemplate } from "@/lib/print/template";
 
 const SIZES: { id: PaperSize; label: string }[] = [
   { id: "a4", label: "A4" },
@@ -12,8 +13,31 @@ const SIZES: { id: PaperSize; label: string }[] = [
   { id: "k80", label: "K80" },
 ];
 
-export function PrintToolbar({ backHref, baseHref, size }: { backHref: string; baseHref: string; size: PaperSize }) {
+export function PrintToolbar({
+  backHref,
+  baseHref,
+  size,
+  templates = [],
+  selectedTemplateId,
+}: {
+  backHref: string;
+  baseHref: string;
+  size: PaperSize;
+  templates?: PrintTemplate[];
+  selectedTemplateId?: string;
+}) {
   const t = useTranslations();
+  const hrefFor = (params: Record<string, string | undefined>) => {
+    const [path, query = ""] = baseHref.split("?");
+    const sp = new URLSearchParams(query);
+    for (const [key, value] of Object.entries(params)) {
+      if (value) sp.set(key, value);
+      else sp.delete(key);
+    }
+    const qs = sp.toString();
+    return qs ? `${path}?${qs}` : path;
+  };
+
   return (
     <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 flex items-center gap-3 print:hidden">
       <Link href={backHref} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -24,7 +48,7 @@ export function PrintToolbar({ backHref, baseHref, size }: { backHref: string; b
         {SIZES.map((s) => (
           <Link
             key={s.id}
-            href={`${baseHref}${baseHref.includes("?") ? "&" : "?"}size=${s.id}`}
+            href={hrefFor({ size: s.id, templateId: selectedTemplateId })}
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-medium border",
               size === s.id ? "bg-primary-600 text-white border-primary-600" : "border-slate-300 dark:border-slate-700"
@@ -34,6 +58,16 @@ export function PrintToolbar({ backHref, baseHref, size }: { backHref: string; b
           </Link>
         ))}
       </div>
+      {templates.length > 1 && (
+        <Select
+          value={selectedTemplateId}
+          onChange={(event) => { window.location.href = hrefFor({ size, templateId: event.target.value }); }}
+          size="sm"
+          options={templates.map((template) => ({ value: template.id, label: template.name }))}
+          className="max-w-[220px] text-xs font-medium"
+          aria-label={t("printSettings.templateName")}
+        />
+      )}
       <Link href="/settings/print" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-500">
         <Settings2 className="w-3.5 h-3.5" />
         {t("print.editTemplate")}

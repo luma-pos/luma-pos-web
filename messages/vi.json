@@ -52,6 +52,7 @@
     "settings": "Cài đặt",
     "purchases": "Nhập hàng",
     "quotes": "Báo giá",
+    "bookings": "Đặt hàng",
     "cashbook": "Sổ quỹ",
     "delivery": "Giao hàng",
     "projects": "Công trình",
@@ -193,6 +194,10 @@
       "invalidAmount": "Số tiền thanh toán VietQR phải lớn hơn 0."
     },
     "saveQuote": "Lưu báo giá",
+    "placeBooking": "Đặt hàng",
+    "deliveryTime": "Thời gian giao hàng",
+    "quoteAmount": "Giá trị báo giá",
+    "customerDue": "Khách cần trả",
     "noProject": "— Công trình có sẵn —",
     "allCategories": "Tất cả",
     "held": {
@@ -211,6 +216,17 @@
       "close": "Đóng hóa đơn",
       "clear": "Xóa giỏ hàng",
       "newOrder": "Đơn mới"
+    },
+    "draftTabs": {
+      "invoice": "Hóa đơn {n}",
+      "quote": "Báo giá {n}",
+      "booking": "Đặt hàng {n}",
+      "addLabel": "Thêm tab POS",
+      "add": {
+        "invoice": "Thêm hóa đơn",
+        "quote": "Thêm báo giá",
+        "booking": "Thêm đặt hàng"
+      }
     },
     "modes": {
       "sale": "Bán mới",
@@ -537,6 +553,7 @@
     "unauthorized": "Phiên đăng nhập hết hạn — đăng nhập lại.",
     "invalidData": "Dữ liệu không hợp lệ.",
     "serverError": "Có lỗi xảy ra, thử lại sau.",
+    "notFound": "Không tìm thấy dữ liệu.",
     "forbidden": "Bạn không có quyền thực hiện thao tác này."
   },
   "zalo": {
@@ -1616,6 +1633,7 @@
     "titles": {
       "order": "HÓA ĐƠN BÁN HÀNG",
       "quote": "BÁO GIÁ",
+      "booking": "PHIẾU ĐẶT HÀNG",
       "purchase": "PHIẾU NHẬP KHO",
       "purchaseDraft": "ĐƠN ĐẶT HÀNG NCC",
       "return": "PHIẾU TRẢ HÀNG"
@@ -1625,10 +1643,11 @@
   },
   "printSettings": {
     "title": "Mẫu in",
-    "settingsDesc": "Thông tin cửa hàng, khổ giấy A4/A5/K80, tùy chọn hiển thị cho từng loại chứng từ",
+    "settingsDesc": "Tạo nhiều mẫu in cho từng loại chứng từ, đặt mẫu mặc định và dùng lại khi in",
     "docTypes": {
       "order": "Hóa đơn bán hàng",
       "quote": "Báo giá",
+      "booking": "Phiếu đặt hàng",
       "purchase": "Phiếu nhập / Đặt NCC",
       "return": "Phiếu trả hàng",
       "receipt": "Phiếu thu / chi"
@@ -1636,6 +1655,7 @@
     "previewTitles": {
       "order": "HÓA ĐƠN BÁN HÀNG",
       "quote": "BÁO GIÁ",
+      "booking": "PHIẾU ĐẶT HÀNG",
       "purchase": "PHIẾU NHẬP KHO",
       "return": "PHIẾU TRẢ HÀNG",
       "receipt": "PHIẾU THU"
@@ -1645,6 +1665,18 @@
     "storeAddress": "Địa chỉ",
     "storePhone": "Điện thoại",
     "storeTaxCode": "Mã số thuế",
+    "templateList": "Danh sách mẫu",
+    "templateName": "Tên mẫu",
+    "newTemplateName": "Mẫu {type} mới",
+    "defaultTemplate": "Mẫu mặc định cho loại chứng từ này",
+    "active": "Đang dùng",
+    "inactive": "Ngừng dùng",
+    "duplicate": "Nhân bản",
+    "duplicated": "Đã nhân bản mẫu in",
+    "setDefault": "Đặt mặc định",
+    "defaultSaved": "Đã đặt làm mẫu mặc định",
+    "deactivate": "Ngừng dùng",
+    "deactivated": "Đã ngừng dùng mẫu in",
     "paperDefault": "Khổ giấy mặc định",
     "applyAll": "Áp dụng thông tin cửa hàng cho tất cả mẫu",
     "appliedAll": "Đã áp dụng cho cả 5 mẫu — nhớ Lưu từng mẫu.",
@@ -1658,10 +1690,14 @@
       "showSku": "Mã SKU cạnh tên SP"
     },
     "footerNote": "Ghi chú chân trang (chính sách đổi trả, cảm ơn…)",
+    "previewNote": "Ghi chú mẫu để kiểm tra bố cục.",
     "saveFor": "Lưu mẫu: {type}",
     "saved": "Đã lưu mẫu in ✓",
     "preview": "Xem trước (rút gọn)",
-    "previewHint": "Khi in thật, mẫu tự dàn trang theo khổ A4/A5/K80 đã chọn."
+    "previewHint": "Khi in thật, mẫu tự dàn trang theo khổ A4/A5/K80 đã chọn.",
+    "errors": {
+      "defaultRequired": "Cần có mẫu mặc định khác trước khi ngừng dùng mẫu này."
+    }
   },
   "payments": {
     "errors": {
@@ -1675,6 +1711,7 @@
       "settings": "Cài đặt",
       "store": "Cửa hàng",
       "staff": "Nhân viên",
+      "pos": "POS",
       "hardware": "Thiết bị",
       "payments": "Thanh toán",
       "print": "Mẫu in",
@@ -1755,7 +1792,7 @@
     "total": "{total} báo giá",
     "createViaPos": "Tạo báo giá (POS)",
     "empty": "Chưa có báo giá nào",
-    "emptyHint": "Tạo giỏ hàng ở POS rồi bấm 'Lưu báo giá'.",
+    "emptyHint": "Tạo tab Báo giá trong POS rồi bấm 'Lưu báo giá'.",
     "cols": {
       "code": "Mã BG",
       "value": "Giá trị"
@@ -1765,6 +1802,18 @@
     "cancelConfirm": "Xóa báo giá này?",
     "errors": {
       "notAQuote": "Đây không phải báo giá đang mở."
+    }
+  },
+  "bookings": {
+    "title": "Đặt hàng",
+    "total": "{total} đơn đặt hàng",
+    "createViaPos": "Tạo đặt hàng (POS)",
+    "empty": "Chưa có đơn đặt hàng nào",
+    "emptyHint": "Tạo tab Đặt hàng trong POS rồi bấm 'Đặt hàng'.",
+    "cols": {
+      "code": "Mã đặt hàng",
+      "deliveryDate": "Thời gian giao",
+      "value": "Giá trị"
     }
   },
   "cashbook": {

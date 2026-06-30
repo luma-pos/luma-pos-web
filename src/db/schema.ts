@@ -678,13 +678,18 @@ export const stocktakeItems = pgTable("stocktake_items", {
 // ============= Print templates (mẫu in theo loại chứng từ) =============
 
 export const printDocTypeEnum = pgEnum("print_doc_type", [
-  "order", "quote", "purchase", "return", "receipt",
+  "order", "quote", "booking", "purchase", "return", "receipt",
 ]);
 export const paperSizeEnum = pgEnum("paper_size", ["a4", "a5", "k80"]);
 
 export const printTemplates = pgTable("print_templates", {
-  docType: printDocTypeEnum("doc_type").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  docType: printDocTypeEnum("doc_type").notNull(),
   paperDefault: paperSizeEnum("paper_default").notNull().default("a5"),
+  isDefault: boolean("is_default").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
   storeName: text("store_name").notNull().default(""),
   storeAddress: text("store_address").notNull().default(""),
   storePhone: text("store_phone").notNull().default(""),
@@ -693,7 +698,11 @@ export const printTemplates = pgTable("print_templates", {
   // toggles: showSeller, showProject, showDebt, showInWords, showSignatures, fontSize...
   options: jsonb("options").$type<Record<string, boolean | string | number>>().notNull().default({}),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [
+  index("print_templates_doc_type_idx").on(t.docType),
+  index("print_templates_active_idx").on(t.isActive),
+  uniqueIndex("print_templates_default_doc_type_idx").on(t.docType).where(sql`${t.isDefault} = true and ${t.isActive} = true`),
+]);
 
 // ============= Shifts (Quản lý ca — Part 17) =============
 

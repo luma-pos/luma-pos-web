@@ -52,6 +52,7 @@
     "settings": "Settings",
     "purchases": "Purchasing",
     "quotes": "Quotes",
+    "bookings": "Bookings",
     "cashbook": "Cash book",
     "delivery": "Delivery",
     "projects": "Projects",
@@ -193,6 +194,10 @@
       "invalidAmount": "VietQR payment amount must be greater than zero."
     },
     "saveQuote": "Save quote",
+    "placeBooking": "Place booking",
+    "deliveryTime": "Delivery time",
+    "quoteAmount": "Quote amount",
+    "customerDue": "Customer due",
     "noProject": "— Existing project —",
     "allCategories": "All",
     "held": {
@@ -211,6 +216,17 @@
       "close": "Close invoice",
       "clear": "Clear cart",
       "newOrder": "New order"
+    },
+    "draftTabs": {
+      "invoice": "Invoice {n}",
+      "quote": "Quote {n}",
+      "booking": "Booking {n}",
+      "addLabel": "Add POS tab",
+      "add": {
+        "invoice": "Add invoice",
+        "quote": "Add quote",
+        "booking": "Add booking"
+      }
     },
     "modes": {
       "sale": "New sale",
@@ -537,6 +553,7 @@
     "unauthorized": "Session expired — please sign in again.",
     "invalidData": "Invalid data.",
     "serverError": "Something went wrong, please retry.",
+    "notFound": "Data not found.",
     "forbidden": "You don't have permission for this action."
   },
   "zalo": {
@@ -1616,6 +1633,7 @@
     "titles": {
       "order": "SALES INVOICE",
       "quote": "QUOTATION",
+      "booking": "BOOKING SLIP",
       "purchase": "GOODS RECEIPT",
       "purchaseDraft": "PURCHASE ORDER",
       "return": "RETURN SLIP"
@@ -1625,10 +1643,11 @@
   },
   "printSettings": {
     "title": "Print templates",
-    "settingsDesc": "Store info, A4/A5/K80 paper, display options per document type",
+    "settingsDesc": "Create multiple templates per document type, choose defaults, and reuse them when printing",
     "docTypes": {
       "order": "Sales invoice",
       "quote": "Quotation",
+      "booking": "Booking slip",
       "purchase": "Purchase / PO",
       "return": "Return slip",
       "receipt": "Cash receipt"
@@ -1636,6 +1655,7 @@
     "previewTitles": {
       "order": "SALES INVOICE",
       "quote": "QUOTATION",
+      "booking": "BOOKING SLIP",
       "purchase": "GOODS RECEIPT",
       "return": "RETURN SLIP",
       "receipt": "RECEIPT"
@@ -1645,6 +1665,18 @@
     "storeAddress": "Address",
     "storePhone": "Phone",
     "storeTaxCode": "Tax code",
+    "templateList": "Templates",
+    "templateName": "Template name",
+    "newTemplateName": "New {type} template",
+    "defaultTemplate": "Default template for this document type",
+    "active": "Active",
+    "inactive": "Inactive",
+    "duplicate": "Duplicate",
+    "duplicated": "Template duplicated",
+    "setDefault": "Set default",
+    "defaultSaved": "Default template updated",
+    "deactivate": "Deactivate",
+    "deactivated": "Template deactivated",
     "paperDefault": "Default paper size",
     "applyAll": "Apply store info to all templates",
     "appliedAll": "Applied to all 5 templates — remember to Save each.",
@@ -1658,10 +1690,14 @@
       "showSku": "SKU next to product"
     },
     "footerNote": "Footer note (return policy, thanks…)",
+    "previewNote": "Sample note for layout checking.",
     "saveFor": "Save template: {type}",
     "saved": "Template saved ✓",
     "preview": "Preview (condensed)",
-    "previewHint": "Actual printing reflows per selected A4/A5/K80 size."
+    "previewHint": "Actual printing reflows per selected A4/A5/K80 size.",
+    "errors": {
+      "defaultRequired": "Set another default before deactivating this template."
+    }
   },
   "payments": {
     "errors": {
@@ -1675,6 +1711,7 @@
       "settings": "Settings",
       "store": "Store",
       "staff": "Staff",
+      "pos": "POS",
       "hardware": "Hardware",
       "payments": "Payments",
       "print": "Print",
@@ -1755,7 +1792,7 @@
     "total": "{total} quotes",
     "createViaPos": "New quote (POS)",
     "empty": "No quotes yet",
-    "emptyHint": "Build a cart in POS then press 'Save quote'.",
+    "emptyHint": "Create a Quote tab in POS, then press 'Save quote'.",
     "cols": {
       "code": "Code",
       "value": "Value"
@@ -1765,6 +1802,18 @@
     "cancelConfirm": "Delete this quote?",
     "errors": {
       "notAQuote": "This is not an open quote."
+    }
+  },
+  "bookings": {
+    "title": "Bookings",
+    "total": "{total} bookings",
+    "createViaPos": "New booking (POS)",
+    "empty": "No bookings yet",
+    "emptyHint": "Create a Booking tab in POS, then press 'Place booking'.",
+    "cols": {
+      "code": "Booking code",
+      "deliveryDate": "Delivery time",
+      "value": "Value"
     }
   },
   "cashbook": {
