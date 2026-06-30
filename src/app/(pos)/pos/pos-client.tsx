@@ -391,6 +391,8 @@ export function PosClient({
   const [browsing, setBrowsing] = useState(false); // click vào ô tìm → mở dropdown SP
   const searchRef = useRef<HTMLDivElement>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const addMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const [addMenuPosition, setAddMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [printSize, setPrintSize] = useState<PaperSize | null>(null); // đang in phiếu tạm
   const [printDefaultSize, setPrintDefaultSize] = useState<PaperSize>(printTemplate.paperDefault);
   const [printJob, setPrintJob] = useState<PosPrintJob | null>(null);
@@ -529,6 +531,17 @@ export function PosClient({
     setActiveId(inv.id);
     setAddMenuOpen(false);
     setError("");
+  }
+
+  function toggleAddMenu() {
+    const rect = addMenuButtonRef.current?.getBoundingClientRect();
+    if (rect) {
+      setAddMenuPosition({
+        top: rect.bottom + 6,
+        left: Math.min(rect.left, window.innerWidth - 210),
+      });
+    }
+    setAddMenuOpen((open) => !open);
   }
 
   /** Đóng 1 tab; luôn giữ tối thiểu 1 đơn. */
@@ -1129,33 +1142,14 @@ export function PosClient({
       })}
       <div className="relative shrink-0">
         <button
-          onClick={() => setAddMenuOpen((open) => !open)}
+          ref={addMenuButtonRef}
+          type="button"
+          onClick={toggleAddMenu}
           title={t("pos.draftTabs.addLabel")}
           className="h-full px-3 py-2.5 rounded-lg border border-border text-slate-400 hover:text-primary-600 hover:border-primary-300"
         >
           <Plus className="w-4 h-4" />
         </button>
-        {addMenuOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setAddMenuOpen(false)} />
-            <div className="absolute left-0 top-full z-50 mt-1 min-w-[190px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-e2">
-              {(["invoice", "quote", "booking"] as PosDraftKind[]).map((kind) => {
-                const ItemIcon = kind === "quote" ? FileText : kind === "booking" ? ClipboardList : ShoppingCart;
-                return (
-                  <button
-                    key={kind}
-                    type="button"
-                    onClick={() => addDraft(kind)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface-2"
-                  >
-                    <ItemIcon className="h-4 w-4 text-slate-400" />
-                    {t(`pos.draftTabs.add.${kind}`)}
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
       </div>
     </div>
   );
@@ -1787,6 +1781,32 @@ export function PosClient({
             closeSearch();
           }}
         />
+      )}
+
+      {addMenuOpen && addMenuPosition && createPortal(
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setAddMenuOpen(false)} />
+          <div
+            className="fixed z-50 min-w-[190px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-e2"
+            style={{ top: addMenuPosition.top, left: addMenuPosition.left }}
+          >
+            {(["invoice", "quote", "booking"] as PosDraftKind[]).map((kind) => {
+              const ItemIcon = kind === "quote" ? FileText : kind === "booking" ? ClipboardList : ShoppingCart;
+              return (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => addDraft(kind)}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface-2"
+                >
+                  <ItemIcon className="h-4 w-4 text-slate-400" />
+                  {t(`pos.draftTabs.add.${kind}`)}
+                </button>
+              );
+            })}
+          </div>
+        </>,
+        document.body
       )}
 
       {/* Phiếu tạm để in (ẩn trên màn hình, chỉ hiện khi in) */}
