@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Loader2, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useConfirmDialog } from "@/components/confirm-dialog-provider";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { buildPrintShareFileName, createPrintShareFile, type ShareablePrintDocType } from "@/lib/print/share-document";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ interface SharePrintDocButtonProps {
 
 export function SharePrintDocButton({ href, code, docType }: SharePrintDocButtonProps) {
   const t = useTranslations();
+  const dialog = useConfirmDialog();
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<ShareStatus>(null);
 
@@ -52,6 +54,13 @@ export function SharePrintDocButton({ href, code, docType }: SharePrintDocButton
 
   const handleShare = async () => {
     if (busy) return;
+    const confirmed = await dialog.confirm({
+      title: t("print.shareConfirmTitle"),
+      description: t("print.shareConfirmDescription", { code }),
+      confirmLabel: t("print.shareConfirmAction"),
+    });
+    if (!confirmed) return;
+
     setBusy(true);
     setStatus(null);
 

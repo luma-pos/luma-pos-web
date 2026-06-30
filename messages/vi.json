@@ -1640,6 +1640,9 @@
     "shareOpened": "Đã mở mẫu in",
     "shareFailed": "Không chia sẻ được phiếu.",
     "shareUnsupported": "Trình duyệt chưa hỗ trợ chia sẻ file",
+    "shareConfirmTitle": "Xác nhận chia sẻ phiếu",
+    "shareConfirmDescription": "Chia sẻ link mẫu in của phiếu {code} cho người nhận?",
+    "shareConfirmAction": "Chia sẻ",
     "shareTitles": {
       "order": "Phiếu bán hàng {code}",
       "quote": "Báo giá {code}",

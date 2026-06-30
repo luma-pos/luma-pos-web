@@ -1640,6 +1640,9 @@
     "shareOpened": "Print template opened",
     "shareFailed": "Could not share this document.",
     "shareUnsupported": "File sharing is not supported in this browser",
+    "shareConfirmTitle": "Confirm document sharing",
+    "shareConfirmDescription": "Share the print template link for {code} with the recipient?",
+    "shareConfirmAction": "Share",
     "shareTitles": {
       "order": "Sales invoice {code}",
       "quote": "Quotation {code}",
