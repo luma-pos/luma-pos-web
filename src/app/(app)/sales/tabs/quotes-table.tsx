@@ -26,12 +26,12 @@ export function QuotesTable({
 }) {
   const t = useTranslations();
   const columns: DataTableColumn<QuoteRow>[] = [
-    { key: "code", label: t("quotes.cols.code"), required: true, render: (row) => <span className="font-semibold text-primary-600">{row.code}</span> },
-    { key: "date", label: t("orders.cols.date"), defaultVisible: true, render: (row) => <span className="text-slate-500">{formatDate(row.createdAt)}</span> },
+    { key: "code", label: t("quotes.cols.code"), required: true, width: "170px", render: (row) => <span className="font-semibold text-primary-600">{row.code}</span> },
+    { key: "date", label: t("orders.cols.date"), defaultVisible: true, width: "170px", render: (row) => <span className="text-slate-500">{formatDate(row.createdAt)}</span> },
     { key: "customer", label: t("orders.cols.customer"), defaultVisible: true, render: (row) => row.customerName ?? t("orders.walkIn") },
     { key: "project", label: t("orders.cols.project"), defaultVisible: true, render: (row) => <span className="text-slate-500">{row.projectName ?? "—"}</span> },
-    { key: "value", label: t("quotes.cols.value"), defaultVisible: true, align: "right", cellClassName: "font-semibold", render: (row) => formatCurrency(Number(row.total)) },
-    { key: "actions", label: "", required: true, width: "110px", align: "right", render: (row) => <span onClick={stopRowToggle}><QuoteActions quoteId={row.id} /></span> },
+    { key: "value", label: t("quotes.cols.value"), defaultVisible: true, align: "right", width: "140px", cellClassName: "font-semibold", render: (row) => formatCurrency(Number(row.total)) },
+    { key: "actions", label: "", required: true, width: "210px", align: "right", render: (row) => <span onClick={stopRowToggle}><QuoteActions quoteId={row.id} /></span> },
   ];
   return (
     <DataTableShell
@@ -41,7 +41,7 @@ export function QuotesTable({
       getRowId={(row) => row.id}
       expandedParam="expandedQuote"
       initialExpandedId={expandedId}
-      minWidth="880px"
+      minWidth="1080px"
       renderExpanded={(row) => (expandedId === row.id ? expandedContent : null)}
     />
   );

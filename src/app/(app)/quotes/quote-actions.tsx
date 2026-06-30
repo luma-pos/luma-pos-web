@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Loader2 } from "lucide-react";
+import { Loader2, Printer } from "lucide-react";
 import { useConfirmDialog } from "@/components/confirm-dialog-provider";
 import { Routes } from "@/lib/routes";
 import { convertQuoteToOrder, cancelQuote } from "@/lib/actions/orders";
@@ -45,16 +45,22 @@ export function QuoteActions({ quoteId }: { quoteId: string }) {
   }
 
   return (
-    <span className="inline-flex items-center gap-2 whitespace-nowrap">
-      <Link href={`${Routes.order(quoteId)}/print`} className="text-xs font-medium text-slate-500 hover:underline">
-        🖨 {t("print.printBtn")}
+    <span className="inline-flex items-center justify-end gap-2 whitespace-nowrap">
+      <Link
+        href={`${Routes.order(quoteId)}/print`}
+        className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:underline"
+      >
+        <Printer className="h-3.5 w-3.5" />
+        {t("print.printBtn")}
       </Link>
-      <button onClick={cancel} disabled={busy} className="text-xs font-medium text-red-500 hover:underline disabled:opacity-50">
+      <button type="button" onClick={cancel} disabled={busy} className="text-xs font-medium text-red-500 hover:underline disabled:opacity-50">
         {t("common.cancel")}
       </button>
       <button
-        onClick={convert} disabled={busy}
-        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium disabled:opacity-50"
+        type="button"
+        onClick={convert}
+        disabled={busy}
+        className="inline-flex min-w-12 items-center justify-center gap-1 rounded-lg bg-primary-600 px-2.5 py-1.5 text-xs font-medium text-white disabled:opacity-50"
       >
         {busy && <Loader2 className="w-3 h-3 animate-spin" />}
         {t("quotes.convert")}
