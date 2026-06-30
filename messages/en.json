@@ -1762,7 +1762,7 @@
     },
     "convert": "Create order",
     "convertConfirm": "Convert this quote to a sale? Stock will be deducted and debt recorded.",
-    "cancelConfirm": "Cancel this quote?",
+    "cancelConfirm": "Delete this quote?",
     "errors": {
       "notAQuote": "This is not an open quote."
     }

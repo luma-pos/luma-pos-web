@@ -1762,7 +1762,7 @@
     },
     "convert": "Tạo đơn hàng",
     "convertConfirm": "Chốt báo giá này thành đơn bán? Kho sẽ trừ và ghi công nợ.",
-    "cancelConfirm": "Hủy báo giá này?",
+    "cancelConfirm": "Xóa báo giá này?",
     "errors": {
       "notAQuote": "Đây không phải báo giá đang mở."
     }
