@@ -118,6 +118,7 @@ type PosCustomer = PosData["customers"][number];
 export type PosSourceInvoice = {
   id?: string;
   mode: "edit" | "copy";
+  kind: PosDraftKind;
   code: string;
   saleTime?: string;
   customerId?: string;
@@ -184,11 +185,11 @@ function makeInvoice(id?: string): PosDraft {
   return makeDraft(id, "invoice");
 }
 
-function makeInvoiceFromSource(source: PosSourceInvoice, products: PosProduct[], id = FIRST_INV_ID): PosDraft {
+function makeDraftFromSource(source: PosSourceInvoice, products: PosProduct[], id = FIRST_INV_ID): PosDraft {
   const afterDiscount = Math.max(0, (source.subtotal ?? 0) - (source.discount ?? 0));
   const taxRate = afterDiscount > 0 && source.tax ? Math.round(((source.tax / afterDiscount) * 100) * 100) / 100 : 0;
   return {
-    ...makeDraft(id, "invoice"),
+    ...makeDraft(id, source.kind),
     cart: (source.items ?? []).flatMap((item) => {
       const product = products.find((p) => p.id === item.productId);
       if (!product) return [];
@@ -431,7 +432,7 @@ export function PosClient({
 
   // nhiều hóa đơn cùng lúc (tab). id đầu cố định để khớp SSR.
   const [invoices, setInvoices] = useState<PosDraft[]>(() => [
-    initialSourceInvoice ? makeInvoiceFromSource(initialSourceInvoice, data.products, FIRST_INV_ID) : makeInvoice(FIRST_INV_ID),
+    initialSourceInvoice ? makeDraftFromSource(initialSourceInvoice, data.products, FIRST_INV_ID) : makeInvoice(FIRST_INV_ID),
   ]);
   const [activeId, setActiveId] = useState(FIRST_INV_ID);
 
@@ -925,17 +926,14 @@ export function PosClient({
 
   async function submitOrder(mode: "sale" | "quote" | "booking") {
     if (cart.length === 0 || !data.warehouse || submitting) return;
-    const isCheckoutMode = mode === "sale";
-    if (mode === "sale" && payMethod === "credit" && !customerId) {
+    const submitMode = sourceInvoice ? sourceInvoice.kind === "quote" ? "quote" : sourceInvoice.kind === "booking" ? "booking" : mode : mode;
+    const isCheckoutMode = submitMode === "sale";
+    if (submitMode === "sale" && payMethod === "credit" && !customerId) {
       setError(t("pos.errors.creditNeedsCustomer"));
       return;
     }
-    if (mode === "sale" && payMethod === "bank_transfer" && payableAmount <= 0) {
+    if (submitMode === "sale" && payMethod === "bank_transfer" && payableAmount <= 0) {
       setError(t("pos.sepay.invalidAmount"));
-      return;
-    }
-    if (sourceInvoice && mode !== "sale") {
-      setError(t("pos.invoiceEdit.saleOnly"));
       return;
     }
     if (sourceInvoice && typeof navigator !== "undefined" && !navigator.onLine) {
@@ -943,14 +941,14 @@ export function PosClient({
       return;
     }
     const payload = {
-      mode,
+      mode: submitMode,
       clientId: makeClientId(), // khử trùng khi đồng bộ offline
       source: sourceInvoice?.id ? { mode: sourceInvoice.mode, orderId: sourceInvoice.id } : undefined,
       customerId: customerId || null,
       warehouseId: data.warehouse.id,
       projectId: projectId || null,
       projectName: projectName || undefined,
-      deliveryDate: mode === "booking" && deliveryDate ? deliveryDate : undefined,
+      deliveryDate: submitMode === "booking" && deliveryDate ? deliveryDate : undefined,
       discount: discountVnd,
       taxRate,
       shippingFee,
@@ -966,7 +964,7 @@ export function PosClient({
       })),
       payment: { method: isCheckoutMode ? payMethod : "credit", amount: isCheckoutMode && payMethod !== "bank_transfer" ? paid : 0 },
     };
-    setSubmittingMode(mode);
+    setSubmittingMode(submitMode);
     setError("");
 
     // offline → xếp hàng chờ đồng bộ
@@ -982,7 +980,7 @@ export function PosClient({
     try {
       const res = await createOrder(payload);
       if (res.ok) {
-        if (mode === "sale" && payMethod === "bank_transfer") {
+        if (submitMode === "sale" && payMethod === "bank_transfer") {
           const paymentRes = await fetch("/api/payments/sepay", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -1023,15 +1021,15 @@ export function PosClient({
           closeInvoice(activeId);
           setSepayCheckout({ ...paymentJson.data, orderId: res.data.id, orderCode: res.data.code, printJob });
           return;
-        }
+          }
         const printJob = buildPrintJob({
-          template: mode === "quote" ? quotePrintTemplate : mode === "booking" ? bookingPrintTemplate : printTemplate,
-          title: mode === "quote" ? t("print.titles.quote") : mode === "booking" ? t("print.titles.booking") : t("print.titles.order"),
+          template: submitMode === "quote" ? quotePrintTemplate : submitMode === "booking" ? bookingPrintTemplate : printTemplate,
+          title: submitMode === "quote" ? t("print.titles.quote") : submitMode === "booking" ? t("print.titles.booking") : t("print.titles.order"),
           code: res.data.code,
         });
         setSubmittingMode(null);
         closeInvoice(activeId);
-        startPrint(printJob, mode === "quote" ? quotePrintTemplate.paperDefault : mode === "booking" ? bookingPrintTemplate.paperDefault : printDefaultSize);
+        startPrint(printJob, submitMode === "quote" ? quotePrintTemplate.paperDefault : submitMode === "booking" ? bookingPrintTemplate.paperDefault : printDefaultSize);
       } else {
         setSubmittingMode(null);
         setError(t(res.error));
@@ -1093,6 +1091,22 @@ export function PosClient({
   const closeSearch = () => { setBrowsing(false); setSearch(""); };
   const isEditMode = sourceInvoice?.mode === "edit";
   const isCopyMode = sourceInvoice?.mode === "copy";
+  const sourceKind = sourceInvoice?.kind ?? "invoice";
+  const sourceTitleTx = sourceKind === "quote"
+    ? isEditMode ? "pos.invoiceEdit.editingQuoteFrom" : "pos.invoiceEdit.copyingQuoteFrom"
+    : sourceKind === "booking"
+      ? isEditMode ? "pos.invoiceEdit.editingBookingFrom" : "pos.invoiceEdit.copyingBookingFrom"
+      : isEditMode ? "pos.invoiceEdit.editingFrom" : "pos.invoiceEdit.copyingFrom";
+  const sourceDescriptionTx = sourceKind === "quote"
+    ? isEditMode ? "pos.invoiceEdit.editQuoteDescription" : "pos.invoiceEdit.copyQuoteDescription"
+    : sourceKind === "booking"
+      ? isEditMode ? "pos.invoiceEdit.editBookingDescription" : "pos.invoiceEdit.copyBookingDescription"
+      : isEditMode ? "pos.invoiceEdit.editDescription" : "pos.invoiceEdit.copyDescription";
+  const sourcePrimaryLabel = isEditMode
+    ? sourceKind === "quote" ? t("pos.invoiceEdit.saveEditedQuote") : sourceKind === "booking" ? t("pos.invoiceEdit.saveEditedBooking") : t("pos.invoiceEdit.saveEdited")
+    : isCopyMode
+      ? sourceKind === "quote" ? t("pos.invoiceEdit.createQuoteCopy") : sourceKind === "booking" ? t("pos.invoiceEdit.createBookingCopy") : t("pos.invoiceEdit.createCopy")
+      : null;
 
   // Tabs hóa đơn — đặt cạnh thanh tìm kiếm (giống KiotViet).
   const invoiceTabs = (
@@ -1233,12 +1247,17 @@ export function PosClient({
                   ]}
                   className="min-w-20 shrink-0 font-medium text-slate-700 dark:text-slate-200"
                 />
-                <div className={cn("group relative flex items-center shrink-0", outOfStock && "text-er")}>
+                <div
+                  className={cn(
+                    "group relative grid h-8 w-28 shrink-0 grid-cols-[32px_1fr_32px] overflow-hidden rounded-md border border-border bg-surface",
+                    outOfStock && "border-er text-er"
+                  )}
+                >
                   <button
                     onClick={() => updateQty(l.key, -1)}
                     className={cn(
-                      "w-8 h-8 rounded-l-md border border-border border-r-0 grid place-items-center text-slate-500 hover:text-er hover:bg-surface-2",
-                      outOfStock && "border-er text-er hover:bg-red-50 dark:hover:bg-red-950/20"
+                      "grid h-full place-items-center text-slate-500 hover:text-er hover:bg-surface-2",
+                      outOfStock && "text-er hover:bg-red-50 dark:hover:bg-red-950/20"
                     )}
                   >
                     <Minus className="w-3.5 h-3.5" />
@@ -1248,15 +1267,15 @@ export function PosClient({
                     value={l.quantity}
                     onChange={(e) => setQty(l.key, Number(e.target.value))}
                     className={cn(
-                      "no-spinner w-12 py-1.5 text-center text-sm border-y border-border bg-surface",
+                      "no-spinner h-full w-full border-x border-border bg-surface text-center text-sm outline-none",
                       outOfStock && "border-er text-er"
                     )}
                   />
                   <button
                     onClick={() => updateQty(l.key, 1)}
                     className={cn(
-                      "w-8 h-8 rounded-r-md border border-border border-l-0 grid place-items-center text-slate-500 hover:text-primary-600 hover:bg-surface-2",
-                      outOfStock && "border-er text-er hover:text-er hover:bg-red-50 dark:hover:bg-red-950/20"
+                      "grid h-full place-items-center text-slate-500 hover:text-primary-600 hover:bg-surface-2",
+                      outOfStock && "text-er hover:text-er hover:bg-red-50 dark:hover:bg-red-950/20"
                     )}
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -1355,7 +1374,7 @@ export function PosClient({
                     as="div"
                     weight="bold"
                     size="sm"
-                    tx={isEditMode ? "pos.invoiceEdit.editingFrom" : "pos.invoiceEdit.copyingFrom"}
+                    tx={sourceTitleTx}
                     txOptions={{ code: sourceInvoice.code }}
                   />
                   <Text
@@ -1363,7 +1382,7 @@ export function PosClient({
                     variant="muted"
                     size="xs"
                     className="mt-0.5"
-                    tx={isEditMode ? "pos.invoiceEdit.editDescription" : "pos.invoiceEdit.copyDescription"}
+                    tx={sourceDescriptionTx}
                     txOptions={{ dateTime: sourceInvoice.saleTime ?? "—" }}
                   />
                 </div>
@@ -1723,10 +1742,8 @@ export function PosClient({
               className="flex-1 py-3 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2"
             >
               {submittingMode !== null && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isEditMode
-                ? t("pos.invoiceEdit.saveEdited")
-                : isCopyMode
-                  ? t("pos.invoiceEdit.createCopy")
+              {sourcePrimaryLabel
+                ? sourcePrimaryLabel
                   : isQuoteDraft
                     ? t("pos.saveQuote")
                     : isBookingDraft

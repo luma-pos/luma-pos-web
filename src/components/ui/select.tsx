@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { TxValues } from "./_tx";
@@ -118,7 +118,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
           {...props}
         >
           <span className="block truncate">{selectedLabel ?? "—"}</span>
-          <ChevronsUpDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <ChevronDown className={cn("absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform", open && "rotate-180")} />
         </button>
         {open && !disabled && (
           <div

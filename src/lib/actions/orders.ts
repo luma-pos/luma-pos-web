@@ -38,6 +38,7 @@ export async function convertQuoteToOrder(quoteId: string): Promise<ActionResult
   if (result.ok) {
     revalidatePath(Routes.Orders);
     revalidatePath(Routes.Quotes);
+    revalidatePath(Routes.Sales);
     revalidatePath(Routes.order(quoteId));
   }
   return result;

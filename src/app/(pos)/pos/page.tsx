@@ -27,12 +27,15 @@ function csvUuids(value: string | string[] | undefined) {
 
 async function sourceInvoiceFromParams(params: PosSearchParams): Promise<PosSourceInvoice | null> {
   const mode = one(params.sourceMode);
+  const kind = one(params.sourceKind);
   const orderId = one(params.sourceOrderId);
   if ((mode !== "edit" && mode !== "copy") || !orderId || !UUID_RE.test(orderId)) return null;
   const order = await getOrder(orderId);
   if (!order) return null;
+  const sourceKind = kind === "quote" || kind === "booking" ? kind : order.status === "quote" ? "quote" : order.status === "confirmed" ? "booking" : "invoice";
   return {
     mode,
+    kind: sourceKind,
     id: order.id,
     code: order.code,
     saleTime: formatDate(order.createdAt),

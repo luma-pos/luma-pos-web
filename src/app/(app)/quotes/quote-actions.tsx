@@ -51,6 +51,48 @@ export function QuoteCreateOrderButton({
   );
 }
 
+export function BookingCreateOrderButton({
+  bookingId,
+  className,
+}: {
+  bookingId: string;
+  className?: string;
+}) {
+  const t = useTranslations();
+  const router = useRouter();
+  const dialog = useConfirmDialog();
+  const [busy, setBusy] = useState(false);
+
+  async function convert() {
+    if (busy) return;
+    const ok = await dialog.confirm({
+      description: t("bookings.convertConfirm"),
+      confirmLabel: t("bookings.convert"),
+    });
+    if (!ok) return;
+    setBusy(true);
+    const res = await convertQuoteToOrder(bookingId);
+    setBusy(false);
+    if (res.ok) router.push(Routes.order(bookingId));
+    else await dialog.alert({ description: t(res.error as never), variant: "destructive" });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={convert}
+      disabled={busy}
+      className={cn(
+        "inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary-600 px-3 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50",
+        className,
+      )}
+    >
+      {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+      {t("bookings.convert")}
+    </button>
+  );
+}
+
 export function QuoteDeleteButton({
   quoteId,
   className,

@@ -10,7 +10,7 @@ import { OrderStatusBadge, PaymentStatusBadge } from "../status-badges";
 import { OrderActions, PaymentForm, SendOrderZaloButton } from "./order-actions";
 import { EInvoiceForm } from "./einvoice-form";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { QuoteCreateOrderButton, QuoteDeleteButton } from "../../quotes/quote-actions";
+import { BookingCreateOrderButton, QuoteCreateOrderButton, QuoteDeleteButton } from "../../quotes/quote-actions";
 
 type EInvoiceSummary = {
   id: string;
@@ -39,10 +39,13 @@ export async function OrderDetailPanel({
   const paid = Number(order.amountPaid);
   const remaining = Math.max(0, total - paid);
   const isQuote = order.status === "quote";
+  const isBooking = order.status === "confirmed";
   const cancelled = order.status === "cancelled" || order.status === "merged";
+  const sourceKind = isQuote ? "quote" : isBooking ? "booking" : "invoice";
   const posSourceHref = (mode: "edit" | "copy") => {
     const sp = new URLSearchParams({
       sourceMode: mode,
+      sourceKind,
       sourceOrderId: order.id,
       sourceCode: order.code,
       sourceSaleTime: formatDate(order.createdAt),
@@ -223,12 +226,13 @@ export async function OrderDetailPanel({
         </div>
         <div className="flex flex-wrap gap-2 xl:justify-end">
           {isQuote && <QuoteCreateOrderButton quoteId={order.id} />}
+          {isBooking && !cancelled && <BookingCreateOrderButton bookingId={order.id} />}
           <Link href={`${Routes.order(order.id)}/print`} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}>
             {t("print.printBtn")}
           </Link>
-          {(order.status === "completed" || order.status === "quote") && order.returns.length === 0 && (
+          {(order.status === "completed" || order.status === "quote" || order.status === "confirmed") && order.returns.length === 0 && (
             <Link href={posSourceHref("edit")} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 bg-white dark:bg-surface")}>
-              {t("orderEdit.action")}
+              {isQuote ? t("quotes.edit") : isBooking ? t("bookings.edit") : t("orderEdit.action")}
             </Link>
           )}
           {!cancelled && (

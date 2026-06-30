@@ -16,6 +16,7 @@ import { getCurrentShift } from "@/lib/data/shifts";
 function revalidateOrderPaths(sourceOrderId?: string) {
   try {
     revalidatePath(Routes.Orders);
+    revalidatePath(Routes.Sales);
     revalidatePath(Routes.Products);
     if (sourceOrderId) revalidatePath(Routes.order(sourceOrderId));
   } catch (e) {
@@ -71,19 +72,21 @@ export async function createOrderForUser(
     const currentShift = profileId ? await getCurrentShift(profileId) : null;
 
     const result = await db.transaction(async (tx) => {
-      if (v.source && isQuote) throw new Error("SOURCE_NOT_EDITABLE");
-
       const [sourceOrder] = v.source
         ? await tx.select().from(orders).where(eq(orders.id, v.source.orderId)).limit(1)
         : [];
       if (v.source && !sourceOrder) throw new Error("SOURCE_NOT_FOUND");
+      const sourceIsSale = sourceOrder?.status === "completed";
+      const sourceIsQuote = sourceOrder?.status === "quote";
+      const sourceIsBooking = sourceOrder?.status === "confirmed";
 
       if (v.source?.mode === "copy") {
         if (sourceOrder.status === "cancelled" || sourceOrder.status === "merged") throw new Error("SOURCE_NOT_COPYABLE");
       }
 
       if (v.source?.mode === "edit") {
-        if (sourceOrder.status !== "completed") throw new Error("SOURCE_NOT_EDITABLE");
+        const sourceMatchesMode = (isQuote && sourceIsQuote) || (isBooking && sourceIsBooking) || (!isQuote && !isBooking && sourceIsSale);
+        if (!sourceMatchesMode) throw new Error("SOURCE_NOT_EDITABLE");
         if (sourceOrder.replacedByOrderId) throw new Error("SOURCE_ALREADY_REPLACED");
         const [hasReturn] = await tx.select({ id: returns.id }).from(returns).where(eq(returns.orderId, sourceOrder.id)).limit(1);
         if (hasReturn) throw new Error("SOURCE_HAS_RETURNS");
@@ -91,7 +94,7 @@ export async function createOrderForUser(
         if (hasEInvoice) throw new Error("SOURCE_HAS_EINVOICE");
 
         const sourceItems = await tx.select().from(orderItems).where(eq(orderItems.orderId, sourceOrder.id));
-        if (sourceOrder.warehouseId) {
+        if (sourceIsSale && sourceOrder.warehouseId) {
           for (const i of sourceItems) {
             const baseQty = Number(i.quantity) * Number(i.unitMultiplier);
             await tx.update(stockLevels).set({
@@ -111,7 +114,7 @@ export async function createOrderForUser(
           }
         }
 
-        if (sourceOrder.customerId) {
+        if (sourceIsSale && sourceOrder.customerId) {
           const sourceRemaining = Number(sourceOrder.total) - Number(sourceOrder.amountPaid);
           await tx.update(customers).set({
             currentDebt: sql`greatest(${customers.currentDebt} - ${toMoney(Math.max(0, sourceRemaining))}, 0)`,
@@ -119,20 +122,22 @@ export async function createOrderForUser(
           }).where(eq(customers.id, sourceOrder.customerId));
         }
 
-        const sourcePayments = await tx.select().from(payments).where(eq(payments.orderId, sourceOrder.id));
-        for (const p of sourcePayments) {
-          if (p.method === "credit") continue;
-          await recordCashTx(tx, {
-            type: "out",
-            fund: fundForMethod(p.method),
-            amount: Number(p.amount),
-            category: "refund",
-            refType: "order_edit_cancel",
-            refId: sourceOrder.id,
-            note: `Hủy đơn gốc ${sourceOrder.code} để sửa`,
-            createdBy: profileId,
-            shiftId: currentShift?.id ?? null,
-          });
+        if (sourceIsSale) {
+          const sourcePayments = await tx.select().from(payments).where(eq(payments.orderId, sourceOrder.id));
+          for (const p of sourcePayments) {
+            if (p.method === "credit") continue;
+            await recordCashTx(tx, {
+              type: "out",
+              fund: fundForMethod(p.method),
+              amount: Number(p.amount),
+              category: "refund",
+              refType: "order_edit_cancel",
+              refId: sourceOrder.id,
+              note: `Hủy đơn gốc ${sourceOrder.code} để sửa`,
+              createdBy: profileId,
+              shiftId: currentShift?.id ?? null,
+            });
+          }
         }
       }
 
