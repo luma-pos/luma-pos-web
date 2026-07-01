@@ -2,7 +2,10 @@
 
 import { type ReactNode, useMemo, useRef, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Search, Trash2, Check, Loader2, AlertTriangle, FileSpreadsheet, Printer, Eye, CircleAlert, PackageSearch, Save, ClipboardList } from "lucide-react";
+import { Search, Trash2, Check, Loader2, AlertTriangle, FileSpreadsheet, PackageSearch, Save } from "lucide-react";
+import { AiQuickActionButton } from "@/components/ai-quick-actions/ai-quick-action-button";
+import { AiQuickActionModal } from "@/components/ai-quick-actions/ai-quick-action-modal";
+import type { AiQuickActionApplyMode } from "@/components/ai-quick-actions/types";
 import { SearchableSelect } from "@/components/combobox";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
@@ -12,6 +15,7 @@ import { createInternalUse } from "@/lib/actions/internal-use";
 import { Routes } from "@/lib/routes";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import type { AiActionPreview } from "@/lib/ai/actions";
 
 const APPROVAL_THRESHOLD = 500_000;
 
@@ -46,6 +50,7 @@ export function InternalUseForm() {
   const [results, setResults] = useState<Awaited<ReturnType<typeof searchPurchaseProducts>>>([]);
   const [searching, setSearching] = useState(false);
   const [toast, setToast] = useState("");
+  const [aiQuickOpen, setAiQuickOpen] = useState(false);
   const tRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const deptOpts = DEPARTMENTS.map(([v, en, vi]) => ({ value: v, label: L ? vi : en }));
@@ -76,6 +81,54 @@ export function InternalUseForm() {
     });
     setQ(""); setResults([]);
   }
+
+  async function applyAiPreview(preview: AiActionPreview, applyMode: AiQuickActionApplyMode) {
+    const payload = preview.action?.payload && typeof preview.action.payload === "object" ? preview.action.payload as Record<string, unknown> : {};
+    const itemRows = Array.isArray(payload.items)
+      ? payload.items.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item)))
+      : [];
+    const lookups = [
+      typeof payload.sku === "string" || typeof payload.productName === "string"
+        ? { sku: payload.sku, productName: payload.productName, text: payload.text, quantity: payload.quantity }
+        : null,
+      ...itemRows,
+    ].filter((item): item is Record<string, unknown> => Boolean(item));
+    const found: Awaited<ReturnType<typeof searchPurchaseProducts>> = [];
+    for (const item of lookups) {
+      const query = [item.sku, item.productName, item.text].find((value) => typeof value === "string" && value.trim()) as string | undefined;
+      if (!query) continue;
+      const rows = await searchPurchaseProducts(query);
+      const product = rows.find((row) => row.sku.toLowerCase() === query.toLowerCase()) ?? rows[0];
+      if (product && !found.some((row) => row.id === product.id)) found.push(product);
+    }
+    if (found.length === 0) {
+      const query = [lookups[0]?.sku, lookups[0]?.productName, lookups[0]?.text].find((value) => typeof value === "string" && value.trim()) as string | undefined;
+      if (query) setQ(query);
+      return;
+    }
+    setLines((current) => {
+      const base = applyMode === "replace" ? [] : current;
+      const next = [...base];
+      for (const product of found) {
+        if (next.some((line) => line.productId === product.id)) continue;
+        const cost = Number(product.costPrice);
+        const units = [{ name: product.baseUnit, mult: 1 }, ...product.units.map((u) => ({ name: u.unitName, mult: Number(u.multiplier) }))];
+        next.push({
+          key: `${product.id}-${Date.now()}-${next.length}`,
+          productId: product.id,
+          productName: product.name,
+          baseUnit: product.baseUnit,
+          costPrice: cost,
+          units,
+          unitName: product.baseUnit,
+          unitMultiplier: 1,
+          quantity: 1,
+          unitCost: cost,
+        });
+      }
+      return next;
+    });
+  }
   const upd = (key: string, patch: Partial<Line>) => setLines((ls) => ls.map((l) => l.key === key ? { ...l, ...patch } : l));
   const changeUnit = (l: Line, name: string) => {
     const u = l.units.find((x) => x.name === name) ?? l.units[0];
@@ -104,27 +157,24 @@ export function InternalUseForm() {
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="min-w-0 overflow-hidden rounded-card bg-surface shadow-e1">
-        <div className="flex flex-wrap items-center gap-3 border-b border-border-soft bg-surface px-4 py-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-card bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-200">
-              <ClipboardList className="h-5 w-5" />
-            </div>
-            <div className="min-w-36">
-              <h2 className="text-lg font-extrabold">{t("nav.internalUse")}</h2>
-              <p className="text-[11px] text-slate-400">{t("internalUse.formSub")}</p>
-            </div>
-            <div className="relative min-w-64 flex-1 xl:max-w-xl">
+    <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden">
+      <section className="flex-1 min-w-0 min-h-[420px] lg:min-h-0 flex flex-col p-3 sm:p-4">
+            <div className="relative mb-3">
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1">
               <Input
                 value={q}
                 onChange={(e) => onSearch(e.target.value)}
                 placeholder={t("internalUse.searchProduct")}
                 leftIcon={<Search />}
                 size="lg"
-                className="h-12 bg-canvas text-base"
+                    className="h-11 bg-surface"
               />
+                </div>
+                <AiQuickActionButton onClick={() => setAiQuickOpen(true)} label={t("aiQuick.internalUse.open")} className="h-11 w-12" />
+              </div>
               {(results.length > 0 || searching) && q.trim() && (
-                <div className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-card border border-border-soft bg-surface shadow-e2">
+                <div className="absolute left-0 right-14 z-30 mt-2 overflow-hidden rounded-card border border-border-soft bg-surface shadow-e2">
                   {searching ? <div className="px-4 py-4 text-center text-sm text-slate-400"><Loader2 className="w-4 h-4 animate-spin inline" /></div>
                     : results.map((p) => (
                       <button key={p.id} type="button" onClick={() => addItem(p)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-surface-2">
@@ -134,13 +184,6 @@ export function InternalUseForm() {
                 </div>
               )}
             </div>
-            <div className="ml-auto flex items-center gap-2">
-              <IconAction label="file"><FileSpreadsheet className="h-4 w-4" /></IconAction>
-              <IconAction label="print"><Printer className="h-4 w-4" /></IconAction>
-              <IconAction label="preview"><Eye className="h-4 w-4" /></IconAction>
-              <IconAction label="notice"><CircleAlert className="h-4 w-4" /></IconAction>
-            </div>
-        </div>
 
         {needsApproval && (
           <div className="m-4 flex items-start gap-2 rounded-card border border-warn/20 bg-warn-soft px-3.5 py-2.5 text-xs text-warn">
@@ -156,7 +199,7 @@ export function InternalUseForm() {
             <FormMetric label={t("internalUse.status.draft")} value={needsApproval ? t("internalUse.status.pending") : t("internalUse.status.approved")} tone={needsApproval ? "warn" : "ok"} />
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="flex-1 min-h-[320px] overflow-auto bg-surface border border-border rounded-card">
             <table className="w-full min-w-[880px] table-fixed text-sm">
               <colgroup>
                 <col className="w-16" />
@@ -222,7 +265,7 @@ export function InternalUseForm() {
           )}
       </section>
 
-      <aside className="flex flex-col rounded-card bg-surface p-4 shadow-e1 xl:sticky xl:top-24 xl:self-start">
+      <aside className="w-full lg:w-[390px] shrink-0 bg-surface border-t lg:border-t-0 lg:border-l border-border flex flex-col p-3 sm:p-4 gap-3 overflow-auto">
           <div className="mb-5 flex items-center justify-between gap-3">
             <SearchableSelect options={[{ value: "main", label: t("internalUse.defaultBranch") }]} value="main" onChange={() => undefined} placeholder={t("internalUse.defaultBranch")} />
             <div className="h-10 rounded-lg border border-border-soft bg-canvas px-3 py-2 text-sm font-semibold text-slate-400">{new Date().toLocaleDateString("vi-VN")}</div>
@@ -256,15 +299,22 @@ export function InternalUseForm() {
       </aside>
 
       {toast && <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-ok-soft text-ok border border-ok/25 text-sm font-semibold shadow-e2 flex items-center gap-2"><Check className="w-4 h-4" />{toast}</div>}
+      <AiQuickActionModal
+        open={aiQuickOpen}
+        title={t("aiQuick.internalUse.title")}
+        description={t("aiQuick.internalUse.description")}
+        placeholder={t("aiQuick.internalUse.placeholder")}
+        submitLabel={t("aiQuick.internalUse.submit")}
+        applyLabel={t("aiQuick.internalUse.apply")}
+        preset="create_inventory_inbound"
+        surface="web"
+        acceptedIntents={["create_inventory_inbound", "create_draft_purchase_order", "create_draft_purchase_order_from_restocking"]}
+        hasExistingData={lines.length > 0}
+        existingDataLabel={t("aiQuick.internalUse.existingData")}
+        onClose={() => setAiQuickOpen(false)}
+        onApply={applyAiPreview}
+      />
     </div>
-  );
-}
-
-function IconAction({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <button type="button" aria-label={label} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border-soft bg-surface text-slate-500 transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 active:scale-[0.98]">
-      {children}
-    </button>
   );
 }
 

@@ -1052,6 +1052,15 @@
         "apply": "Áp dụng vào phiếu kiểm"
       }
     },
+    "internalUse": {
+      "open": "AI xuất nội bộ",
+      "title": "AI xuất nội bộ",
+      "description": "Gửi yêu cầu hoặc ảnh danh sách hàng. AI tạo preview rồi fill nháp vào phiếu xuất nội bộ.",
+      "placeholder": "Ví dụ: Xuất nội bộ 2 bóng LED9W cho bộ phận bảo trì...",
+      "submit": "Tạo preview",
+      "apply": "Áp dụng vào phiếu xuất",
+      "existingData": "Phiếu xuất nội bộ hiện tại đã có dữ liệu"
+    },
     "pos": {
       "open": "AI thêm hàng vào giỏ",
       "title": "AI thêm hàng vào giỏ POS",

@@ -10,19 +10,17 @@ export default async function NewInternalUsePage() {
   const t = await getTranslations();
 
   return (
-    <div className="min-h-dvh bg-canvas p-4 sm:p-6">
-      <div className="mb-5 flex flex-wrap items-start gap-4">
+    <div className="h-dvh flex flex-col bg-canvas">
+      <header className="shrink-0 min-h-12 px-4 flex items-center gap-3 bg-surface border-b border-border">
         <Link
           href={`${Routes.Inventory}?tab=internal`}
-          className="mt-1 inline-flex h-10 w-10 items-center justify-center rounded-card border border-border bg-surface text-slate-500 shadow-e1 transition hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
+          aria-label={t("common.back")}
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t("internalUse.formTitle")}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">{t("internalUse.formSub")}</p>
-        </div>
-      </div>
+        <h1 className="text-[17px] font-bold">{t("internalUse.formTitle")}</h1>
+      </header>
 
       <InternalUseForm />
     </div>

@@ -1052,6 +1052,15 @@
         "apply": "Apply to stocktake"
       }
     },
+    "internalUse": {
+      "open": "AI internal issue",
+      "title": "AI internal issue",
+      "description": "Send a request or item-list image. AI previews and fills this internal-use issue.",
+      "placeholder": "Example: Issue 2 LED9W bulbs to the maintenance department...",
+      "submit": "Create preview",
+      "apply": "Apply to issue",
+      "existingData": "The current internal-use issue already has data"
+    },
     "pos": {
       "open": "AI add items to cart",
       "title": "AI add items to POS cart",
