@@ -5,7 +5,7 @@ import { logZaloWebhookEvent } from "@/lib/zalo/webhook";
 
 function safeCompareHex(expected: string, signature: string | null) {
   if (!signature) return false;
-  const normalized = signature.replace(/^sha256=/i, "");
+  const normalized = signature.replace(/^sha256=/i, "").replace(/^mac=/i, "").trim();
   const expectedBuffer = Buffer.from(expected, "hex");
   const actualBuffer = Buffer.from(normalized, "hex");
   return expectedBuffer.length === actualBuffer.length && timingSafeEqual(expectedBuffer, actualBuffer);
@@ -19,9 +19,9 @@ function sha256Hex(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function verifyZEventSignature(secret: string, body: string, event: Record<string, unknown>, signature: string | null) {
+function verifyZEventSignature(secret: string, body: string, event: Record<string, unknown>, signature: string | null, headerTimestamp: string | null) {
   const appId = readString(event.app_id) ?? readString(event.appId);
-  const timestamp = readString(event.timestamp) ?? readString(event.timeStamp);
+  const timestamp = readString(headerTimestamp) ?? readString(event.timestamp) ?? readString(event.timeStamp);
   if (!appId || !timestamp || !signature) return false;
   const compactBody = JSON.stringify(event);
   return [
@@ -46,8 +46,9 @@ export async function POST(request: Request) {
   }
   if (config.webhookSecret) {
     const zEventSignature = request.headers.get("x-zevent-signature");
+    const zEventTimestamp = request.headers.get("x-zevent-timestamp");
     const legacySignature = request.headers.get("x-zalo-signature") ?? request.headers.get("x-hub-signature-256");
-    const verified = verifyZEventSignature(config.webhookSecret, body, event, zEventSignature)
+    const verified = verifyZEventSignature(config.webhookSecret, body, event, zEventSignature, zEventTimestamp)
       || verifyLegacyHmacSignature(config.webhookSecret, body, legacySignature);
     if (!verified) return NextResponse.json({ ok: false, error: "errors.forbidden" }, { status: 403 });
   }
