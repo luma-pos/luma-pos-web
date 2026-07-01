@@ -5,7 +5,6 @@ import { Text } from "@/components/ui/text";
 import { OrdersTab } from "./tabs/orders";
 import { QuotesTab } from "./tabs/quotes";
 import { BookingsTab } from "./tabs/bookings";
-import { PromotionsTab } from "./tabs/promotions";
 import { EInvoicesTab } from "./tabs/einvoices";
 import { ReturnsTab } from "./tabs/returns";
 
@@ -17,7 +16,6 @@ const TABS = [
   { tab: "quotes", labelKey: "nav.quotes" },
   { tab: "bookings", labelKey: "nav.bookings" },
   { tab: "einvoices", labelKey: "nav.einvoices" },
-  { tab: "promotions", labelKey: "nav.promotions" },
 ];
 
 export default async function SalesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -38,7 +36,6 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         : tab === "returns" ? <ReturnsTab searchParams={params} />
         : tab === "bookings" ? <BookingsTab searchParams={params} />
         : tab === "einvoices" ? <EInvoicesTab />
-        : tab === "promotions" ? <PromotionsTab />
         : <OrdersTab searchParams={params} />}
     </div>
   );

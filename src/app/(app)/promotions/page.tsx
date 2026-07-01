@@ -5,5 +5,5 @@ export default async function PromotionsRedirect({ searchParams }: { searchParam
   const usp = new URLSearchParams();
   for (const [k, v] of Object.entries(sp)) if (typeof v === "string") usp.set(k, v);
   usp.set("tab", "promotions");
-  redirect(`/sales?${usp.toString()}`);
+  redirect(`/settings?${usp.toString()}`);
 }

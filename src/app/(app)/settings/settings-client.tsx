@@ -219,7 +219,7 @@ function formatAiTestMessage(message: string, L: boolean) {
   return map[message] ? (L ? map[message][1] : map[message][0]) : message;
 }
 
-type SectionId = "store" | "staff" | "pos" | "hardware" | "payments" | "print" | "tax" | "notifications" | "zalo" | "ai";
+type SectionId = "store" | "staff" | "pos" | "hardware" | "payments" | "print" | "promotions" | "tax" | "notifications" | "zalo" | "ai";
 
 const NAV: { group: [string, string]; items: { id: SectionId; ico: string; en: string; vi: string; badge?: string }[] }[] = [
   { group: ["Store", "Cửa hàng"], items: [
@@ -231,6 +231,7 @@ const NAV: { group: [string, string]; items: { id: SectionId; ico: string; en: s
     { id: "hardware", ico: "🖨️", en: "Hardware", vi: "Thiết bị phần cứng" },
     { id: "payments", ico: "💳", en: "Payments", vi: "Thanh toán" },
     { id: "print", ico: "📄", en: "Print Templates", vi: "Mẫu in", badge: "15.1" },
+    { id: "promotions", ico: "%", en: "Promotions", vi: "Khuyến mãi" },
   ] },
   { group: ["Compliance", "Tuân thủ"], items: [
     { id: "tax", ico: "📋", en: "Tax & E-Invoice", vi: "Thuế & HĐ điện tử" },
@@ -248,6 +249,7 @@ const SEC_META: Record<SectionId, { en: string; vi: string; subEn: string; subVi
   hardware: { en: "Hardware Devices", vi: "Thiết bị phần cứng", subEn: "Printer, scanner, drawer, scale, reader", subVi: "Máy in, quét mã, ngăn kéo, cân, đọc thẻ" },
   payments: { en: "Payment Methods", vi: "Phương thức thanh toán", subEn: "Vietnamese payment ecosystem", subVi: "Hệ sinh thái thanh toán Việt Nam" },
   print: { en: "Print Templates", vi: "Mẫu in", subEn: "Receipt & document template designer", subVi: "Thiết kế mẫu hóa đơn & chứng từ" },
+  promotions: { en: "Promotions", vi: "Khuyến mãi", subEn: "Quantity-based product promotions", subVi: "Khuyến mãi sản phẩm theo bậc số lượng" },
   tax: { en: "Tax & E-Invoice", vi: "Thuế & Hóa đơn điện tử", subEn: "VAT rates + Decree 70/2025 e-invoice", subVi: "Thuế GTGT + HĐĐT theo Nghị định 70/2025" },
   notifications: { en: "Notifications", vi: "Thông báo", subEn: "Alert types and channels", subVi: "Loại thông báo và kênh gửi" },
   zalo: { en: "Zalo OA", vi: "Zalo OA", subEn: "Official Account and ZNS templates", subVi: "Official Account và template ZNS" },
@@ -279,25 +281,31 @@ export function SettingsClient({
   store,
   canManage,
   canEditAi,
+  initialTab,
+  promotionsContent,
 }: {
   store: StoreSettings;
   canManage: boolean;
   canEditAi: boolean;
+  initialTab?: string;
+  promotionsContent: React.ReactNode;
 }) {
   const locale = useLocale();
   const tSettings = useTranslations("settings");
   const L = locale === "vi";
-  const [active, setActive] = useState<SectionId>("store");
+  const normalizedInitialTab = initialTab && SEC_META[initialTab as SectionId] ? initialTab as SectionId : null;
+  const [active, setActive] = useState<SectionId>(normalizedInitialTab ?? "store");
   const [staff, setStaff] = useState<StaffRow[] | null>(null);
   const [bankAccounts, setBankAccounts] = useState<PaymentBankAccountRow[] | null>(null);
   const [aiUsage, setAiUsage] = useState<AiUsageStatus | null>(null);
   const [lazyLoading, setLazyLoading] = useState<Partial<Record<"staff" | "payments" | "ai", boolean>>>({});
   const [lazyError, setLazyError] = useState<Partial<Record<"staff" | "payments" | "ai", string>>>({});
   useEffect(() => {
+    if (normalizedInitialTab) return;
     const saved = localStorage.getItem("lp-settings-active") as SectionId | null;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client sync of persisted section (SSR-safe)
     if (saved && SEC_META[saved]) setActive(saved);
-  }, []);
+  }, [normalizedInitialTab]);
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -387,6 +395,7 @@ export function SettingsClient({
         {active === "hardware" && <HardwareSection L={L} prefs={store.prefs.hardware} canManage={canManage} />}
         {active === "payments" && <PaymentsSection L={L} prefs={store.prefs.payments} canManage={canManage} bankAccounts={bankAccounts ?? []} accountsLoading={Boolean(lazyLoading.payments)} accountsError={lazyError.payments} />}
         {active === "print" && <PrintSection L={L} />}
+        {active === "promotions" && promotionsContent}
         {active === "tax" && <TaxSection L={L} prefs={store.prefs.tax} canManage={canManage} />}
         {active === "notifications" && <NotificationsSection L={L} prefs={store.prefs.notifications} canManage={canManage} />}
         {active === "zalo" && <ZaloSection L={L} prefs={store.prefs.zalo} canEdit={canEditAi} />}
