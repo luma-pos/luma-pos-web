@@ -6,6 +6,7 @@ import { StockTab } from "./tabs/stock";
 import { ProductsTab } from "./tabs/products";
 import { PricingTab } from "./tabs/pricing";
 import { PurchasesTab } from "./tabs/purchases";
+import { PurchaseReturnsTab } from "./tabs/purchase-returns";
 import { StocktakesTab } from "./tabs/stocktakes";
 import { InternalUseTab } from "./tabs/internal-use";
 
@@ -16,6 +17,7 @@ const TABS = [
   { tab: "stock", labelKey: "inventory.title" },
   { tab: "pricing", labelKey: "nav.pricing" },
   { tab: "purchases", labelKey: "nav.purchases" },
+  { tab: "purchase-returns", labelKey: "purchaseReturns.title" },
   { tab: "internal", labelKey: "nav.internalUse" },
   { tab: "stocktakes", labelKey: "nav.stocktakes" },
 ];
@@ -37,6 +39,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       {tab === "products" ? <ProductsTab searchParams={params} />
         : tab === "pricing" ? <PricingTab searchParams={params} />
         : tab === "purchases" ? <PurchasesTab searchParams={params} />
+        : tab === "purchase-returns" ? <PurchaseReturnsTab searchParams={params} />
         : tab === "internal" ? <InternalUseTab searchParams={params} />
         : tab === "stocktakes" ? <StocktakesTab searchParams={params} />
         : <StockTab searchParams={params} />}

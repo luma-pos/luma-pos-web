@@ -253,6 +253,7 @@ const purchaseProductSelection = {
   sku: products.sku,
   baseUnit: products.baseUnit,
   costPrice: products.costPrice,
+  totalStock: products.totalStock,
   units: sql<{ unitName: string; multiplier: string }[]>`coalesce((
     select json_agg(json_build_object('unitName', pu.unit_name, 'multiplier', pu.multiplier) order by pu.sort_order)
     from product_units pu where pu.product_id = ${products.id}

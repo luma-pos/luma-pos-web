@@ -1543,6 +1543,66 @@
     "subtotal": "Goods total",
     "needPay": "Payable"
   },
+  "purchaseReturns": {
+    "title": "Purchase returns",
+    "total": "{total} returns",
+    "createNew": "Purchase return",
+    "createTitle": "Purchase return",
+    "searchPlaceholder": "By return code",
+    "searchProduct": "Search products by code or name (F3)",
+    "empty": "No purchase returns yet",
+    "emptyHint": "Create a purchase return to send goods back to a supplier.",
+    "unitLabel": "returns",
+    "supplierPlaceholder": "Find supplier",
+    "code": "Purchase return code",
+    "autoCode": "Auto-generated code",
+    "saveDraft": "Save draft",
+    "complete": "Complete",
+    "draftTodo": "Draft saving will be added when draft management is needed.",
+    "emptyLinesTitle": "Add returned products",
+    "emptyLinesHint": "Search by product code or name to add items.",
+    "availableStock": "Current stock {stock} {unit}",
+    "vatRefund": "VAT refund",
+    "supplierNeedReturn": "Supplier should return",
+    "refundAmount": "Supplier paid back",
+    "debtAmount": "Apply to debt",
+    "applyDebt": "Apply remaining amount to debt",
+    "unsettledAmount": "Unsettled",
+    "settlementLabel": "Settlement",
+    "cols": {
+      "index": "No.",
+      "code": "Purchase return code",
+      "time": "Time",
+      "supplier": "Supplier",
+      "subtotal": "Goods total",
+      "discount": "Discount",
+      "tax": "VAT refund",
+      "totalRefund": "Supplier payable",
+      "sku": "SKU",
+      "productName": "Product",
+      "unit": "Unit",
+      "qty": "Quantity",
+      "unitCost": "Purchase price",
+      "returnUnitCost": "Return price"
+    },
+    "status": {
+      "draft": "Draft",
+      "completed": "Completed"
+    },
+    "settlement": {
+      "unsettled": "Unsettled",
+      "partial": "Partially settled",
+      "settled": "Settled"
+    },
+    "refundMethods": {
+      "cash": "Cash",
+      "bank_transfer": "Bank transfer"
+    },
+    "errors": {
+      "emptyItems": "Add at least 1 returned product.",
+      "insufficientStock": "Return quantity exceeds current stock."
+    }
+  },
   "inventory": {
     "title": "Inventory",
     "totalValue": "Stock value",

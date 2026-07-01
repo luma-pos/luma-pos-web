@@ -1543,6 +1543,66 @@
     "subtotal": "Tổng tiền hàng",
     "needPay": "Cần trả NCC"
   },
+  "purchaseReturns": {
+    "title": "Trả hàng nhập",
+    "total": "{total} phiếu",
+    "createNew": "Trả hàng nhập",
+    "createTitle": "Trả hàng nhập",
+    "searchPlaceholder": "Theo mã phiếu trả",
+    "searchProduct": "Tìm hàng hóa theo mã hoặc tên (F3)",
+    "empty": "Chưa có phiếu trả hàng nhập",
+    "emptyHint": "Tạo phiếu trả hàng nhập để xuất trả hàng cho nhà cung cấp.",
+    "unitLabel": "phiếu trả",
+    "supplierPlaceholder": "Tìm nhà cung cấp",
+    "code": "Mã trả hàng nhập",
+    "autoCode": "Mã phiếu tự động",
+    "saveDraft": "Lưu tạm",
+    "complete": "Hoàn thành",
+    "draftTodo": "Lưu tạm sẽ được bổ sung khi cần quản lý phiếu nháp.",
+    "emptyLinesTitle": "Thêm sản phẩm trả hàng",
+    "emptyLinesHint": "Tìm theo mã hoặc tên sản phẩm để thêm vào phiếu.",
+    "availableStock": "Tồn hiện tại {stock} {unit}",
+    "vatRefund": "VAT hoàn lại",
+    "supplierNeedReturn": "Nhà cung cấp cần trả",
+    "refundAmount": "Tiền nhà cung cấp trả",
+    "debtAmount": "Tính vào công nợ",
+    "applyDebt": "Tính phần còn lại vào công nợ",
+    "unsettledAmount": "Chưa xử lý",
+    "settlementLabel": "Xử lý tiền",
+    "cols": {
+      "index": "STT",
+      "code": "Mã trả hàng nhập",
+      "time": "Thời gian",
+      "supplier": "Nhà cung cấp",
+      "subtotal": "Tổng tiền hàng",
+      "discount": "Giảm giá",
+      "tax": "VAT hoàn lại",
+      "totalRefund": "NCC cần trả",
+      "sku": "Mã hàng",
+      "productName": "Tên hàng",
+      "unit": "ĐVT",
+      "qty": "Số lượng",
+      "unitCost": "Giá nhập",
+      "returnUnitCost": "Giá trả lại"
+    },
+    "status": {
+      "draft": "Phiếu tạm",
+      "completed": "Hoàn thành"
+    },
+    "settlement": {
+      "unsettled": "Chưa xử lý",
+      "partial": "Xử lý một phần",
+      "settled": "Đã xử lý"
+    },
+    "refundMethods": {
+      "cash": "Tiền mặt",
+      "bank_transfer": "Chuyển khoản"
+    },
+    "errors": {
+      "emptyItems": "Phiếu trả hàng nhập cần ít nhất 1 sản phẩm.",
+      "insufficientStock": "Số lượng trả vượt quá tồn kho hiện tại."
+    }
+  },
   "inventory": {
     "title": "Tồn kho",
     "totalValue": "Giá trị tồn kho",

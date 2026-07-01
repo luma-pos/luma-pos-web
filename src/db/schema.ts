@@ -525,6 +525,50 @@ export const purchaseOrderItems = pgTable("purchase_order_items", {
   total: decimal("total", { precision: 14, scale: 2 }).notNull(),
 });
 
+// ============= Purchase Returns (trả hàng nhập/NCC) =============
+
+export const purchaseReturns = pgTable("purchase_returns", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: varchar("code", { length: 30 }).notNull().unique(),
+  purchaseOrderId: uuid("purchase_order_id").references(() => purchaseOrders.id),
+  supplierId: uuid("supplier_id").notNull().references(() => suppliers.id),
+  warehouseId: uuid("warehouse_id").notNull().references(() => warehouses.id),
+  status: text("status").notNull().default("completed"), // completed, draft (reserved for future)
+  settlementStatus: text("settlement_status").notNull().default("unsettled"), // unsettled, partial, settled
+  subtotal: decimal("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
+  discount: decimal("discount", { precision: 14, scale: 2 }).notNull().default("0"),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("0"),
+  tax: decimal("tax", { precision: 14, scale: 2 }).notNull().default("0"),
+  totalRefund: decimal("total_refund", { precision: 14, scale: 2 }).notNull().default("0"),
+  refundAmount: decimal("refund_amount", { precision: 14, scale: 2 }).notNull().default("0"),
+  refundMethod: text("refund_method"),
+  debtAmount: decimal("debt_amount", { precision: 14, scale: 2 }).notNull().default("0"),
+  note: text("note"),
+  createdBy: uuid("created_by").references(() => profiles.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index("purchase_returns_purchase_idx").on(t.purchaseOrderId),
+  index("purchase_returns_supplier_idx").on(t.supplierId, t.createdAt),
+  index("purchase_returns_created_idx").on(t.createdAt),
+]);
+
+export const purchaseReturnItems = pgTable("purchase_return_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  purchaseReturnId: uuid("purchase_return_id").notNull().references(() => purchaseReturns.id, { onDelete: "cascade" }),
+  purchaseOrderItemId: uuid("purchase_order_item_id").references(() => purchaseOrderItems.id),
+  productId: uuid("product_id").notNull().references(() => products.id),
+  productName: text("product_name").notNull(),
+  sku: varchar("sku", { length: 50 }).notNull(),
+  unitName: varchar("unit_name", { length: 30 }).notNull(),
+  quantity: decimal("quantity", { precision: 14, scale: 4 }).notNull(),
+  unitCost: decimal("unit_cost", { precision: 14, scale: 2 }).notNull(),
+  returnUnitCost: decimal("return_unit_cost", { precision: 14, scale: 2 }).notNull(),
+  total: decimal("total", { precision: 14, scale: 2 }).notNull(),
+}, (t) => [
+  index("purchase_return_items_return_idx").on(t.purchaseReturnId),
+  index("purchase_return_items_product_idx").on(t.productId),
+]);
+
 // ============= Returns (trả hàng theo hóa đơn) =============
 
 export const refundMethodEnum = pgEnum("refund_method", ["cash", "bank_transfer", "debt_deduct"]);
