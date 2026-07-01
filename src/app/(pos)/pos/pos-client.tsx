@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Search, Plus, Minus, Trash2, Loader2, ShoppingCart, X, GripVertical, WifiOff, RefreshCw, ChevronDown, Printer, MoreVertical, CheckCircle2, FileText, ClipboardList, UserPlus } from "lucide-react";
+import { Search, Plus, Minus, Trash2, Loader2, ShoppingCart, X, GripVertical, WifiOff, RefreshCw, ChevronDown, Printer, MoreVertical, CheckCircle2, FileText, ClipboardList, UserPlus, RotateCcw } from "lucide-react";
 import { formatCurrency, formatNumber, cn } from "@/lib/utils";
 import { normalizeSearch } from "@/lib/normalize";
 import { createPortal } from "react-dom";
@@ -21,6 +21,7 @@ import type { PaperSize, PrintTemplate } from "@/lib/print/template-shared";
 import type { StorePrefs } from "@/lib/schemas/settings";
 import type { AiActionPreview } from "@/lib/ai/actions";
 import { createOrder } from "@/lib/actions/orders";
+import { createPosReturn, searchReturnableOrders, type ReturnableOrderOption } from "@/lib/actions/returns";
 import { searchPosProducts } from "@/lib/actions/pos-search";
 import { saveCatalog, enqueueOrder, getOutbox, removeOutbox, markFailed } from "@/lib/offline/pos-store";
 import { applyPromo } from "@/lib/promo";
@@ -68,7 +69,7 @@ type PosAiCartDraftPayload = {
 };
 
 type PayMethod = "cash" | "bank_transfer" | "credit";
-type PosDraftKind = "invoice" | "quote" | "booking";
+type PosDraftKind = "invoice" | "quote" | "booking" | "return_quick" | "return_invoice";
 type PosPrintPaymentQr = {
   title: string;
   qrImageUrl: string;
@@ -163,6 +164,10 @@ interface PosDraft {
   payMethod: PayMethod;
   paidInput: number | null;
   note?: string;
+  returnOrderId?: string;
+  returnOrderCode?: string;
+  returnReason?: string;
+  returnRestock?: boolean;
 }
 
 const INV_KEY = "pos-invoices";
@@ -180,6 +185,7 @@ function makeDraft(id?: string, kind: PosDraftKind = "invoice"): PosDraft {
     cart: [], customerId: "", projectId: "", projectName: "", priceBook: "",
     discountInput: 0, discountMode: "vnd", taxRate: 0,
     shippingFee: 0, payMethod: "cash", paidInput: null,
+    returnReason: "other", returnRestock: true,
   };
 }
 
@@ -221,7 +227,7 @@ function makeDraftFromSource(source: PosSourceInvoice, products: PosProduct[], i
 }
 
 function draftKind(raw: unknown): PosDraftKind {
-  return raw === "quote" || raw === "booking" ? raw : "invoice";
+  return raw === "quote" || raw === "booking" || raw === "return_quick" || raw === "return_invoice" ? raw : "invoice";
 }
 
 function normalizeInvoice(raw: Record<string, unknown>): PosDraft {
@@ -238,6 +244,10 @@ function normalizeInvoice(raw: Record<string, unknown>): PosDraft {
 function ensureInvoiceFirst(list: PosDraft[]) {
   if ((list[0]?.kind ?? "invoice") === "invoice") return list;
   return [makeInvoice(FIRST_INV_ID), ...list.filter((draft) => draft.id !== FIRST_INV_ID)];
+}
+
+function isReturnKind(kind: PosDraftKind) {
+  return kind === "return_quick" || kind === "return_invoice";
 }
 
 function loadInvoices(): PosDraft[] | null {
@@ -371,6 +381,7 @@ export function PosClient({
   printTemplate,
   quotePrintTemplate,
   bookingPrintTemplate,
+  returnPrintTemplate,
   initialSourceInvoice,
   posPrefs,
 }: {
@@ -378,13 +389,14 @@ export function PosClient({
   printTemplate: PrintTemplate;
   quotePrintTemplate: PrintTemplate;
   bookingPrintTemplate: PrintTemplate;
+  returnPrintTemplate: PrintTemplate;
   initialSourceInvoice?: PosSourceInvoice | null;
   posPrefs: StorePrefs["pos"];
 }) {
   const t = useTranslations();
 
   const [search, setSearch] = useState("");
-  const [submittingMode, setSubmittingMode] = useState<"sale" | "quote" | "booking" | null>(null);
+  const [submittingMode, setSubmittingMode] = useState<"sale" | "quote" | "booking" | "return" | null>(null);
   const submitting = submittingMode !== null;
   const [error, setError] = useState("");
   const [sepayCheckout, setSepayCheckout] = useState<SepayCheckout | null>(null);
@@ -505,11 +517,30 @@ export function PosClient({
 
   const active = invoices.find((i) => i.id === activeId) ?? invoices[0];
   const sourceInvoice = active.source ?? null;
-  const { cart, customerId, projectId, projectName, deliveryDate, discountInput, discountMode, taxRate, shippingFee, payMethod, paidInput, note: orderNote } = active;
+  const {
+    cart,
+    customerId,
+    projectId,
+    projectName,
+    deliveryDate,
+    discountInput,
+    discountMode,
+    taxRate,
+    shippingFee,
+    payMethod,
+    paidInput,
+    note: orderNote,
+    returnOrderId,
+    returnOrderCode,
+    returnReason,
+    returnRestock,
+  } = active;
   const activeKind = active.kind ?? "invoice";
   const isInvoiceDraft = activeKind === "invoice";
   const isQuoteDraft = activeKind === "quote";
   const isBookingDraft = activeKind === "booking";
+  const isReturnDraft = isReturnKind(activeKind);
+  const isReturnInvoiceDraft = activeKind === "return_invoice";
   const priceBook: PriceBook = active.priceBook ?? ""; // "" = bảng giá mặc định
   const defaultBook = data.priceBooks.find((b) => b.isDefault) ?? data.priceBooks[0];
   const isDefaultBook = !priceBook || priceBook === defaultBook?.id;
@@ -533,6 +564,13 @@ export function PosClient({
   const setOrderNote = (v: string) => patchActive({ note: v });
   const setPayMethod = (v: PayMethod) => patchActive({ payMethod: v });
   const setPaidInput = (v: number | null) => patchActive({ paidInput: v });
+  const setReturnReason = (v: string) => patchActive({ returnReason: v });
+  const setReturnRestock = (v: boolean) => patchActive({ returnRestock: v });
+  const setReturnSourceOrder = (order: ReturnableOrderOption | null) => patchActive({
+    returnOrderId: order?.id,
+    returnOrderCode: order?.code,
+    customerId: order?.customerId ?? customerId,
+  });
 
   /** Thêm tab POS mới và chuyển sang nó. */
   function addDraft(kind: PosDraftKind) {
@@ -578,6 +616,9 @@ export function PosClient({
   // Khi gõ tìm kiếm: hỏi server (quét toàn bộ SP, bỏ dấu) — khớp trang Sản phẩm.
   const [serverResults, setServerResults] = useState<PosProduct[]>([]);
   const [searching, setSearching] = useState(false);
+  const [returnSourceQuery, setReturnSourceQuery] = useState("");
+  const [returnSourceOptions, setReturnSourceOptions] = useState<ReturnableOrderOption[]>([]);
+  const [returnSourceSearching, setReturnSourceSearching] = useState(false);
   // ===== offline (Mức A) =====
   const [online, setOnline] = useState(true);
   const [pending, setPending] = useState(0);
@@ -620,6 +661,38 @@ export function PosClient({
     }, q ? 250 : 0);
     return () => { cancelled = true; clearTimeout(h); };
   }, [search, searchableProducts]);
+
+  useEffect(() => {
+    if (!isReturnInvoiceDraft) return;
+    const q = returnSourceQuery.trim();
+    let cancelled = false;
+    const id = setTimeout(() => {
+      if (cancelled) return;
+      if (!q) {
+        setReturnSourceOptions([]);
+        setReturnSourceSearching(false);
+        return;
+      }
+      setReturnSourceSearching(true);
+      searchReturnableOrders(q)
+        .then((rows) => {
+          if (!cancelled) {
+            setReturnSourceOptions(rows);
+            setReturnSourceSearching(false);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setReturnSourceOptions([]);
+            setReturnSourceSearching(false);
+          }
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [isReturnInvoiceDraft, returnSourceQuery]);
 
   const syncingRef = useRef(false);
   async function flushOutbox() {
@@ -691,9 +764,9 @@ export function PosClient({
   }
 
   const subtotal = cart.reduce((s, l) => s + effPrice(l).price * l.quantity, 0);
-  const discountVnd = discountMode === "pct" ? Math.round(subtotal * discountInput / 100) : discountInput;
-  const taxAmount = Math.round((subtotal - discountVnd) * taxRate / 100);
-  const total = Math.max(0, subtotal - discountVnd + taxAmount + shippingFee);
+  const discountVnd = isReturnDraft ? 0 : discountMode === "pct" ? Math.round(subtotal * discountInput / 100) : discountInput;
+  const taxAmount = isReturnDraft ? 0 : Math.round((subtotal - discountVnd) * taxRate / 100);
+  const total = isReturnDraft ? subtotal : Math.max(0, subtotal - discountVnd + taxAmount + shippingFee);
   const paid = payMethod === "credit" ? 0 : (paidInput ?? total);
   const payableAmount = Math.min(Math.max(0, paid), total);
   const remaining = Math.max(0, total - paid);
@@ -1059,6 +1132,62 @@ export function PosClient({
     }
   }
 
+  async function submitReturn() {
+    if (cart.length === 0 || !data.warehouse || submitting) return;
+    if (isReturnInvoiceDraft && !returnOrderId) {
+      setError(t("pos.returns.sourceRequired"));
+      return;
+    }
+    if (payMethod === "credit" && !customerId) {
+      setError(t("returns.errors.debtNeedsCustomer"));
+      return;
+    }
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError(t("pos.returns.onlineRequired"));
+      return;
+    }
+
+    setSubmittingMode("return");
+    setError("");
+    try {
+      const res = await createPosReturn({
+        orderId: isReturnInvoiceDraft ? returnOrderId : undefined,
+        customerId: customerId || null,
+        warehouseId: data.warehouse.id,
+        priceBookId: priceBook || null,
+        reason: returnReason || "other",
+        refundMethod: payMethod === "credit" ? "debt_deduct" : payMethod,
+        note: orderNote || undefined,
+        items: cart.map((l) => ({
+          productId: l.product.id,
+          productName: l.product.name,
+          unitName: l.unitName,
+          unitMultiplier: l.unitMultiplier,
+          quantity: l.quantity,
+          manualUnitPrice: l.manualPrice ? l.unitPrice : undefined,
+          lineDiscount: l.lineDiscount ?? 0,
+          restock: returnRestock ?? true,
+        })),
+      });
+      if (res.ok) {
+        const printJob = buildPrintJob({
+          template: returnPrintTemplate,
+          title: t("print.titles.return"),
+          code: returnOrderCode ? `${res.data.code} ← ${returnOrderCode}` : res.data.code,
+        });
+        setSubmittingMode(null);
+        closeInvoice(activeId);
+        startPrint(printJob, returnPrintTemplate.paperDefault);
+      } else {
+        setSubmittingMode(null);
+        setError(t(res.error));
+      }
+    } catch {
+      setSubmittingMode(null);
+      setError(t("errors.serverError"));
+    }
+  }
+
   /** Lưu đơn vào hàng đợi offline + báo người dùng. */
   async function queueOffline(payload: Parameters<typeof createOrder>[0]) {
     // localId = clientId của đơn → sync lại dùng đúng clientId, server khử trùng.
@@ -1069,7 +1198,7 @@ export function PosClient({
     setOfflineSaved(true);
     setTimeout(() => setOfflineSaved(false), 3500);
   }
-  const submitActiveDraft = () => submitOrder(isQuoteDraft ? "quote" : isBookingDraft ? "booking" : "sale");
+  const submitActiveDraft = () => isReturnDraft ? submitReturn() : submitOrder(isQuoteDraft ? "quote" : isBookingDraft ? "booking" : "sale");
 
   /** Mở in phiếu tạm theo khổ đã chọn. */
   const doPrint = (size: PaperSize) => {
@@ -1130,7 +1259,7 @@ export function PosClient({
         const isActive = inv.id === activeId;
         const kind = inv.kind ?? "invoice";
         const ordinal = invoices.slice(0, idx + 1).filter((item) => (item.kind ?? "invoice") === kind).length;
-        const TabIcon = kind === "quote" ? FileText : kind === "booking" ? ClipboardList : ShoppingCart;
+        const TabIcon = isReturnKind(kind) ? RotateCcw : kind === "quote" ? FileText : kind === "booking" ? ClipboardList : ShoppingCart;
         return (
           <div
             key={inv.id}
@@ -1609,7 +1738,81 @@ export function PosClient({
               {t("pos.customerDebt", { debt: formatCurrency(Number(customer.currentDebt)) })}
             </p>
           )}
-          {posPrefs.showProjectFields && (
+          {isReturnDraft && (
+            <div className="space-y-2 rounded-xl border border-border bg-surface-2 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-semibold">{t(isReturnInvoiceDraft ? "pos.returns.invoiceTitle" : "pos.returns.quickTitle")}</div>
+                <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={returnRestock ?? true}
+                    onChange={(e) => setReturnRestock(e.target.checked)}
+                    className="h-4 w-4 rounded border-border accent-primary-600"
+                  />
+                  {t("pos.returns.restock")}
+                </label>
+              </div>
+              {isReturnInvoiceDraft && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={returnOrderCode ? `${returnOrderCode}${returnSourceQuery ? ` · ${returnSourceQuery}` : ""}` : returnSourceQuery}
+                    onChange={(e) => {
+                      setReturnSourceOrder(null);
+                      setReturnSourceQuery(e.target.value);
+                    }}
+                    placeholder={t("pos.returns.sourcePlaceholder")}
+                    className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm"
+                  />
+                  {(returnSourceSearching || returnSourceOptions.length > 0) && !returnOrderId && (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-border bg-surface shadow-e2">
+                      {returnSourceSearching ? (
+                        <div className="px-3 py-3 text-sm text-slate-400"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{t("common.search")}</div>
+                      ) : (
+                        returnSourceOptions.map((order) => (
+                          <button
+                            key={order.id}
+                            type="button"
+                            onClick={() => {
+                              setReturnSourceOrder(order);
+                              setReturnSourceQuery("");
+                              setReturnSourceOptions([]);
+                            }}
+                            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-surface-2"
+                          >
+                            <span className="min-w-0">
+                              <span className="font-semibold text-primary-600">{order.code}</span>
+                              <span className="ml-2 text-slate-500">{order.customerName ?? t("orders.walkIn")}</span>
+                            </span>
+                            <span className="shrink-0 tabular-nums text-slate-500">{formatCurrency(Number(order.total))}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Select
+                  value={returnReason ?? "other"}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  size="sm"
+                  options={[
+                    { value: "defective", label: t("returns.reasons.defective") },
+                    { value: "wrong_item", label: t("returns.reasons.wrong_item") },
+                    { value: "changed_mind", label: t("returns.reasons.changed_mind") },
+                    { value: "other", label: t("returns.reasons.other") },
+                  ]}
+                />
+                <div className="text-xs leading-8 text-slate-500">
+                  {isReturnInvoiceDraft
+                    ? returnOrderCode ? t("pos.returns.sourceSelected", { code: returnOrderCode }) : t("pos.returns.sourceHint")
+                    : t("pos.returns.quickHint")}
+                </div>
+              </div>
+            </div>
+          )}
+          {posPrefs.showProjectFields && !isReturnDraft && (
             <div className="flex gap-2">
               <div className="flex-1">
                 <Combobox
@@ -1646,30 +1849,34 @@ export function PosClient({
             <span className="text-slate-500">{t("pos.subtotal")}</span>
             <span className="tabular-nums">{formatCurrency(subtotal)}</span>
           </div>
-          <SummaryAdjustRow
-            label={t("pos.discount")}
-            hint={`− ${formatCurrency(discountVnd)}`}
-            hintVisible={discountMode === "pct" && discountInput > 0}
-          >
-            <AmountModeInput
-              value={discountInput}
-              mode={discountMode}
-              onValueChange={setDiscountInput}
-              onModeChange={setDiscountMode}
-            />
-          </SummaryAdjustRow>
-          <SummaryAdjustRow
-            label={t("pos.tax")}
-            hint={`+ ${formatCurrency(taxAmount)}`}
-            hintVisible={taxRate > 0}
-          >
-            <AmountModeInput value={taxRate} mode="pct" onValueChange={setTaxRate} />
-          </SummaryAdjustRow>
-          <SummaryAdjustRow label={t("pos.shipping")}>
-            <AmountModeInput value={shippingFee} mode="vnd" onValueChange={setShippingFee} />
-          </SummaryAdjustRow>
+          {!isReturnDraft && (
+            <>
+              <SummaryAdjustRow
+                label={t("pos.discount")}
+                hint={`− ${formatCurrency(discountVnd)}`}
+                hintVisible={discountMode === "pct" && discountInput > 0}
+              >
+                <AmountModeInput
+                  value={discountInput}
+                  mode={discountMode}
+                  onValueChange={setDiscountInput}
+                  onModeChange={setDiscountMode}
+                />
+              </SummaryAdjustRow>
+              <SummaryAdjustRow
+                label={t("pos.tax")}
+                hint={`+ ${formatCurrency(taxAmount)}`}
+                hintVisible={taxRate > 0}
+              >
+                <AmountModeInput value={taxRate} mode="pct" onValueChange={setTaxRate} />
+              </SummaryAdjustRow>
+              <SummaryAdjustRow label={t("pos.shipping")}>
+                <AmountModeInput value={shippingFee} mode="vnd" onValueChange={setShippingFee} />
+              </SummaryAdjustRow>
+            </>
+          )}
           <div className="flex justify-between text-base font-semibold pt-1">
-            <span>{t("pos.total")}</span>
+            <span>{t(isReturnDraft ? "returns.totalRefund" : "pos.total")}</span>
             <span className="text-primary-600 tabular-nums">{formatCurrency(total)}</span>
           </div>
         </div>
@@ -1678,7 +1885,30 @@ export function PosClient({
 
         {/* phương thức + nút — ghim đáy panel */}
         <div className="p-3 border-t border-border space-y-2 text-sm">
-          {isInvoiceDraft ? (
+          {isReturnDraft ? (
+            <>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(["cash", "bank_transfer", "credit"] as PayMethod[]).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setPayMethod(m)}
+                    className={cn(
+                      "py-1.5 rounded-lg text-xs font-medium border",
+                      payMethod === m
+                        ? "bg-primary-600 text-white border-primary-600"
+                        : "border-border text-slate-600 dark:text-slate-300"
+                    )}
+                  >
+                    {t(m === "credit" ? "returns.refundMethods.debt_deduct" : `returns.refundMethods.${m}`)}
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-between rounded-lg border border-border bg-surface-2 px-3 py-2">
+                <span className="text-slate-500">{t("returns.totalRefund")}</span>
+                <span className="font-semibold tabular-nums text-er">{formatCurrency(total)}</span>
+              </div>
+            </>
+          ) : isInvoiceDraft ? (
             <>
               <div className="grid grid-cols-3 gap-1.5">
                 {(["cash", "bank_transfer", "credit"] as PayMethod[]).map((m) => (
@@ -1764,6 +1994,8 @@ export function PosClient({
                     ? t("pos.saveQuote")
                     : isBookingDraft
                       ? t("pos.placeBooking")
+                      : isReturnDraft
+                        ? t("returns.submit")
                       : t("pos.checkout")} · {formatCurrency(total)}
             </button>
           </div>
@@ -1823,8 +2055,8 @@ export function PosClient({
             className="fixed z-50 min-w-[190px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-e2"
             style={{ top: addMenuPosition.top, left: addMenuPosition.left }}
           >
-            {(["invoice", "quote", "booking"] as PosDraftKind[]).map((kind) => {
-              const ItemIcon = kind === "quote" ? FileText : kind === "booking" ? ClipboardList : ShoppingCart;
+            {(["invoice", "quote", "booking", "return_quick", "return_invoice"] as PosDraftKind[]).map((kind) => {
+              const ItemIcon = isReturnKind(kind) ? RotateCcw : kind === "quote" ? FileText : kind === "booking" ? ClipboardList : ShoppingCart;
               return (
                 <button
                   key={kind}
@@ -1867,7 +2099,7 @@ export function PosClient({
               ...(printJob.totals.tax > 0 ? [{ label: t("pos.tax"), value: printJob.totals.tax, kind: "tax" as const }] : []),
               ...(printJob.totals.shipping > 0 ? [{ label: t("pos.shipping"), value: printJob.totals.shipping, kind: "shipping" as const }] : []),
             ]}
-            grandTotalLabel={t("print.grandTotal")}
+            grandTotalLabel={t(printJob.template.docType === "return" ? "returns.totalRefund" : "print.grandTotal")}
             grandTotal={printJob.grandTotal}
             paymentQr={printJob.paymentQr}
             afterTotals={printJob.template.options.showDebt && printJob.payMethod !== "credit" && printJob.paid > 0
@@ -1882,7 +2114,7 @@ export function PosClient({
             cols={{
               product: t("orders.cols.product"),
               unit: t("orders.cols.unit"),
-              qty: t("orders.cols.qty"),
+              qty: t(printJob.template.docType === "return" ? "returns.cols.returnNow" : "orders.cols.qty"),
               unitPrice: t("orders.cols.unitPrice"),
               discount: t("orders.cols.discount"),
               lineTotal: t("orders.cols.lineTotal"),

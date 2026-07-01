@@ -226,8 +226,12 @@
       "add": {
         "invoice": "Thêm hóa đơn",
         "quote": "Thêm báo giá",
-        "booking": "Thêm đặt hàng"
-      }
+        "booking": "Thêm đặt hàng",
+        "return_quick": "Thêm trả hàng nhanh",
+        "return_invoice": "Thêm trả theo hóa đơn"
+      },
+      "return_quick": "Trả nhanh {n}",
+      "return_invoice": "Trả HĐ {n}"
     },
     "modes": {
       "sale": "Bán mới",
@@ -292,7 +296,18 @@
     "printK80": "In bill K80",
     "printA4Short": "A4",
     "printA5Short": "A5",
-    "printK80Short": "K80"
+    "printK80Short": "K80",
+    "returns": {
+      "quickTitle": "Trả hàng nhanh",
+      "invoiceTitle": "Trả hàng theo hóa đơn",
+      "sourcePlaceholder": "Tìm hóa đơn nguồn theo mã, khách, SĐT...",
+      "sourceRequired": "Trả hàng theo hóa đơn cần chọn hóa đơn nguồn.",
+      "sourceHint": "Chọn hóa đơn nguồn rồi thêm hàng cần trả vào giỏ.",
+      "sourceSelected": "Đang trả theo hóa đơn {code}",
+      "quickHint": "Không gắn hóa đơn nguồn; dùng cho hàng trả nhanh hoặc dữ liệu cũ.",
+      "restock": "Nhập lại kho",
+      "onlineRequired": "Lập phiếu trả hàng cần có mạng để đồng bộ ngay."
+    }
   },
   "stub": {
     "wip": "Đang phát triển..."

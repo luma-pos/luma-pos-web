@@ -66,13 +66,14 @@ export default async function POSPage({ searchParams }: { searchParams: Promise<
     ...(sourceInvoice?.items?.map((item) => item.productId) ?? []),
     ...aiProductIds,
   ];
-  const [data, settings, t, orderPrintTemplate, quotePrintTemplate, bookingPrintTemplate] = await Promise.all([
+  const [data, settings, t, orderPrintTemplate, quotePrintTemplate, bookingPrintTemplate, returnPrintTemplate] = await Promise.all([
     getPosData({ includeProductIds }),
     getStoreSettings(),
     getTranslations(),
     getPrintTemplate("order"),
     getPrintTemplate("quote"),
     getPrintTemplate("booking"),
+    getPrintTemplate("return"),
   ]);
   return (
     <div className="h-full flex flex-col">
@@ -101,6 +102,7 @@ export default async function POSPage({ searchParams }: { searchParams: Promise<
           printTemplate={orderPrintTemplate}
           quotePrintTemplate={quotePrintTemplate}
           bookingPrintTemplate={bookingPrintTemplate}
+          returnPrintTemplate={returnPrintTemplate}
           initialSourceInvoice={sourceInvoice}
           posPrefs={settings.prefs.pos}
         />
