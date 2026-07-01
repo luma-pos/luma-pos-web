@@ -1275,8 +1275,10 @@ function ZaloSection({ L, prefs, canEdit }: { L: boolean; prefs: StorePrefs["zal
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => { setForm((p) => ({ ...p, [key]: value })); mark(); };
   const setSecretValue = (key: ZaloSecretKey, value: string) => set(key, value);
   const setClear = (key: ZaloSecretKey, value: boolean) => { setClearSecret((p) => ({ ...p, [key]: value })); mark(); };
+  const isZnsMode = form.deliveryMode === "zns";
   const connected = form.enabled && Boolean(form.oaId.trim()) && Boolean(form.appId.trim()) && (secretSet.accessToken || Boolean(form.accessToken.trim()));
   const znsReady = connected && Boolean(form.portalTemplateId || form.invoiceTemplateId || form.debtTemplateId);
+  const channelReady = isZnsMode ? znsReady : connected;
   function save() {
     start(async () => {
       const res = await updateZaloSettings({
@@ -1313,18 +1315,20 @@ function ZaloSection({ L, prefs, canEdit }: { L: boolean; prefs: StorePrefs["zal
           <div className="flex flex-wrap items-center gap-2">
             <span className={cn(
               "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold",
-              znsReady ? "bg-ok-soft text-ok" : connected ? "bg-in-soft text-in" : "bg-warn-soft text-warn"
+              channelReady ? "bg-ok-soft text-ok" : connected ? "bg-in-soft text-in" : "bg-warn-soft text-warn"
             )}>
               <MessageCircle className="h-3.5 w-3.5" />
-              {znsReady
-                ? (L ? "Sẵn sàng gửi ZNS" : "Ready for ZNS")
+              {channelReady
+                ? isZnsMode
+                  ? (L ? "Sẵn sàng gửi ZNS" : "Ready for ZNS")
+                  : (L ? "Sẵn sàng gửi tin OA" : "Ready for OA messages")
                 : connected
-                  ? (L ? "Đã kết nối OA" : "OA connected")
+                  ? (L ? "Thiếu template ZNS" : "ZNS template missing")
                   : (L ? "Chưa đủ cấu hình" : "Configuration incomplete")}
             </span>
-            {connected && !znsReady && (
+            {isZnsMode && connected && !znsReady && (
               <span className="text-[11px] font-semibold text-slate-500">
-                {L ? "Template ZNS có thể bổ sung sau." : "ZNS templates can be added later."}
+                {L ? "Template ZNS cần để gửi bằng SĐT." : "ZNS templates are required for phone delivery."}
               </span>
             )}
           </div>
@@ -1351,11 +1355,13 @@ function ZaloSection({ L, prefs, canEdit }: { L: boolean; prefs: StorePrefs["zal
             <ZaloSecretInput id="appSecret" label="App secret" value={form.appSecret} setFlag={secretSet.appSecret} clear={clearSecret.appSecret} canEdit={canEdit} L={L} onValueChange={setSecretValue} onClearChange={setClear} />
             <ZaloSecretInput id="webhookSecret" label="Webhook secret" value={form.webhookSecret} setFlag={secretSet.webhookSecret} clear={clearSecret.webhookSecret} canEdit={canEdit} L={L} onValueChange={setSecretValue} onClearChange={setClear} />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="flex flex-col gap-1"><span className={FL}>{L ? "Template link đặt hàng" : "Portal link template"}</span><input className={cn(FI, "font-mono")} value={form.portalTemplateId} disabled={!canEdit} onChange={(e) => set("portalTemplateId", e.target.value)} /></div>
-            <div className="flex flex-col gap-1"><span className={FL}>{L ? "Template hóa đơn" : "Invoice template"}</span><input className={cn(FI, "font-mono")} value={form.invoiceTemplateId} disabled={!canEdit} onChange={(e) => set("invoiceTemplateId", e.target.value)} /></div>
-            <div className="flex flex-col gap-1"><span className={FL}>{L ? "Template công nợ" : "Debt template"}</span><input className={cn(FI, "font-mono")} value={form.debtTemplateId} disabled={!canEdit} onChange={(e) => set("debtTemplateId", e.target.value)} /></div>
-          </div>
+          {isZnsMode && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1"><span className={FL}>{L ? "Template link đặt hàng" : "Portal link template"}</span><input className={cn(FI, "font-mono")} value={form.portalTemplateId} disabled={!canEdit} onChange={(e) => set("portalTemplateId", e.target.value)} /></div>
+              <div className="flex flex-col gap-1"><span className={FL}>{L ? "Template hóa đơn" : "Invoice template"}</span><input className={cn(FI, "font-mono")} value={form.invoiceTemplateId} disabled={!canEdit} onChange={(e) => set("invoiceTemplateId", e.target.value)} /></div>
+              <div className="flex flex-col gap-1"><span className={FL}>{L ? "Template công nợ" : "Debt template"}</span><input className={cn(FI, "font-mono")} value={form.debtTemplateId} disabled={!canEdit} onChange={(e) => set("debtTemplateId", e.target.value)} /></div>
+            </div>
+          )}
           <div className="px-3.5 py-2.5 bg-in-soft border border-in/20 rounded-[10px] text-[11px] text-in leading-relaxed">
             {L
               ? "Token và secret chỉ lưu server-side trong Settings. Mobile/web chỉ gọi backend LumaPOS; tin giao dịch cần template ZNS đã được Zalo duyệt."
