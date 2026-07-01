@@ -227,8 +227,7 @@
         "invoice": "Thêm hóa đơn",
         "quote": "Thêm báo giá",
         "booking": "Thêm đặt hàng",
-        "return_quick": "Thêm trả hàng nhanh",
-        "return_invoice": "Thêm trả theo hóa đơn"
+        "return_quick": "Thêm trả hàng nhanh"
       },
       "return_quick": "Trả nhanh {n}",
       "return_invoice": "Trả HĐ {n}"

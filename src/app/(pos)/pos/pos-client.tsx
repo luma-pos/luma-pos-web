@@ -118,7 +118,7 @@ type SepayCheckout = {
 type PosCustomer = PosData["customers"][number];
 export type PosSourceInvoice = {
   id?: string;
-  mode: "edit" | "copy";
+  mode: "edit" | "copy" | "return";
   kind: PosDraftKind;
   code: string;
   saleTime?: string;
@@ -196,6 +196,17 @@ function makeInvoice(id?: string): PosDraft {
 function makeDraftFromSource(source: PosSourceInvoice, products: PosProduct[], id = FIRST_INV_ID): PosDraft {
   const afterDiscount = Math.max(0, (source.subtotal ?? 0) - (source.discount ?? 0));
   const taxRate = afterDiscount > 0 && source.tax ? Math.round(((source.tax / afterDiscount) * 100) * 100) / 100 : 0;
+  if (source.mode === "return") {
+    return {
+      ...makeDraft(id, "return_invoice"),
+      source,
+      returnOrderId: source.id,
+      returnOrderCode: source.code,
+      customerId: source.customerId ?? "",
+      projectId: source.projectId ?? "",
+      projectName: source.projectName ?? "",
+    };
+  }
   return {
     ...makeDraft(id, source.kind),
     source,
@@ -1027,10 +1038,13 @@ export function PosClient({
       setError(t("pos.invoiceEdit.onlineRequired"));
       return;
     }
+    const orderSource = sourceInvoice?.id && (sourceInvoice.mode === "edit" || sourceInvoice.mode === "copy")
+      ? { mode: sourceInvoice.mode, orderId: sourceInvoice.id }
+      : undefined;
     const payload = {
       mode: submitMode,
       clientId: makeClientId(), // khử trùng khi đồng bộ offline
-      source: sourceInvoice?.id ? { mode: sourceInvoice.mode, orderId: sourceInvoice.id } : undefined,
+      source: orderSource,
       customerId: customerId || null,
       warehouseId: data.warehouse.id,
       projectId: projectId || null,
@@ -1234,6 +1248,7 @@ export function PosClient({
   const closeSearch = () => { setBrowsing(false); setSearch(""); };
   const isEditMode = sourceInvoice?.mode === "edit";
   const isCopyMode = sourceInvoice?.mode === "copy";
+  const showSourceInvoiceBanner = Boolean(sourceInvoice && sourceInvoice.mode !== "return");
   const sourceKind = sourceInvoice?.kind ?? "invoice";
   const sourceTitleTx = sourceKind === "quote"
     ? isEditMode ? "pos.invoiceEdit.editingQuoteFrom" : "pos.invoiceEdit.copyingQuoteFrom"
@@ -1506,7 +1521,7 @@ export function PosClient({
         )}
         <div className="mb-3 space-y-2">
           {invoiceTabs}
-          {sourceInvoice && (
+          {showSourceInvoiceBanner && sourceInvoice && (
             <div className={cn(
               "grid gap-2 rounded-xl border p-3",
               isEditMode
@@ -2055,7 +2070,7 @@ export function PosClient({
             className="fixed z-50 min-w-[190px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-e2"
             style={{ top: addMenuPosition.top, left: addMenuPosition.left }}
           >
-            {(["invoice", "quote", "booking", "return_quick", "return_invoice"] as PosDraftKind[]).map((kind) => {
+            {(["invoice", "quote", "booking", "return_quick"] as PosDraftKind[]).map((kind) => {
               const ItemIcon = isReturnKind(kind) ? RotateCcw : kind === "quote" ? FileText : kind === "booking" ? ClipboardList : ShoppingCart;
               return (
                 <button

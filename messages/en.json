@@ -227,8 +227,7 @@
         "invoice": "Add invoice",
         "quote": "Add quote",
         "booking": "Add booking",
-        "return_quick": "Add quick return",
-        "return_invoice": "Add invoice return"
+        "return_quick": "Add quick return"
       },
       "return_quick": "Quick return {n}",
       "return_invoice": "Invoice return {n}"

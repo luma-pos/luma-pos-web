@@ -29,10 +29,18 @@ async function sourceInvoiceFromParams(params: PosSearchParams): Promise<PosSour
   const mode = one(params.sourceMode);
   const kind = one(params.sourceKind);
   const orderId = one(params.sourceOrderId);
-  if ((mode !== "edit" && mode !== "copy") || !orderId || !UUID_RE.test(orderId)) return null;
+  if ((mode !== "edit" && mode !== "copy" && mode !== "return") || !orderId || !UUID_RE.test(orderId)) return null;
   const order = await getOrder(orderId);
   if (!order) return null;
-  const sourceKind = kind === "quote" || kind === "booking" ? kind : order.status === "quote" ? "quote" : order.status === "confirmed" ? "booking" : "invoice";
+  const sourceKind = mode === "return"
+    ? "return_invoice"
+    : kind === "quote" || kind === "booking"
+      ? kind
+      : order.status === "quote"
+        ? "quote"
+        : order.status === "confirmed"
+          ? "booking"
+          : "invoice";
   return {
     mode,
     kind: sourceKind,

@@ -58,7 +58,7 @@ export async function OrderDetailPanel({
   const shareHref = shareTemplate
     ? `${Routes.order(order.id)}/print?${new URLSearchParams({ templateId: shareTemplate.id, size: shareTemplate.paperDefault }).toString()}`
     : null;
-  const posSourceHref = (mode: "edit" | "copy") => {
+  const posSourceHref = (mode: "edit" | "copy" | "return") => {
     const sp = new URLSearchParams({
       sourceMode: mode,
       sourceKind,
@@ -264,7 +264,7 @@ export async function OrderDetailPanel({
             </Link>
           )}
           {order.status === "completed" && (
-            <Link href={`${Routes.order(order.id)}/return`} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}>
+            <Link href={posSourceHref("return")} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}>
               {t("returns.action")}
             </Link>
           )}
