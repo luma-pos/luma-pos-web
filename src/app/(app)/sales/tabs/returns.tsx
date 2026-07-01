@@ -3,10 +3,11 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { FileX2, Search } from "lucide-react";
 import { Routes } from "@/lib/routes";
-import { getReturns } from "@/lib/data/returns";
+import { getReturn, getReturns } from "@/lib/data/returns";
 import { parsePageSize } from "@/lib/pagination";
 import { Pagination } from "@/components/pagination";
 import { TableSkeleton } from "@/components/table-skeleton";
+import { ReturnDetailPanel } from "./return-detail-panel";
 import { ReturnsTable } from "./returns-table";
 
 type SP = Record<string, string | undefined>;
@@ -51,7 +52,11 @@ async function ReturnsContent({ searchParams }: { searchParams: SP }) {
   const t = await getTranslations();
   const page = Number(searchParams.page) || 1;
   const pageSize = parsePageSize(searchParams.size);
-  const { rows, total, pageCount } = await getReturns({ q: searchParams.q, page, pageSize });
+  const expandedId = searchParams.expandedReturn ?? null;
+  const [{ rows, total, pageCount }, expandedReturn] = await Promise.all([
+    getReturns({ q: searchParams.q, page, pageSize }),
+    expandedId ? getReturn(expandedId).catch(() => null) : Promise.resolve(null),
+  ]);
 
   return (
     <>
@@ -66,7 +71,11 @@ async function ReturnsContent({ searchParams }: { searchParams: SP }) {
           <p className="mt-1 text-sm">{t("returns.emptyHint")}</p>
         </div>
       ) : (
-        <ReturnsTable rows={rows} />
+        <ReturnsTable
+          rows={rows}
+          expandedId={expandedReturn?.id ?? expandedId}
+          expandedContent={expandedReturn ? <ReturnDetailPanel ret={expandedReturn} compact /> : null}
+        />
       )}
 
       <Pagination page={page} pageCount={pageCount} total={total} pageSize={pageSize} unitLabel={t("returns.title")} />

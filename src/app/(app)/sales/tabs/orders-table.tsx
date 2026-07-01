@@ -1,24 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { DataTableShell, stopRowToggle, type DataTableColumn } from "@/components/data-table";
-import { Routes } from "@/lib/routes";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import type { OrderListRow } from "@/lib/data/orders";
 import { OrderStatusBadge, PaymentStatusBadge } from "../../orders/status-badges";
-
-function posSourceHref(order: { id: string; code: string; createdAt: Date | string }, mode: "edit" | "copy") {
-  const sp = new URLSearchParams({
-    sourceMode: mode,
-    sourceOrderId: order.id,
-    sourceCode: order.code,
-    sourceSaleTime: formatDate(order.createdAt),
-  });
-  return `${Routes.POS}?${sp.toString()}`;
-}
 
 export function OrdersTable({
   rows,
@@ -112,27 +100,6 @@ export function OrdersTable({
       defaultVisible: true,
       width: "130px",
       render: (order) => <OrderStatusBadge status={order.status} />,
-    },
-    {
-      key: "actions",
-      label: "",
-      required: true,
-      width: "132px",
-      align: "right",
-      render: (order) => (
-        <div className="flex items-center justify-end gap-2" onClick={stopRowToggle}>
-          {order.status !== "cancelled" && (order.status === "completed" || order.status === "quote") && (
-            <Link href={posSourceHref(order, "edit")} className="text-xs font-semibold text-primary-600 hover:underline">
-              {t("common.edit")}
-            </Link>
-          )}
-          {order.status !== "cancelled" && (
-            <Link href={posSourceHref(order, "copy")} className="text-xs font-semibold text-primary-600 hover:underline">
-              {t("pos.modes.copyShort")}
-            </Link>
-          )}
-        </div>
-      ),
     },
   ];
 
