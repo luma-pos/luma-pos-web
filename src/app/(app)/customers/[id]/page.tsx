@@ -37,6 +37,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         <div className="ml-auto flex items-center gap-2">
           <CustomerEdit customer={{
             id: customer.id, name: customer.name, phone: customer.phone, email: customer.email,
+            zaloUserId: customer.zaloUserId,
             address: customer.address, type: customer.type, taxCode: customer.taxCode,
             debtLimit: customer.debtLimit, note: customer.note,
           }} />
@@ -73,6 +74,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         </div>
         <div className="bg-surface border border-border rounded-card p-4 text-sm space-y-1">
           <div className="flex justify-between"><span className="text-slate-500">{t("customers.cols.phone")}</span><span>{customer.phone ?? "—"}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">{t("customers.fields.zaloUserId")}</span><span className="font-mono text-xs">{customer.zaloUserId ?? "—"}</span></div>
           <div className="flex justify-between"><span className="text-slate-500">{t("customers.fields.address")}</span><span className="text-right">{customer.address ?? "—"}</span></div>
           {customer.taxCode && <div className="flex justify-between"><span className="text-slate-500">{t("customers.fields.taxCode")}</span><span>{customer.taxCode}</span></div>}
           {customer.note && <p className="text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">{customer.note}</p>}
@@ -80,7 +82,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       </div>
 
       <div className="mb-5 max-w-md">
-        <PortalLink customerId={customer.id} token={customer.portalToken} zaloConfigured={store.prefs.zalo.enabled && store.prefs.zalo.accessTokenSet && Boolean(store.prefs.zalo.portalTemplateId)} />
+        <PortalLink customerId={customer.id} token={customer.portalToken} zaloConfigured={store.prefs.zalo.enabled && store.prefs.zalo.accessTokenSet && (store.prefs.zalo.deliveryMode === "oa" ? Boolean(customer.zaloUserId) : Boolean(store.prefs.zalo.portalTemplateId))} />
       </div>
 
       {owingOrders.length > 0 && (

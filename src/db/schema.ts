@@ -281,6 +281,7 @@ export const customers = pgTable("customers", {
   code: varchar("code", { length: 30 }).unique(), // KH001
   name: text("name").notNull(),
   phone: varchar("phone", { length: 20 }),
+  zaloUserId: text("zalo_user_id"),
   email: text("email"),
   address: text("address"),
   type: customerTypeEnum("type").notNull().default("retail"),
@@ -295,6 +296,7 @@ export const customers = pgTable("customers", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
   index("customers_phone_idx").on(t.phone),
+  index("customers_zalo_user_id_idx").on(t.zaloUserId),
   index("customers_name_idx").on(t.name),
 ]);
 

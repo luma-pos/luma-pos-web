@@ -13,6 +13,7 @@ type CustomerType = "retail" | "wholesale" | "contractor" | "agent";
 export function CustomerEdit({ customer }: {
   customer: {
     id: string; name: string; phone: string | null; email: string | null;
+    zaloUserId: string | null;
     address: string | null; type: CustomerType; taxCode: string | null;
     debtLimit: string | null; note: string | null;
   };
@@ -22,6 +23,7 @@ export function CustomerEdit({ customer }: {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(customer.name);
   const [phone, setPhone] = useState(customer.phone ?? "");
+  const [zaloUserId, setZaloUserId] = useState(customer.zaloUserId ?? "");
   const [email, setEmail] = useState(customer.email ?? "");
   const [address, setAddress] = useState(customer.address ?? "");
   const [type, setType] = useState<CustomerType>(customer.type);
@@ -34,7 +36,7 @@ export function CustomerEdit({ customer }: {
   async function save() {
     setSaving(true); setError("");
     const res = await updateCustomer({
-      id: customer.id, name: name.trim(), phone, email, address, type,
+      id: customer.id, name: name.trim(), phone, zaloUserId, email, address, type,
       taxCode, debtLimit: Number(debtLimit) || 0, note,
     });
     setSaving(false);
@@ -63,6 +65,7 @@ export function CustomerEdit({ customer }: {
               <div className="sm:col-span-2"><label className={lbl}>{t("customers.fields.name")}</label><input className={input} value={name} onChange={(e) => setName(e.target.value)} /></div>
               <div><label className={lbl}>{t("customers.cols.phone")}</label><input className={input} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
               <div><label className={lbl}>Email</label><input className={input} value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+              <div className="sm:col-span-2"><label className={lbl}>{t("customers.fields.zaloUserId")}</label><input className={`${input} font-mono`} value={zaloUserId} onChange={(e) => setZaloUserId(e.target.value)} /></div>
               <div className="sm:col-span-2"><label className={lbl}>{t("customers.fields.address")}</label><input className={input} value={address} onChange={(e) => setAddress(e.target.value)} /></div>
               <div><label className={lbl}>{t("customers.cols.type")}</label>
                 <Select

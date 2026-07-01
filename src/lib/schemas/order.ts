@@ -86,6 +86,7 @@ export const updateCustomerSchema = z.object({
   id: z.uuid(),
   name: z.string().trim().min(1, { error: "validation.required" }),
   phone: z.string().trim().optional(),
+  zaloUserId: z.string().trim().optional(),
   email: z.string().trim().optional(),
   address: z.string().trim().optional(),
   type: z.enum(["retail", "wholesale", "contractor", "agent"]),

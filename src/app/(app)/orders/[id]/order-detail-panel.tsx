@@ -69,7 +69,13 @@ export async function OrderDetailPanel({
     return `${Routes.POS}?${sp.toString()}`;
   };
   const openInListHref = Routes.salesOrder(order.id, order.status);
-  const canSendZalo = Boolean(store.prefs.zalo.enabled && store.prefs.zalo.accessTokenSet && store.prefs.zalo.invoiceTemplateId && order.customerPhone);
+  const canSendZalo = Boolean(
+    store.prefs.zalo.enabled
+    && store.prefs.zalo.accessTokenSet
+    && (store.prefs.zalo.deliveryMode === "oa"
+      ? order.customerZaloUserId
+      : store.prefs.zalo.invoiceTemplateId && order.customerPhone)
+  );
 
   return (
     <div className={cn("bg-surface", compact ? "px-4 py-4" : "space-y-4")}>

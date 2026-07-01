@@ -94,6 +94,7 @@ const aiPrefs = z.object({
 
 const zaloPrefs = z.object({
   enabled: z.boolean().default(false),
+  deliveryMode: z.enum(["oa", "zns"]).default("oa"),
   oaId: z.string().trim().max(80).default(""),
   appId: z.string().trim().max(80).default(""),
   appSecret: z.string().trim().max(500).default(""),
@@ -129,6 +130,7 @@ export const storePrefsSchema = z.object({
   }),
   zalo: zaloPrefs.default({
     enabled: false,
+    deliveryMode: "oa",
     oaId: "",
     appId: "",
     appSecret: "",
@@ -170,6 +172,7 @@ export type AiSettingsInput = z.input<typeof aiSettingsInputSchema>;
 
 export const zaloSettingsInputSchema = z.object({
   enabled: z.boolean().default(false),
+  deliveryMode: z.enum(["oa", "zns"]).default("oa"),
   oaId: z.string().trim().max(80).default(""),
   appId: z.string().trim().max(80).default(""),
   appSecret: z.string().trim().max(500).optional(),

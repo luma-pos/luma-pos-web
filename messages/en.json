@@ -581,6 +581,7 @@
       "notEnabled": "Zalo OA is not enabled.",
       "missingAccessToken": "OA access token is missing.",
       "missingTemplate": "ZNS template is not configured.",
+      "missingZaloUserId": "Customer has no Zalo user ID.",
       "missingPhone": "Customer has no phone number.",
       "sendFailed": "Could not send Zalo message."
     }
@@ -1356,6 +1357,7 @@
       "name": "Customer name",
       "namePlaceholder": "e.g. Mr. Tuan (contractor)",
       "email": "Email",
+      "zaloUserId": "Zalo user ID",
       "address": "Address",
       "taxCode": "Tax code",
       "debtLimit": "Credit limit",

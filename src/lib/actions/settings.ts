@@ -215,6 +215,7 @@ export async function updateZaloSettings(input: ZaloSettingsInput): Promise<Acti
     const nextZalo = {
       ...current.zalo,
       enabled: v.enabled,
+      deliveryMode: v.deliveryMode,
       oaId: v.oaId,
       appId: v.appId,
       appSecret: nextAppSecret,
@@ -242,6 +243,7 @@ export async function updateZaloSettings(input: ZaloSettingsInput): Promise<Acti
       status: "succeeded",
       before: {
         enabled: current.zalo.enabled,
+        deliveryMode: current.zalo.deliveryMode,
         oaId: current.zalo.oaId,
         appId: current.zalo.appId,
         appSecretSet: Boolean(current.zalo.appSecret),
@@ -254,6 +256,7 @@ export async function updateZaloSettings(input: ZaloSettingsInput): Promise<Acti
       },
       after: {
         enabled: nextZalo.enabled,
+        deliveryMode: nextZalo.deliveryMode,
         oaId: nextZalo.oaId,
         appId: nextZalo.appId,
         appSecretSet: Boolean(nextZalo.appSecret),

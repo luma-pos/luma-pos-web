@@ -120,6 +120,7 @@ export async function getOrder(id: string) {
       projectId: orders.projectId,
       customerName: customers.name,
       customerPhone: customers.phone,
+      customerZaloUserId: customers.zaloUserId,
       customerType: customers.type,
       customerDebt: customers.currentDebt,
       warehouseName: warehouses.name,

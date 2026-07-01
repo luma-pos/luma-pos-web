@@ -639,6 +639,7 @@ function CustomerActionBar({ customer }: { customer: CustomerRow }) {
             name: customer.name,
             phone: customer.phone,
             email: customer.email,
+            zaloUserId: customer.zaloUserId,
             address: customer.address,
             type: customer.type,
             taxCode: customer.taxCode,

@@ -6,10 +6,12 @@ export async function getZaloConfig() {
   const settings = await getZaloSettings();
   const connected = Boolean(settings.enabled && settings.oaId && settings.appId && settings.accessToken);
   const znsReady = Boolean(connected && (settings.portalTemplateId || settings.invoiceTemplateId || settings.debtTemplateId));
+  const oaReady = Boolean(connected);
   return {
     ...settings,
     connected,
     configured: znsReady,
+    oaReady,
     znsReady,
   };
 }
@@ -19,7 +21,9 @@ export function publicZaloStatus(config: Awaited<ReturnType<typeof getZaloConfig
     enabled: config.enabled,
     configured: config.configured,
     connected: config.connected,
+    oaReady: config.oaReady,
     znsReady: config.znsReady,
+    deliveryMode: config.deliveryMode,
     oaId: config.oaId,
     appId: config.appId,
     appSecretSet: Boolean(config.appSecret),

@@ -1244,6 +1244,7 @@ function ZaloSecretInput({
 function ZaloSection({ L, prefs, canEdit }: { L: boolean; prefs: StorePrefs["zalo"]; canEdit: boolean }) {
   const [form, setForm] = useState({
     enabled: prefs.enabled,
+    deliveryMode: prefs.deliveryMode,
     oaId: prefs.oaId,
     appId: prefs.appId,
     appSecret: "",
@@ -1328,6 +1329,19 @@ function ZaloSection({ L, prefs, canEdit }: { L: boolean; prefs: StorePrefs["zal
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <span className={FL}>{L ? "Kênh gửi mặc định" : "Default sending channel"}</span>
+              <Select
+                className="w-full"
+                disabled={!canEdit}
+                value={form.deliveryMode}
+                options={[
+                  { value: "oa", label: L ? "Tin nhắn OA (Zalo user ID)" : "OA message (Zalo user ID)" },
+                  { value: "zns", label: L ? "ZNS Template (SĐT)" : "ZNS Template (phone)" },
+                ]}
+                onValueChange={(value) => set("deliveryMode", value === "zns" ? "zns" : "oa")}
+              />
+            </div>
             <div className="flex flex-col gap-1"><span className={FL}>OA ID</span><input className={cn(FI, "font-mono")} value={form.oaId} disabled={!canEdit} onChange={(e) => set("oaId", e.target.value)} /></div>
             <div className="flex flex-col gap-1"><span className={FL}>App ID</span><input className={cn(FI, "font-mono")} value={form.appId} disabled={!canEdit} onChange={(e) => set("appId", e.target.value)} /></div>
           </div>

@@ -4,7 +4,7 @@ import { customers, einvoices, zaloMessageEvents } from "@/db/schema";
 import { formatCurrency } from "@/lib/utils";
 import { getOrder } from "@/lib/data/orders";
 import { getZaloConfig } from "./config";
-import { sendZnsTemplate } from "./client";
+import { sendOaTextMessage, sendZnsTemplate } from "./client";
 
 export type ZaloSendKind = "portal_link" | "invoice";
 
@@ -18,8 +18,10 @@ type ZaloSendPrepared = {
   orderId?: string | null;
   invoiceId?: string | null;
   phone: string;
+  zaloUserId?: string | null;
   templateId: string;
   templateData: Record<string, string | number>;
+  oaText: string;
   payloadSummary: Record<string, unknown>;
 };
 
@@ -50,22 +52,23 @@ async function logZaloEvent(input: ZaloSendPrepared, status: string, details: {
 
 async function preparePortalLink(input: Extract<ZaloSendInput, { kind: "portal_link" }>, templateId: string): Promise<ZaloSendPrepared | { error: string }> {
   const [customer] = await db
-    .select({ id: customers.id, name: customers.name, phone: customers.phone })
+    .select({ id: customers.id, name: customers.name, phone: customers.phone, zaloUserId: customers.zaloUserId })
     .from(customers)
     .where(eq(customers.id, input.customerId))
     .limit(1);
   if (!customer) return { error: "errors.notFound" };
   const phone = normalizePhone(customer.phone);
-  if (!phone) return { error: "zalo.errors.missingPhone" };
   return {
     kind: "portal_link",
     customerId: customer.id,
     phone,
+    zaloUserId: customer.zaloUserId,
     templateId,
     templateData: {
       customer_name: customer.name,
       portal_url: input.url,
     },
+    oaText: `Chào ${customer.name}, LumaPOS gửi link đặt hàng của bạn: ${input.url}`,
     payloadSummary: {
       customerName: customer.name,
       url: input.url,
@@ -77,7 +80,7 @@ async function prepareInvoice(input: Extract<ZaloSendInput, { kind: "invoice" }>
   const order = await getOrder(input.orderId);
   if (!order) return { error: "errors.notFound" };
   const phone = normalizePhone(order.customerPhone);
-  if (!order.customerId || !phone) return { error: "zalo.errors.missingPhone" };
+  if (!order.customerId) return { error: "zalo.errors.missingPhone" };
   const [invoice] = await db
     .select({ id: einvoices.id, number: einvoices.number, status: einvoices.status })
     .from(einvoices)
@@ -89,6 +92,7 @@ async function prepareInvoice(input: Extract<ZaloSendInput, { kind: "invoice" }>
     orderId: order.id,
     invoiceId: invoice?.id ?? null,
     phone,
+    zaloUserId: order.customerZaloUserId,
     templateId,
     templateData: {
       customer_name: order.customerName ?? "Khach le",
@@ -97,6 +101,11 @@ async function prepareInvoice(input: Extract<ZaloSendInput, { kind: "invoice" }>
       order_url: input.url ?? "",
       invoice_number: invoice?.number ?? order.code,
     },
+    oaText: [
+      `Chào ${order.customerName ?? "quý khách"}, LumaPOS gửi hóa đơn/đơn hàng ${order.code}.`,
+      `Tổng tiền: ${formatCurrency(Number(order.total))}.`,
+      input.url ? `Xem chi tiết: ${input.url}` : "",
+    ].filter(Boolean).join("\n"),
     payloadSummary: {
       customerName: order.customerName,
       orderCode: order.code,
@@ -112,19 +121,27 @@ export async function sendZaloMessage(input: ZaloSendInput) {
   if (!config.enabled) return { ok: false as const, error: "zalo.errors.notEnabled" };
   if (!config.accessToken) return { ok: false as const, error: "zalo.errors.missingAccessToken" };
   const templateId = input.kind === "portal_link" ? config.portalTemplateId : config.invoiceTemplateId;
-  if (!templateId) return { ok: false as const, error: "zalo.errors.missingTemplate" };
+  if (config.deliveryMode === "zns" && !templateId) return { ok: false as const, error: "zalo.errors.missingTemplate" };
 
   const prepared = input.kind === "portal_link"
     ? await preparePortalLink(input, templateId)
     : await prepareInvoice(input, templateId);
   if ("error" in prepared) return { ok: false as const, error: prepared.error };
+  if (config.deliveryMode === "zns" && !prepared.phone) return { ok: false as const, error: "zalo.errors.missingPhone" };
 
-  const result = await sendZnsTemplate(config.accessToken, {
-    phone: prepared.phone,
-    template_id: prepared.templateId,
-    template_data: prepared.templateData,
-    tracking_id: `${prepared.kind}:${prepared.orderId ?? prepared.customerId ?? Date.now()}`,
-  });
+  const result = config.deliveryMode === "oa"
+    ? prepared.zaloUserId
+      ? await sendOaTextMessage(config.accessToken, {
+        recipient: { user_id: prepared.zaloUserId },
+        message: { text: prepared.oaText },
+      })
+      : { ok: false as const, errorCode: "missing_zalo_user_id", errorMessage: "zalo.errors.missingZaloUserId" }
+    : await sendZnsTemplate(config.accessToken, {
+      phone: prepared.phone,
+      template_id: prepared.templateId,
+      template_data: prepared.templateData,
+      tracking_id: `${prepared.kind}:${prepared.orderId ?? prepared.customerId ?? Date.now()}`,
+    });
   if (result.ok) {
     await logZaloEvent(prepared, "sent", { zaloMessageId: result.messageId }, input.actorId);
     return { ok: true as const, data: { messageId: result.messageId } };
@@ -133,5 +150,6 @@ export async function sendZaloMessage(input: ZaloSendInput) {
     errorCode: result.errorCode,
     errorMessage: result.errorMessage,
   }, input.actorId);
+  if (result.errorCode === "missing_zalo_user_id") return { ok: false as const, error: "zalo.errors.missingZaloUserId" };
   return { ok: false as const, error: "zalo.errors.sendFailed" };
 }

@@ -41,6 +41,7 @@ export async function updateCustomerCore(input: UpdateCustomerInput): Promise<Ac
     await db.update(customers).set({
       name: v.name,
       phone: v.phone?.slice(0, 20) || null,
+      zaloUserId: v.zaloUserId || null,
       email: v.email || null,
       address: v.address || null,
       type: v.type,
