@@ -1042,6 +1042,16 @@
       "apply": "Apply to receipt",
       "existingData": "The current receipt already has data"
     },
+    "stock": {
+      "create_stocktake": {
+        "label": "AI stocktake",
+        "sessionTitle": "AI stocktake",
+        "description": "Send a request or count-list image. AI previews and fills the stocktake form.",
+        "placeholder": "Example: Count SP004935 and SP004908 in the main warehouse...",
+        "submit": "Create preview",
+        "apply": "Apply to stocktake"
+      }
+    },
     "pos": {
       "open": "AI add items to cart",
       "title": "AI add items to POS cart",

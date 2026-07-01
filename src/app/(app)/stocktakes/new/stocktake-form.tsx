@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, Check, ClipboardCheck, PackageSearch, Save, Search, Trash2 } from "lucide-react";
+import { AiQuickActionButton } from "@/components/ai-quick-actions/ai-quick-action-button";
+import { AiQuickActionModal } from "@/components/ai-quick-actions/ai-quick-action-modal";
+import type { AiQuickActionApplyMode } from "@/components/ai-quick-actions/types";
 import { useConfirmDialog } from "@/components/confirm-dialog-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +14,7 @@ import { Select } from "@/components/ui/select";
 import { Routes } from "@/lib/routes";
 import { cn, formatCurrency, formatNumber } from "@/lib/utils";
 import { createStocktake } from "@/lib/actions/stocktakes";
+import type { AiActionPreview } from "@/lib/ai/actions";
 
 interface ProductOption {
   id: string; sku: string; name: string; baseUnit: string; costPrice: number; stock: number;
@@ -33,6 +37,7 @@ export function StocktakeForm({ activeWarehouseId, warehouses, products }: { act
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<"draft" | "balance" | null>(null);
   const [error, setError] = useState("");
+  const [aiQuickOpen, setAiQuickOpen] = useState(false);
 
   const added = useMemo(() => new Set(lines.map((l) => l.product.id)), [lines]);
 
@@ -47,6 +52,43 @@ export function StocktakeForm({ activeWarehouseId, warehouses, products }: { act
   function addLine(p: ProductOption) {
     setLines((ls) => [...ls, { product: p, actualQty: p.stock }]);
     setSearch("");
+  }
+
+  async function applyAiPreview(preview: AiActionPreview, applyMode: AiQuickActionApplyMode) {
+    const payload = preview.action?.payload && typeof preview.action.payload === "object" ? preview.action.payload as Record<string, unknown> : {};
+    const values = [
+      payload.sku,
+      payload.productName,
+      payload.product,
+      payload.q,
+      payload.prompt,
+      ...preview.fields.map((field) => `${field.label} ${field.value}`),
+      ...preview.lines.flatMap((line) => [line.label, line.value, line.meta]),
+    ];
+    const queries = values.filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+    const matched: ProductOption[] = [];
+    for (const query of queries) {
+      const normalized = query.toLowerCase();
+      const product = products.find((item) =>
+        item.sku.toLowerCase() === normalized ||
+        normalized.includes(item.sku.toLowerCase()) ||
+        item.name.toLowerCase().includes(normalized) ||
+        normalized.includes(item.name.toLowerCase())
+      );
+      if (product && !matched.some((item) => item.id === product.id)) matched.push(product);
+    }
+    if (matched.length === 0) {
+      if (queries[0]) setSearch(queries[0]);
+      return;
+    }
+    setLines((current) => {
+      const base = applyMode === "replace" ? [] : current;
+      const existing = new Set(base.map((line) => line.product.id));
+      return [
+        ...base,
+        ...matched.filter((product) => !existing.has(product.id)).map((product) => ({ product, actualQty: product.stock })),
+      ];
+    });
   }
 
   function setQty(id: string, qty: number) {
@@ -93,12 +135,12 @@ export function StocktakeForm({ activeWarehouseId, warehouses, products }: { act
   return (
     <div className="min-h-dvh bg-canvas p-4 sm:p-6">
       <div className="mb-5 flex flex-wrap items-start gap-4">
-        <Button type="button" variant="outline" size="icon" onClick={() => router.push(Routes.Stocktakes)} className="mt-1 rounded-card bg-surface text-slate-500">
+        <Button type="button" variant="ghost" size="iconSm" onClick={() => router.push(Routes.Stocktakes)} className="mt-1 text-slate-500">
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-extrabold leading-tight">{t("stocktakes.createNew")}</h1>
+            <h1 className="text-[17px] font-bold leading-tight">{t("stocktakes.createNew")}</h1>
             <span className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-950 dark:text-primary-200">{t("stocktakes.status.draft")}</span>
           </div>
           <p className="mt-1 max-w-3xl text-sm text-slate-500">{t("stocktakes.balanceHint")}</p>
@@ -119,15 +161,20 @@ export function StocktakeForm({ activeWarehouseId, warehouses, products }: { act
         <section className="min-w-0 overflow-hidden rounded-card bg-surface shadow-e1">
           <div className="border-b border-border-soft bg-surface px-4 py-4 sm:px-5">
             <div className="relative">
-              <Input
-                value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("stocktakes.searchPlaceholder")}
-                leftIcon={<Search />}
-                size="lg"
-                className="h-12 bg-canvas text-base"
-              />
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1">
+                  <Input
+                    value={search} onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t("stocktakes.searchPlaceholder")}
+                    leftIcon={<Search />}
+                    size="lg"
+                    className="h-12 bg-canvas text-base"
+                  />
+                </div>
+                <AiQuickActionButton onClick={() => setAiQuickOpen(true)} label={t("aiQuick.stock.create_stocktake.label")} className="h-12 w-14" />
+              </div>
               {suggestions.length > 0 && (
-                <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-card border border-border-soft bg-surface shadow-e2">
+                <div className="absolute left-0 right-16 z-20 mt-2 overflow-hidden rounded-card border border-border-soft bg-surface shadow-e2">
                   {suggestions.map((p) => (
                     <button
                       key={p.id} onClick={() => addLine(p)}
@@ -272,6 +319,22 @@ export function StocktakeForm({ activeWarehouseId, warehouses, products }: { act
           </div>
         </aside>
       </div>
+
+      <AiQuickActionModal
+        open={aiQuickOpen}
+        title={t("aiQuick.stock.create_stocktake.sessionTitle")}
+        description={t("aiQuick.stock.create_stocktake.description")}
+        placeholder={t("aiQuick.stock.create_stocktake.placeholder")}
+        submitLabel={t("aiQuick.stock.create_stocktake.submit")}
+        applyLabel={t("aiQuick.stock.create_stocktake.apply")}
+        preset="create_stocktake"
+        surface="web"
+        acceptedIntents={["create_stocktake", "inventory_stock_view", "report_summary"]}
+        hasExistingData={lines.length > 0}
+        existingDataLabel={t("stocktakes.summary.checked")}
+        onClose={() => setAiQuickOpen(false)}
+        onApply={applyAiPreview}
+      />
     </div>
   );
 }

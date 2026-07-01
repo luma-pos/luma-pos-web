@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, Search, Trash2 } from "lucide-react";
+import { AiQuickActionButton } from "@/components/ai-quick-actions/ai-quick-action-button";
+import { AiQuickActionModal } from "@/components/ai-quick-actions/ai-quick-action-modal";
+import type { AiQuickActionApplyMode } from "@/components/ai-quick-actions/types";
 import { Combobox } from "@/components/combobox";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
@@ -11,6 +14,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { Select } from "@/components/ui/select";
 import { Text } from "@/components/ui/text";
 import { createPurchaseReturn, searchPurchaseReturnProducts } from "@/lib/actions/purchase-returns";
+import type { AiActionPreview } from "@/lib/ai/actions";
 import type { PurchaseFormOptions } from "@/lib/data/inventory";
 import type { PurchaseReturnProductRow } from "@/lib/data/purchase-returns";
 import { Routes } from "@/lib/routes";
@@ -57,6 +61,7 @@ export function PurchaseReturnForm({ options }: { options: PurchaseFormOptions }
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [aiQuickOpen, setAiQuickOpen] = useState(false);
 
   useEffect(() => {
     const q = search.trim();
@@ -91,6 +96,39 @@ export function PurchaseReturnForm({ options }: { options: PurchaseFormOptions }
   function addProduct(product: PurchaseReturnProductRow) {
     setLines((current) => [...current, productToLine(product)]);
     setSearch("");
+  }
+
+  async function applyAiPreview(preview: AiActionPreview, applyMode: AiQuickActionApplyMode) {
+    const payload = preview.action?.payload && typeof preview.action.payload === "object" ? preview.action.payload as Record<string, unknown> : {};
+    const itemRows = Array.isArray(payload.items)
+      ? payload.items.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item)))
+      : [];
+    const lookups = [
+      typeof payload.sku === "string" || typeof payload.productName === "string"
+        ? { sku: payload.sku, productName: payload.productName, text: payload.text, quantity: payload.quantity, unitCost: payload.unitCost }
+        : null,
+      ...itemRows,
+    ].filter((item): item is Record<string, unknown> => Boolean(item));
+    const seen = new Set(applyMode === "replace" ? [] : lines.map((line) => line.productId));
+    const nextLines: Line[] = [];
+
+    for (const item of lookups) {
+      const query = [item.sku, item.productName, item.text].find((value) => typeof value === "string" && value.trim()) as string | undefined;
+      if (!query) continue;
+      const matches = await searchPurchaseReturnProducts(query, warehouseId);
+      const product = matches.find((row) => row.sku.toLowerCase() === query.toLowerCase()) ?? matches[0];
+      if (!product || seen.has(product.id)) continue;
+      seen.add(product.id);
+      const quantity = Math.max(1, Number(item.quantity) || 1);
+      const unitCost = Number(item.unitCost) || Number(product.costPrice) || 0;
+      nextLines.push({ ...productToLine(product), quantity, returnUnitCost: unitCost });
+    }
+
+    if (nextLines.length) setLines((current) => applyMode === "replace" ? nextLines : [...current, ...nextLines]);
+    else {
+      const query = [lookups[0]?.sku, lookups[0]?.productName, lookups[0]?.text].find((value) => typeof value === "string" && value.trim()) as string | undefined;
+      if (query) setSearch(query);
+    }
   }
 
   function patch(productId: string, next: Partial<Line>) {
@@ -136,16 +174,17 @@ export function PurchaseReturnForm({ options }: { options: PurchaseFormOptions }
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <Text as="h1" weight="bold" className="text-[17px]" text={t("purchaseReturns.createTitle")} />
-        <div className="relative ml-2 hidden min-w-[280px] max-w-xl flex-1 md:block">
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("purchaseReturns.searchProduct")} leftIcon={<Search />} className="h-10" />
-          {results.length > 0 && <ProductResults rows={results} onPick={addProduct} />}
-        </div>
       </header>
 
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden bg-canvas">
         <div className="flex-1 min-w-0 min-h-[420px] lg:min-h-0 flex flex-col p-3 sm:p-4">
-          <div className="relative mb-3 md:hidden">
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("purchaseReturns.searchProduct")} leftIcon={<Search />} className="h-11" />
+          <div className="relative mb-3">
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("purchaseReturns.searchProduct")} leftIcon={<Search />} className="h-11" />
+              </div>
+              <AiQuickActionButton onClick={() => setAiQuickOpen(true)} label={t("aiQuick.purchase.open")} className="h-11 w-12" />
+            </div>
             {results.length > 0 && <ProductResults rows={results} onPick={addProduct} />}
           </div>
 
@@ -280,13 +319,29 @@ export function PurchaseReturnForm({ options }: { options: PurchaseFormOptions }
           </div>
         </aside>
       </div>
+
+      <AiQuickActionModal
+        open={aiQuickOpen}
+        title={t("aiQuick.purchase.title")}
+        description={t("aiQuick.purchase.description")}
+        placeholder={t("aiQuick.purchase.placeholder")}
+        submitLabel={t("aiQuick.purchase.submit")}
+        applyLabel={t("aiQuick.purchase.apply")}
+        preset="create_inventory_inbound"
+        surface="web"
+        acceptedIntents={["create_inventory_inbound", "create_draft_purchase_order", "create_draft_purchase_order_from_restocking"]}
+        hasExistingData={lines.length > 0}
+        existingDataLabel={t("aiQuick.purchase.existingData")}
+        onClose={() => setAiQuickOpen(false)}
+        onApply={applyAiPreview}
+      />
     </div>
   );
 }
 
 function ProductResults({ rows, onPick }: { rows: PurchaseReturnProductRow[]; onPick: (row: PurchaseReturnProductRow) => void }) {
   return (
-    <div className="absolute z-20 left-0 right-0 mt-1 max-h-80 overflow-auto bg-surface border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg">
+    <div className="absolute z-20 left-0 right-14 mt-1 max-h-80 overflow-auto bg-surface border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg">
       {rows.map((row) => (
         <button key={row.id} type="button" onClick={() => onPick(row)} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-surface-2">
           <span className="min-w-0">

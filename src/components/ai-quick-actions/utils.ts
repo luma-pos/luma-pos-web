@@ -11,10 +11,14 @@ export function quickActionPrompt(input: {
   const fallback =
     input.preset === "create_inventory_inbound"
       ? "Đọc file/ảnh đính kèm và tạo preview phiếu nhập hàng."
+      : input.preset === "create_stocktake"
+        ? "Đọc nội dung hoặc file/ảnh đính kèm và tạo preview phiếu kiểm kho."
       : "Tạo giỏ POS nháp từ nội dung hoặc file/ảnh đính kèm.";
   const instruction =
     input.preset === "create_inventory_inbound"
       ? "Tạo phiếu nhập hàng từ thông tin sau. Chỉ tạo preview/draft để user áp dụng vào form hiện tại; không lưu, không cộng tồn kho, không ghi thanh toán."
+      : input.preset === "create_stocktake"
+        ? "Tạo phiếu kiểm kho từ thông tin sau. Chỉ tạo preview để user áp dụng vào form hiện tại; không lưu phiếu, không cân bằng kho, không ghi stock movement."
       : "Tạo giỏ POS nháp từ thông tin sau. Chỉ trả về cart draft để user thêm vào giỏ hiện tại; không tạo hóa đơn, không thanh toán, không trừ kho.";
   const prompt = `[AI_ACTION_PRESET:${input.preset}]\n${instruction}\n\nThông tin người dùng:\n\n${userText || fallback}`;
   return input.attachmentCount
@@ -38,5 +42,7 @@ export function fieldValue(fields: AiActionLine[], labelIncludes: string) {
 }
 
 export function isPreviewApplicable(preview: AiActionPreview, acceptedIntents: string[]) {
-  return acceptedIntents.includes(preview.intent) && previewMatchedCount(preview) > 0;
+  if (!acceptedIntents.includes(preview.intent)) return false;
+  if (preview.intent === "create_stocktake") return true;
+  return previewMatchedCount(preview) > 0;
 }

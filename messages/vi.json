@@ -1042,6 +1042,16 @@
       "apply": "Áp dụng vào phiếu nhập",
       "existingData": "Phiếu nhập hiện tại đã có dữ liệu"
     },
+    "stock": {
+      "create_stocktake": {
+        "label": "AI kiểm kho",
+        "sessionTitle": "AI kiểm kho",
+        "description": "Gửi yêu cầu hoặc ảnh danh sách kiểm. AI tạo preview rồi fill vào phiếu kiểm kho.",
+        "placeholder": "Ví dụ: Kiểm kho SP004935, SP004908 tại kho chính...",
+        "submit": "Tạo preview",
+        "apply": "Áp dụng vào phiếu kiểm"
+      }
+    },
     "pos": {
       "open": "AI thêm hàng vào giỏ",
       "title": "AI thêm hàng vào giỏ POS",
