@@ -27,6 +27,8 @@ function verifyZEventSignature(secret: string, body: string, event: Record<strin
   return [
     `${appId}${body}${timestamp}${secret}`,
     `${appId}${compactBody}${timestamp}${secret}`,
+    `${body}${timestamp}${secret}`,
+    `${compactBody}${timestamp}${secret}`,
   ].some((payload) => safeCompareHex(sha256Hex(payload), signature));
 }
 
