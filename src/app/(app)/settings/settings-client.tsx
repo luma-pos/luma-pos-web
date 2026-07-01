@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, ChevronDown, Copy, ExternalLink, KeyRound, Loader2, MessageCircle, Pencil, Plus, Power, Printer, Save, Star, Trash2, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Copy, ExternalLink, KeyRound, Loader2, MessageCircle, Pencil, Plus, Power, Printer, Save, Star, Trash2, X } from "lucide-react";
 import { SearchableSelect } from "@/components/combobox";
 import { Select } from "@/components/ui/select";
 import { SegmentedTabs } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
+import { Routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { normalizeSearch } from "@/lib/normalize";
 import {
@@ -1055,13 +1056,53 @@ function BankSelect({ value, onChange, placeholder }: { value: string; onChange:
 }
 
 function PrintSection({ L }: { L: boolean }) {
+  const items = [
+    {
+      href: "/settings/print",
+      title: L ? "Mẫu chứng từ" : "Document templates",
+      desc: L ? "Hóa đơn, báo giá, đặt hàng, nhập hàng, trả hàng và biên nhận." : "Invoices, quotes, bookings, purchases, returns and receipts.",
+      meta: "A4 / A5 / K80",
+      primary: true,
+    },
+    {
+      href: Routes.LabelSettings,
+      title: L ? "Mẫu tem mã" : "Barcode label templates",
+      desc: L ? "Tem mã vạch sản phẩm, SKU, giá bán, lề trắng và kích thước tem." : "Product barcode labels, SKU, price, quiet zones and label sizes.",
+      meta: "40x30 / 50x30 / 35x22",
+      primary: false,
+    },
+  ];
   return (
-    <Card title={L ? "Thiết kế mẫu in (15.1)" : "Print Template Designer (15.1)"} vi={L ? "Hóa đơn · tem mã · K80/K57/A5/A4" : "Documents · barcode labels · K80/K57/A5/A4"} action={<Link href="/settings/print" className={btnF}><Printer className="w-3 h-3" />{L ? "Mẫu chứng từ →" : "Document templates →"}</Link>}>
-      <div className="p-4.5 text-[12px] text-slate-500 leading-relaxed">
-        {L ? "Tùy chỉnh mẫu in chứng từ và mẫu tem mã vạch theo từng khổ giấy/tem." : "Customize document print templates and barcode label templates by paper or label size."}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Link href="/settings/print" className={btnS}><Printer className="w-3 h-3" />{L ? "Mẫu chứng từ" : "Document templates"}</Link>
-          <Link href="/settings/labels" className={btnS}><Printer className="w-3 h-3" />{L ? "Mẫu tem mã" : "Label templates"}</Link>
+    <Card title={L ? "Thiết kế mẫu in (15.1)" : "Print Template Designer (15.1)"} vi={L ? "Chứng từ · tem mã · K80/K57/A5/A4" : "Documents · barcode labels · K80/K57/A5/A4"}>
+      <div className="p-4.5">
+        <p className="mb-3 text-[12px] leading-relaxed text-slate-500">
+          {L ? "Tùy chỉnh mẫu in theo từng nhóm để tránh nhầm giữa chứng từ và tem mã vạch sản phẩm." : "Manage each print-template group separately so document layouts and product barcode labels stay clear."}
+        </p>
+        <div className="grid gap-3 md:grid-cols-2">
+          {items.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "group rounded-[10px] border p-4 transition hover:-translate-y-0.5 hover:shadow-e1",
+                item.primary
+                  ? "border-primary-200 bg-primary-50/70 text-primary-900 dark:border-primary-900 dark:bg-primary-950/30 dark:text-primary-100"
+                  : "border-border bg-canvas text-slate-900 hover:bg-surface-2 dark:text-slate-100",
+              )}
+            >
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-lg", item.primary ? "bg-primary-600 text-white" : "bg-surface border border-border text-slate-600 dark:text-slate-300")}>
+                  <Printer className="h-4 w-4" />
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  {item.meta}
+                  <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                </span>
+              </div>
+              <div className="text-sm font-extrabold">{item.title}</div>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{item.desc}</p>
+            </Link>
+          ))}
         </div>
       </div>
     </Card>
