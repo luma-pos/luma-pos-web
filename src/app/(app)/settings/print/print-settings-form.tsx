@@ -22,26 +22,27 @@ import {
   type PaperSize,
   type PrintDocType,
   type PrintTemplate,
+  type PrintTemplateStoreInfo,
 } from "@/lib/print/template-shared";
 
 const TOGGLES = ["showSeller", "showProject", "showDebt", "showPaymentQr", "showInWords", "showSignatures", "showSku"] as const;
 
-export function PrintSettingsForm({ templates }: { templates: PrintTemplate[] }) {
+export function PrintSettingsForm({ templates, storeDefaults }: { templates: PrintTemplate[]; storeDefaults: PrintTemplateStoreInfo }) {
   const t = useTranslations();
   const router = useRouter();
   const [drafts, setDrafts] = useState<PrintTemplate[]>(templates);
   const [docType, setDocType] = useState<PrintDocType>("order");
   const visible = useMemo(() => drafts.filter((item) => item.docType === docType), [drafts, docType]);
-  const [selectedId, setSelectedId] = useState(() => visible[0]?.id ?? defaultTemplate("order").id);
+  const [selectedId, setSelectedId] = useState(() => visible[0]?.id ?? defaultTemplate("order", storeDefaults).id);
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const selected = drafts.find((item) => item.id === selectedId && item.docType === docType) ?? visible[0] ?? defaultTemplate(docType);
+  const selected = drafts.find((item) => item.id === selectedId && item.docType === docType) ?? visible[0] ?? defaultTemplate(docType, storeDefaults);
   const persisted = !selected.id.startsWith("draft-") && !selected.id.startsWith("default-");
 
   function selectDocType(next: PrintDocType) {
     setDocType(next);
     const first = drafts.find((item) => item.docType === next);
-    setSelectedId(first?.id ?? defaultTemplate(next).id);
+    setSelectedId(first?.id ?? defaultTemplate(next, storeDefaults).id);
     setMsg(null);
   }
 
@@ -56,7 +57,7 @@ export function PrintSettingsForm({ templates }: { templates: PrintTemplate[] })
   function addTemplate() {
     const id = `draft-${docType}-${Date.now()}`;
     const next = {
-      ...defaultTemplate(docType),
+      ...defaultTemplate(docType, storeDefaults),
       id,
       name: t("printSettings.newTemplateName", { type: t(`printSettings.docTypes.${docType}`) }),
       isDefault: visible.length === 0,

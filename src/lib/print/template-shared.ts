@@ -32,6 +32,8 @@ export interface PrintTemplate {
   options: PrintTemplateOptions;
 }
 
+export type PrintTemplateStoreInfo = Pick<PrintTemplate, "storeName" | "storeAddress" | "storePhone" | "storeTaxCode">;
+
 export const DEFAULT_OPTIONS: PrintTemplateOptions = {
   showSeller: true,
   showProject: true,
@@ -51,7 +53,7 @@ export const DEFAULT_FOOTER: Record<PrintDocType, string> = {
   receipt: "",
 };
 
-export function defaultTemplate(docType: PrintDocType): PrintTemplate {
+export function defaultTemplate(docType: PrintDocType, storeInfo: Partial<PrintTemplateStoreInfo> = {}): PrintTemplate {
   return {
     id: `default-${docType}`,
     name: DEFAULT_TEMPLATE_NAME[docType],
@@ -60,10 +62,10 @@ export function defaultTemplate(docType: PrintDocType): PrintTemplate {
     isDefault: true,
     isActive: true,
     sortOrder: 0,
-    storeName: "",
-    storeAddress: "",
-    storePhone: "",
-    storeTaxCode: "",
+    storeName: storeInfo.storeName ?? "",
+    storeAddress: storeInfo.storeAddress ?? "",
+    storePhone: storeInfo.storePhone ?? "",
+    storeTaxCode: storeInfo.storeTaxCode ?? "",
     footerNote: DEFAULT_FOOTER[docType],
     options: { ...DEFAULT_OPTIONS },
   };
