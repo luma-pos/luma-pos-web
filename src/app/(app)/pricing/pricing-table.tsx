@@ -70,6 +70,8 @@ export function PricingTable({ books: initialBooks, rows: initialRows, total }: 
 
   const defaultBookId = books.find((b) => b.isDefault)?.id ?? books[0]?.id ?? "";
   const cellKey = (rowId: string, bookId: string) => `${rowId}:${bookId}`;
+  const formulaRow = formula ? rows.find((row) => row.id === formula.rowId) : null;
+  const formulaBook = formula ? books.find((book) => book.id === formula.bookId) : null;
 
   async function addBook() {
     const name = newName.trim();
@@ -185,43 +187,6 @@ export function PricingTable({ books: initialBooks, rows: initialRows, total }: 
             />
             {savingCell.has(k) && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400 absolute -right-5" />}
             {savedCell.has(k) && <Check className="w-3.5 h-3.5 text-ok absolute -right-5" />}
-
-            {formula?.rowId === r.id && formula.bookId === b.id && (
-              <div className="absolute right-0 top-full mt-1 z-30 w-[420px] text-left bg-surface border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 space-y-4">
-                <div className="font-semibold">{t("pricing.formula.title")}</div>
-                <div className="text-sm">{t("pricing.formula.newPrice")} <span className="text-primary-600 font-bold">[{formatCurrency(computeNew(r, b.id))}]</span></div>
-                <div className="flex items-center gap-1.5 text-sm flex-wrap">
-                  <span className="text-slate-500">{t("pricing.formula.newPrice")} =</span>
-                  <Select
-                    value={fBase}
-                    onChange={(e) => setFBase(e.target.value as PriceFormulaBase)}
-                    size="sm"
-                    options={[
-                      { value: "current", label: t("pricing.formula.baseCurrent") },
-                      { value: "cost", label: t("pricing.formula.baseCost") },
-                      { value: "lastPurchase", label: t("pricing.cols.lastPurchase") },
-                    ]}
-                  />
-                  <button type="button" onClick={() => setFOp("+")} className={cn("w-7 h-7 grid place-items-center rounded-full border text-sm", fOp === "+" ? "bg-primary-600 text-white border-primary-600" : "border-border")}>+</button>
-                  <button type="button" onClick={() => setFOp("-")} className={cn("w-7 h-7 grid place-items-center rounded-full border text-sm", fOp === "-" ? "bg-primary-600 text-white border-primary-600" : "border-border")}>−</button>
-                  <input type="number" min={0} value={fAmount || ""} onChange={(e) => setFAmount(Math.max(0, Number(e.target.value)))} className="no-spinner w-16 px-2 py-1.5 text-right text-sm rounded-md border border-border bg-surface" />
-                  <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
-                    <button type="button" onClick={() => setFUnit("vnd")} className={cn("px-2 py-1.5", fUnit === "vnd" ? "bg-primary-600 text-white" : "")}>VND</button>
-                    <button type="button" onClick={() => setFUnit("pct")} className={cn("px-2 py-1.5", fUnit === "pct" ? "bg-primary-600 text-white" : "")}>%</button>
-                  </div>
-                </div>
-                <label className="flex items-start gap-2 text-sm">
-                  <input type="checkbox" checked={fAll} onChange={(e) => setFAll(e.target.checked)} className="mt-0.5" />
-                  <span>{t("pricing.formula.applyAll", { n: total })} <b>{b.name}</b></span>
-                </label>
-                <div className="flex justify-end gap-2 pt-1">
-                  <button type="button" onClick={() => setFormula(null)} className="px-3 py-1.5 text-sm rounded-lg border border-border">{t("common.cancel")}</button>
-                  <button type="button" onClick={() => applyFormula(r, b.id)} disabled={applying} className="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg bg-primary-600 text-white font-medium disabled:opacity-50">
-                    {applying && <Loader2 className="w-4 h-4 animate-spin" />} {t("common.done")}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         );
       },
@@ -284,6 +249,65 @@ export function PricingTable({ books: initialBooks, rows: initialRows, total }: 
         getRowId={(row) => row.id}
         minWidth={`${Math.max(780, 610 + books.length * 170)}px`}
       />
+      {formulaRow && formulaBook && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-3 sm:p-6"
+          onMouseDown={() => setFormula(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 text-left shadow-2xl"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-semibold">{t("pricing.formula.title")}</div>
+                <div className="mt-1 truncate text-sm text-slate-500">{formulaRow.name} · {formulaBook.name}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormula(null)}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-surface-2 hover:text-slate-700"
+                aria-label={t("common.close")}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-4 text-sm">
+              {t("pricing.formula.newPrice")} <span className="font-bold text-primary-600">[{formatCurrency(computeNew(formulaRow, formulaBook.id))}]</span>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-1.5 text-sm">
+              <span className="text-slate-500">{t("pricing.formula.newPrice")} =</span>
+              <Select
+                value={fBase}
+                onChange={(e) => setFBase(e.target.value as PriceFormulaBase)}
+                size="sm"
+                options={[
+                  { value: "current", label: t("pricing.formula.baseCurrent") },
+                  { value: "cost", label: t("pricing.formula.baseCost") },
+                  { value: "lastPurchase", label: t("pricing.cols.lastPurchase") },
+                ]}
+              />
+              <button type="button" onClick={() => setFOp("+")} className={cn("grid h-7 w-7 place-items-center rounded-full border text-sm", fOp === "+" ? "border-primary-600 bg-primary-600 text-white" : "border-border")}>+</button>
+              <button type="button" onClick={() => setFOp("-")} className={cn("grid h-7 w-7 place-items-center rounded-full border text-sm", fOp === "-" ? "border-primary-600 bg-primary-600 text-white" : "border-border")}>−</button>
+              <input type="number" min={0} value={fAmount || ""} onChange={(e) => setFAmount(Math.max(0, Number(e.target.value)))} className="no-spinner w-16 rounded-md border border-border bg-surface px-2 py-1.5 text-right text-sm" />
+              <div className="inline-flex overflow-hidden rounded-md border border-border text-xs">
+                <button type="button" onClick={() => setFUnit("vnd")} className={cn("px-2 py-1.5", fUnit === "vnd" ? "bg-primary-600 text-white" : "")}>VND</button>
+                <button type="button" onClick={() => setFUnit("pct")} className={cn("px-2 py-1.5", fUnit === "pct" ? "bg-primary-600 text-white" : "")}>%</button>
+              </div>
+            </div>
+            <label className="mt-4 flex items-start gap-2 text-sm">
+              <input type="checkbox" checked={fAll} onChange={(e) => setFAll(e.target.checked)} className="mt-0.5" />
+              <span>{t("pricing.formula.applyAll", { n: total })} <b>{formulaBook.name}</b></span>
+            </label>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setFormula(null)} className="rounded-lg border border-border px-3 py-1.5 text-sm">{t("common.cancel")}</button>
+              <button type="button" onClick={() => applyFormula(formulaRow, formulaBook.id)} disabled={applying} className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50">
+                {applying && <Loader2 className="h-4 w-4 animate-spin" />} {t("common.done")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
